@@ -1,0 +1,13 @@
+fastapi
+uvicorn
+psycopg2-binary
+SQLAlchemy
+alembic
+pydantic
+python-dotenv
+passlib
+jinja2
+pandas
+pyjwt
+requests
+reportlab

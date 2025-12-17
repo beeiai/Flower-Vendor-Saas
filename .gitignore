@@ -1,0 +1,17 @@
+# Python
+venv/
+__pycache__/
+*.pyc
+
+# Environment
+.env
+
+# Logs
+*.log
+
+# Static files
+static/settlements/*.pdf
+
+# OS
+.DS_Store
+Thumbs.db
