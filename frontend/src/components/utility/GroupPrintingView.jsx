@@ -1,0 +1,1 @@
+// GroupPrintingView component

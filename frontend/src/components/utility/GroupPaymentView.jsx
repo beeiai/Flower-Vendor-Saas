@@ -1,0 +1,1 @@
+// GroupPaymentView component
