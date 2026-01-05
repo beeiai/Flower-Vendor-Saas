@@ -1,12 +1,17 @@
 from sqlalchemy import (
     Column, Integer, String, Numeric, DATE, Boolean, Text,
-    ForeignKey, TIMESTAMP, func
+    ForeignKey, TIMESTAMP, func, Index
 )
 from sqlalchemy.orm import relationship
 from app.core.db import Base
 
+
 class CollectionItem(Base):
     __tablename__ = "collection_items"
+    __table_args__ = (
+        Index("ix_collection_items_vendor_id", "vendor_id"),
+        Index("ix_collection_items_farmer_id", "farmer_id"),
+    )
 
     id = Column(Integer, primary_key=True, index=True)
     

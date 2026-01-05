@@ -1,23 +1,72 @@
-from fastapi import FastAPI
+import logging
+
+from fastapi import FastAPI, Request
+from fastapi.responses import JSONResponse
 from sqlalchemy import text
 from app.core.db import engine
 from app.routes.auth import router as auth_router
 from app.routes.settlements import router as settlement_router
 from fastapi.staticfiles import StaticFiles
+from app.core.startup import *  # noqa: F401
+from app.routes import farmers, farmer_groups, vehicles
+from app.routes import items as catalog_items
+from fastapi.middleware.cors import CORSMiddleware
+from app.core.config import settings
+from app.core.rate_limiter import rate_limit_middleware
 
+logger = logging.getLogger(__name__)
 
 app = FastAPI(
     title="Flower Vendor SaaS API",
-    version="1.0.0"
+    version="1.0.0",
+)
+
+# Attach rate limiting as the first middleware so it runs before handlers.
+app.middleware("http")(rate_limit_middleware)
+
+# CORS configuration is environment-driven so production can restrict origins
+# without changing code. Defaults are localhost Vite dev URLs.
+allowed_origins = [o for o in settings.CORS_ALLOWED_ORIGINS.split(",") if o]
+
+app.add_middleware(
+    CORSMiddleware,
+    allow_origins=allowed_origins,
+    allow_credentials=True,
+    allow_methods=["GET", "POST", "PUT", "DELETE", "OPTIONS"],
+    allow_headers=["Authorization", "Content-Type"],
 )
 
 app.include_router(auth_router)
 app.include_router(settlement_router)
 app.mount("/static", StaticFiles(directory="static"), name="static")
+app.include_router(farmers.router)
+app.include_router(farmer_groups.router)
+app.include_router(vehicles.router)
+app.include_router(catalog_items.router)
+app.include_router(catalog_items.alias)
+app.include_router(farmers.customers)
+
+
+@app.exception_handler(Exception)
+async def unhandled_exception_handler(request: Request, exc: Exception):
+    """Catch-all handler to avoid leaking stack traces to clients.
+
+    HTTPExceptions and validation errors are handled by FastAPI; this only
+    normalizes unexpected server errors.
+    """
+    logger.exception("Unhandled error on %s %s", request.method, request.url.path)
+    return JSONResponse(
+        status_code=500,
+        content={"detail": "Internal server error."},
+    )
+
 
 @app.get("/")
 def home():
     return {"message": "API is running"}
+
+
+
 
 @app.get("/db-test")
 def test_db():
@@ -25,5 +74,6 @@ def test_db():
         with engine.connect() as conn:
             result = conn.execute(text("SELECT 1"))
             return {"db": "connected", "result": result.scalar()}
-    except Exception as e:
-        return {"db": "error", "details": str(e)}
+    except Exception:
+        # Do not leak DB errors; just return a generic message.
+        return {"db": "error", "details": "Database connectivity issue"}

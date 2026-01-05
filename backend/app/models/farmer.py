@@ -1,9 +1,13 @@
-from sqlalchemy import Column, Integer, String, Text, Numeric, TIMESTAMP, ForeignKey, func
+from sqlalchemy import Column, Integer, String, Text, Numeric, TIMESTAMP, ForeignKey, func, Index
 from sqlalchemy.orm import relationship
 from app.core.db import Base
 
+
 class Farmer(Base):
     __tablename__ = "farmers"
+    __table_args__ = (
+        Index("ix_farmers_vendor_id", "vendor_id"),
+    )
 
     id = Column(Integer, primary_key=True, index=True)
 

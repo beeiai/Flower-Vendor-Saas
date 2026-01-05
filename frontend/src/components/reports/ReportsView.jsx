@@ -1,6 +1,6 @@
 import React, { useEffect, useMemo, useState } from 'react';
 import SearchableSelect from '../shared/SearchableSelect';
-import { api } from '../../utils/api';
+import api from '../../config/api';
 
 function toNum(value) {
 	const n = Number(value);

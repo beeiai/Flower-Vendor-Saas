@@ -1,9 +1,15 @@
-from sqlalchemy import Column, Integer, String, TIMESTAMP, ForeignKey, func
+from sqlalchemy import Column, Integer, String, TIMESTAMP, ForeignKey, func, UniqueConstraint, Index
 from sqlalchemy.orm import relationship
 from app.core.db import Base
 
+
 class Vehicle(Base):
     __tablename__ = "vehicles"
+    __table_args__ = (
+        # Prevent duplicate vehicle numbers per vendor
+        UniqueConstraint("vendor_id", "vehicle_number", name="uq_vehicles_vendor_id_vehicle_number"),
+        Index("ix_vehicles_vendor_id", "vendor_id"),
+    )
 
     id = Column(Integer, primary_key=True, index=True)
     vendor_id = Column(Integer, ForeignKey("vendors.id", ondelete="CASCADE"), nullable=False)

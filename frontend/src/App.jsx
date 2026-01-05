@@ -1,13 +1,18 @@
-import React, { useState, useMemo, useEffect, useRef } from 'react';
-import { Flower2, Receipt, FolderPlus, PackagePlus, Users, Plus, Trash2, Save, UserPlus, Check, X, ChevronDown, Calculator, Sparkles, Monitor, Database, Activity, ArrowRight, Truck, Clock, List, ChevronLeft, ChevronRight, Info, AlertCircle, CheckCircle2, XCircle, Printer, Search, Edit2, MessageSquare, FileText, LayoutPanelTop, BarChart3, Settings2, Play, MoreHorizontal, WalletCards, UserCheck, History, Landmark, ArrowDownToLine, ArrowUpFromLine, Coins, ArrowDownRight, ArrowUpRight, FileBarChart, Layers, Send, Smartphone } from 'lucide-react';
-import SearchableSelect from './components/shared/SearchableSelect';
-import Toast from './components/shared/Toast';
-import { api } from './utils/api';
-import ReportsWindow from './components/reports/ReportsView';
+﻿import React, { useEffect, useState, useMemo, useRef } from "react";
 
-// --- SHARED UI COMPONENTS ---
+import {
+  Flower2, Receipt, FolderPlus, PackagePlus, Users, Plus, Trash2, Save,
+  UserPlus, X, Edit2, Printer, Truck, WalletCards, Coins, Activity, Sparkles,
+  Database, Monitor, Smartphone, Send, Settings2,
+  ChevronDown, Layers, FileBarChart, UserCheck, List, BarChart3, 
+  ArrowRight, Search, Landmark
+} from "lucide-react";
 
-// ...existing code...
+import SearchableSelect from "./components/shared/SearchableSelect";
+import Toast from "./components/shared/Toast";
+import Login from "./components/auth/Login";
+import ReportsWindow from "./components/reports/ReportsView";
+import api from "./config/api";
 
 // --- CORE FUNCTIONAL MODULES ---
 
@@ -45,7 +50,7 @@ function GroupCustomerRegistryForm({ title = 'ADD GROUP', initialTab = 'group', 
         address: custForm.address,
       });
 
-      setCustomers(prev => [...prev, { id: created.id, group: groupName, name: created.name, contact: created.contact, address: created.address }]);
+      setCustomers(prev => [...prev, { id: created.id, group: groupName, name: created.name, contact: (created.contact || created.phone), address: created.address }]);
       setCustForm({ groupName: '', name: '', contact: '', address: '' });
       showNotify?.('Customer added successfully', 'success');
     } catch (e) {
@@ -68,36 +73,36 @@ function GroupCustomerRegistryForm({ title = 'ADD GROUP', initialTab = 'group', 
           </div>
 
           <div className="p-4">
-        {tab === 'group' && (
-          <div className="space-y-4">
-            <div>
-              <label className="text-[9px] font-black uppercase text-slate-500">Group Name</label>
-              <input type="text" className="w-full border p-2 text-[11px] font-bold outline-none" value={groupName} onChange={e => setGroupName(e.target.value)} />
-            </div>
-            <button onClick={addGroup} className="w-full bg-rose-600 text-white py-3 font-black uppercase text-[10px] shadow-lg hover:bg-rose-700 transition-all">Add Group</button>
-          </div>
-        )}
+            {tab === 'group' && (
+              <div className="space-y-4">
+                <div>
+                  <label className="text-[9px] font-black uppercase text-slate-500">Group Name</label>
+                  <input type="text" className="w-full border p-2 text-[11px] font-bold outline-none" value={groupName} onChange={e => setGroupName(e.target.value)} />
+                </div>
+                <button onClick={addGroup} className="w-full bg-rose-600 text-white py-3 font-black uppercase text-[10px] shadow-lg hover:bg-rose-700 transition-all">Add Group</button>
+              </div>
+            )}
 
-        {tab === 'customer' && (
-          <div className="space-y-4">
-            <SearchableSelect label="Target Group" options={groups.map(g => g.name)} value={custForm.groupName} onChange={(val) => setCustForm({ ...custForm, groupName: val })} placeholder="Select group" />
-            <div>
-              <label className="text-[9px] font-black uppercase text-slate-500">Customer Name</label>
-              <input type="text" className="w-full border p-2 text-[11px] font-bold outline-none" value={custForm.name} onChange={e => setCustForm({ ...custForm, name: e.target.value })} />
-            </div>
-            <div className="grid grid-cols-2 gap-3">
-              <div>
-                <label className="text-[9px] font-black uppercase text-slate-500">Phone</label>
-                <input type="text" className="w-full border p-2 text-[11px] font-bold outline-none" value={custForm.contact} onChange={e => setCustForm({ ...custForm, contact: e.target.value })} />
+            {tab === 'customer' && (
+              <div className="space-y-4">
+                <SearchableSelect label="Target Group" options={groups.map(g => g.name)} value={custForm.groupName} onChange={(val) => setCustForm({ ...custForm, groupName: val })} placeholder="Select group" />
+                <div>
+                  <label className="text-[9px] font-black uppercase text-slate-500">Customer Name</label>
+                  <input type="text" className="w-full border p-2 text-[11px] font-bold outline-none" value={custForm.name} onChange={e => setCustForm({ ...custForm, name: e.target.value })} />
+                </div>
+                <div className="grid grid-cols-2 gap-3">
+                  <div>
+                    <label className="text-[9px] font-black uppercase text-slate-500">Phone</label>
+                    <input type="text" className="w-full border p-2 text-[11px] font-bold outline-none" value={custForm.contact} onChange={e => setCustForm({ ...custForm, contact: e.target.value })} />
+                  </div>
+                  <div>
+                    <label className="text-[9px] font-black uppercase text-slate-500">Address</label>
+                    <input type="text" className="w-full border p-2 text-[11px] font-bold outline-none" value={custForm.address} onChange={e => setCustForm({ ...custForm, address: e.target.value })} />
+                  </div>
+                </div>
+                <button onClick={addCustomer} className="w-full bg-rose-600 text-white py-3 font-black uppercase text-[10px] shadow-lg hover:bg-rose-700 transition-all">Add Customer</button>
               </div>
-              <div>
-                <label className="text-[9px] font-black uppercase text-slate-500">Address</label>
-                <input type="text" className="w-full border p-2 text-[11px] font-bold outline-none" value={custForm.address} onChange={e => setCustForm({ ...custForm, address: e.target.value })} />
-              </div>
-            </div>
-            <button onClick={addCustomer} className="w-full bg-rose-600 text-white py-3 font-black uppercase text-[10px] shadow-lg hover:bg-rose-700 transition-all">Add Customer</button>
-          </div>
-        )}
+            )}
           </div>
         </div>
       </div>
@@ -493,7 +498,12 @@ function DailySaleView({ customers, catalog, onCancel }) {
       <div className="bg-slate-800 px-4 py-2 flex justify-between items-center text-white shrink-0 shadow-lg"><h1 className="text-[14px] font-black uppercase flex items-center gap-2"><Monitor className="w-3.5 h-3.5 text-rose-500" /> DAILY SALE ANALYSIS</h1><button onClick={onCancel} className="p-1 hover:bg-rose-600"><X className="w-4 h-4" /></button></div>
       <div className="flex-1 p-3 flex flex-col gap-3 overflow-hidden">
         <section className="bg-white border border-slate-400 p-3 shadow-md flex flex-col gap-2 shrink-0">
-          <div className="flex items-end gap-3"><div className="w-[350px]"><SearchableSelect label="Party/Item filter" options={[...customers.map(c => c.name), ...catalog.map(i => i.itemName)]} value={formData.target} onChange={val => setFormData({...formData, target: val})} /></div><button onClick={handleGo} className="bg-slate-800 text-white px-8 h-[28px] text-[10px] font-black uppercase hover:bg-rose-600 shadow-md transition-all">Apply</button></div>
+          <div className="flex items-end gap-3">
+            <div className="w-[350px]">
+              <SearchableSelect label="Party/Item filter" options={[...customers.map(c => c.name), ...catalog.map(i => i.itemName)]} value={formData.target} onChange={val => setFormData({...formData, target: val})} />
+            </div>
+            <button onClick={handleGo} className="bg-slate-800 text-white px-8 h-[28px] text-[10px] font-black uppercase hover:bg-rose-600 shadow-md transition-all">Apply</button>
+          </div>
           <div className="flex gap-4">
             <div className="w-48"><label className="text-[9px] font-black text-slate-500 uppercase block mb-0.5">Start Date</label><input type="date" className="w-full border p-1 text-[11px] font-bold h-[28px]" value={formData.fromDate} onChange={e => setFormData({...formData, fromDate: e.target.value})} /></div>
             <div className="w-48"><label className="text-[9px] font-black text-slate-500 uppercase block mb-0.5">End Date</label><input type="date" className="w-full border p-1 text-[11px] font-bold h-[28px]" value={formData.toDate} onChange={e => setFormData({...formData, toDate: e.target.value})} /></div>
@@ -518,7 +528,7 @@ function DailyTransactionsView({ customerInfo, setCustomerInfo, groups, customer
   const vRef = useRef(null); const cRef = useRef(null); const nRef = useRef(null); const qRef = useRef(null); const rRef = useRef(null); const lRef = useRef(null); const coRef = useRef(null); const pRef = useRef(null); const remRef = useRef(null);
   const filteredCustomers = customers.filter(c => !customerInfo.groupName || c.group === customerInfo.groupName);
   const remAdvance = advanceStore[customerInfo.customerName]?.balance || 0;
-  const handleCustomerSelect = (name) => { const c = customers.find(x => x.name === name); if (c) setCustomerInfo({ customerName: name, groupName: c.group, contactNo: c.contact, address: c.address }); else setCustomerInfo({ ...customerInfo, customerName: name }); };
+  const handleCustomerSelect = (name) => { const c = customers.find(x => x.name === name); if (c) setCustomerInfo({ customerName: name, groupName: c.group, contactNo: (c.contact || c.phone), address: c.address }); else setCustomerInfo({ ...customerInfo, customerName: name }); };
   const handleKey = (e, next) => { if (e.key === 'Enter') { e.preventDefault(); next?.current?.focus(); } };
 
   return (
@@ -615,12 +625,202 @@ function DailyTransactionsView({ customerInfo, setCustomerInfo, groups, customer
   );
 }
 
+function AdvanceView({ groups, customers, advanceStore, onSaveAdvance, onCancel }) {
+  const [selectedCustomer, setSelectedCustomer] = useState('');
+  const [giveAmt, setGiveAmt] = useState('');
+  const [deductAmt, setDeductAmt] = useState('');
+  const [date, setDate] = useState(new Date().toISOString().split('T')[0]);
+  const [remarks, setRemarks] = useState('');
+
+  const handleSave = () => {
+    const g = parseFloat(giveAmt) || 0;
+    const d = parseFloat(deductAmt) || 0;
+    if (!selectedCustomer) {
+      return;
+    }
+    onSaveAdvance(selectedCustomer, g, d, date, remarks);
+    setGiveAmt('');
+    setDeductAmt('');
+    setRemarks('');
+  };
+
+  return (
+    <div className="flex-1 flex flex-col h-full bg-[#f1f3f5] overflow-hidden">
+      <div className="bg-slate-800 px-4 py-2 flex justify-between items-center text-white shrink-0 shadow-lg">
+        <h1 className="text-[14px] font-black uppercase flex items-center gap-2"><WalletCards className="w-4 h-4 text-rose-500" /> ADVANCE TRACKER</h1>
+        <button onClick={onCancel} className="p-1 hover:bg-rose-600"><X className="w-4 h-4" /></button>
+      </div>
+      <div className="flex-1 flex p-4 gap-4 overflow-hidden">
+        <div className="w-80 bg-white border-2 border-slate-300 p-4 shadow-sm h-fit">
+          <h3 className="text-[10px] font-black uppercase text-slate-500 mb-4">Manage Advance</h3>
+          <div className="space-y-4">
+            <SearchableSelect 
+              label="Customer" 
+              options={customers.map(c => c.name)} 
+              value={selectedCustomer} 
+              onChange={setSelectedCustomer} 
+            />
+            <div>
+              <label className="text-[9px] font-black uppercase text-slate-400">Give Advance</label>
+              <input type="number" className="w-full border p-2 h-10 font-bold outline-none" value={giveAmt} onChange={e => setGiveAmt(e.target.value)} />
+            </div>
+            <div>
+              <label className="text-[9px] font-black uppercase text-slate-400">Deduct Advance</label>
+              <input type="number" className="w-full border p-2 h-10 font-bold outline-none" value={deductAmt} onChange={e => setDeductAmt(e.target.value)} />
+            </div>
+            <div>
+              <label className="text-[9px] font-black uppercase text-slate-400">Date</label>
+              <input type="date" className="w-full border p-2 h-10 font-bold outline-none" value={date} onChange={e => setDate(e.target.value)} />
+            </div>
+            <div>
+              <label className="text-[9px] font-black uppercase text-slate-400">Remarks</label>
+              <input type="text" className="w-full border p-2 h-10 font-bold outline-none" value={remarks} onChange={e => setRemarks(e.target.value)} />
+            </div>
+            <button onClick={handleSave} className="w-full bg-emerald-600 text-white py-3 font-black uppercase text-[10px] hover:bg-emerald-700 transition-all">Update Ledger</button>
+          </div>
+        </div>
+        <div className="flex-1 bg-white border-2 border-slate-300 shadow-sm overflow-hidden flex flex-col">
+          <div className="bg-slate-100 p-2 border-b font-black text-[9px] uppercase text-slate-500">Advance Ledger</div>
+          <div className="flex-1 overflow-auto">
+            <table className="w-full text-left text-[11px]">
+              <thead className="bg-slate-50 sticky top-0 uppercase text-[9px] font-black">
+                <tr>
+                  <th className="p-3">Customer</th>
+                  <th className="p-3 text-right">Given</th>
+                  <th className="p-3 text-right">Deducted</th>
+                  <th className="p-3 text-right">Balance</th>
+                </tr>
+              </thead>
+              <tbody>
+                {customers.map(c => {
+                  const adv = advanceStore[c.name] || { given: 0, deducted: 0, balance: 0 };
+                  return (
+                    <tr key={c.name} className="border-b hover:bg-slate-50">
+                      <td className="p-3 font-bold text-slate-800">{String(c.name)}</td>
+                      <td className="p-3 text-right text-emerald-600 font-bold">₹{adv.given.toFixed(2)}</td>
+                      <td className="p-3 text-right text-rose-600 font-bold">₹{adv.deducted.toFixed(2)}</td>
+                      <td className="p-3 text-right font-black">₹{adv.balance.toFixed(2)}</td>
+                    </tr>
+                  );
+                })}
+              </tbody>
+            </table>
+          </div>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+function SaalaView({ saalaPeople, setSaalaPeople, saalaPayments, setSaalaPayments, onCancel, showNotify }) {
+  const [newSaala, setNewSaala] = useState('');
+  const [paymentForm, setPaymentForm] = useState({ saalaId: '', amount: '', date: new Date().toISOString().split('T')[0], remarks: '' });
+
+  const addSaala = async () => {
+    const name = String(newSaala || '').trim();
+    if (!name) return;
+    try {
+      const created = await api.createSaala(name);
+      setSaalaPeople([...saalaPeople, created]);
+      setNewSaala('');
+      showNotify('SAALA added', 'success');
+    } catch (e) {
+      showNotify(`Failed: ${e.message}`, 'error');
+    }
+  };
+
+  const addPayment = async () => {
+    const amount = parseFloat(paymentForm.amount) || 0;
+    if (!paymentForm.saalaId || amount <= 0) return;
+    try {
+      const created = await api.createSaalaPayment({
+        saalaId: paymentForm.saalaId,
+        amount,
+        date: paymentForm.date,
+        remarks: paymentForm.remarks
+      });
+      setSaalaPayments([...saalaPayments, created]);
+      setPaymentForm({ saalaId: '', amount: '', date: new Date().toISOString().split('T')[0], remarks: '' });
+      showNotify('Payment recorded', 'success');
+    } catch (e) {
+      showNotify(`Failed: ${e.message}`, 'error');
+    }
+  };
+
+  return (
+    <div className="flex-1 flex flex-col h-full bg-[#f1f3f5] overflow-hidden">
+      <div className="bg-slate-800 px-4 py-2 flex justify-between items-center text-white shrink-0">
+        <h1 className="text-[14px] font-black uppercase flex items-center gap-2"><Landmark className="w-4 h-4 text-rose-500" /> SAALA (CREDIT) MANAGEMENT</h1>
+        <button onClick={onCancel} className="p-1 hover:bg-rose-600"><X className="w-4 h-4" /></button>
+      </div>
+      <div className="flex-1 flex p-4 gap-4 overflow-hidden">
+        <div className="w-80 bg-white border-2 border-slate-300 p-4 shadow-sm h-fit space-y-4">
+          <div>
+            <h3 className="text-[10px] font-black uppercase text-slate-500 mb-4">Add SAALA</h3>
+            <input type="text" className="w-full border p-2 h-10 font-bold outline-none" value={newSaala} onChange={e => setNewSaala(e.target.value)} placeholder="SAALA Name" />
+            <button onClick={addSaala} className="w-full bg-slate-800 text-white py-3 font-black uppercase text-[10px] hover:bg-rose-600 transition-all mt-2">Add SAALA</button>
+          </div>
+          <div>
+            <h3 className="text-[10px] font-black uppercase text-slate-500 mb-4">Record Payment</h3>
+            <select className="w-full border p-2 h-10 font-bold outline-none mb-2" value={paymentForm.saalaId} onChange={e => setPaymentForm({...paymentForm, saalaId: e.target.value})}>
+              <option value="">Select SAALA</option>
+              {saalaPeople.map(s => <option key={s.id} value={s.id}>{s.name}</option>)}
+            </select>
+            <input type="number" className="w-full border p-2 h-10 font-bold outline-none mb-2" value={paymentForm.amount} onChange={e => setPaymentForm({...paymentForm, amount: e.target.value})} placeholder="Amount" />
+            <input type="date" className="w-full border p-2 h-10 font-bold outline-none mb-2" value={paymentForm.date} onChange={e => setPaymentForm({...paymentForm, date: e.target.value})} />
+            <input type="text" className="w-full border p-2 h-10 font-bold outline-none mb-2" value={paymentForm.remarks} onChange={e => setPaymentForm({...paymentForm, remarks: e.target.value})} placeholder="Remarks" />
+            <button onClick={addPayment} className="w-full bg-emerald-600 text-white py-3 font-black uppercase text-[10px] hover:bg-emerald-700 transition-all">Record Payment</button>
+          </div>
+        </div>
+        <div className="flex-1 bg-white border-2 border-slate-300 shadow-sm overflow-hidden flex flex-col">
+          <div className="bg-slate-100 p-2 border-b font-black text-[9px] uppercase text-slate-500">SAALA Payments</div>
+          <div className="flex-1 overflow-auto">
+            <table className="w-full text-left text-[11px]">
+              <thead className="bg-slate-50 sticky top-0 uppercase text-[9px] font-black">
+                <tr>
+                  <th className="p-3">SAALA</th>
+                  <th className="p-3">Date</th>
+                  <th className="p-3 text-right">Amount</th>
+                  <th className="p-3">Remarks</th>
+                </tr>
+              </thead>
+              <tbody>
+                {saalaPayments.map(p => (
+                  <tr key={p.id} className="border-b hover:bg-slate-50">
+                    <td className="p-3 font-bold text-slate-800">{String(p.saalaName || '')}</td>
+                    <td className="p-3">{String(p.date)}</td>
+                    <td className="p-3 text-right font-black text-emerald-600">₹{Number(p.amount || 0).toFixed(2)}</td>
+                    <td className="p-3">{String(p.remarks || '')}</td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+        </div>
+      </div>
+    </div>
+  );
+}
+
 // --- MAIN APPLICATION SHELL ---
 
 export default function App() {
+  const [isAuthenticated, setIsAuthenticated] = useState(false);
+  const [checkingAuth, setCheckingAuth] = useState(true);
+
+  useEffect(() => {
+    const token = localStorage.getItem("token");
+    if (token) {
+      setIsAuthenticated(true);
+    }
+    setCheckingAuth(false);
+  }, []);
+
   const [activeSection, setActiveSection] = useState('daily');
   const [notification, setNotification] = useState({ message: '', type: 'info' });
   const [itemForm, setItemForm] = useState({ itemCode: '', itemName: '' });
+
+  
 
   const [groupPattiForm, setGroupPattiForm] = useState({
     fromDate: new Date().toISOString().split('T')[0],
@@ -664,6 +864,32 @@ export default function App() {
   const [currentEntry, setCurrentEntry] = useState({ date: new Date().toISOString().split('T')[0], vehicle: '', itemCode: '', itemName: '', qty: '', rate: '', laguage: '', coolie: '', paidAmt: '', remarks: '' });
   const [items, setItems] = useState([]);
   const [commissionPct, setCommissionPct] = useState(12);
+
+  // 🔐 Auth check on app load
+  useEffect(() => {
+    const token = localStorage.getItem("token");
+
+    // 🚫 No token → directly logout
+    if (!token) {
+      setIsAuthenticated(false);
+      setCheckingAuth(false);
+      return;
+    }
+
+    // ✅ Verify token ONCE with backend
+    api
+      .me()
+      .then(() => {
+        setIsAuthenticated(true);
+      })
+      .catch(() => {
+        localStorage.removeItem("token");
+        setIsAuthenticated(false);
+      })
+      .finally(() => {
+        setCheckingAuth(false);
+      });
+  }, []);
 
   const showNotify = (m, t = 'info') => { setNotification({ message: m, type: t }); setTimeout(() => setNotification({ message: '', type: 'info' }), 3000); };
 
@@ -1037,8 +1263,45 @@ export default function App() {
     </div>
   );
 
+  const handleLogout = () => {
+    localStorage.removeItem("token");
+    setIsAuthenticated(false);
+  };
+
+  // ⏳ Loading state
+  if (checkingAuth) {
+    return (
+      <div className="h-screen flex items-center justify-center text-slate-500">
+        Checking authentication...
+      </div>
+    );
+  }
+
+  // 🔒 Not logged in → show login
+  if (!isAuthenticated) {
+    return (
+      <Login
+        onLoginSuccess={() => {
+          setIsAuthenticated(true);
+        }}
+      />
+    );
+  }
+
+
+  // ✅ Logged in → show EXISTING APP UI
   return (
     <div className="h-screen flex flex-col bg-white overflow-hidden text-slate-900 font-sans">
+      {/* Optional global logout button */}
+      <div className="fixed top-2 right-2 z-50">
+        <button
+          onClick={handleLogout}
+          className="bg-rose-600 text-white px-3 py-1 text-xs font-black uppercase"
+        >
+          Logout
+        </button>
+      </div>
+
       <Toast message={notification.message} type={notification.type} onClose={() => setNotification({ message: '', type: 'info' })} />
       <nav className="h-10 bg-slate-900 flex items-center px-4 shrink-0 z-[4000] border-b border-black/50 shadow-2xl">
         <div className="flex items-center gap-6 h-full">
@@ -1128,7 +1391,7 @@ export default function App() {
       </nav>
 
       <div className="flex-1 overflow-hidden flex flex-col bg-slate-100 relative">
-        {activeSection === 'daily' && <DailyTransactionsView customerInfo={customerInfo} setCustomerInfo={setCustomerInfo} groups={groups} customers={customers} catalog={catalog} vehicles={vehicles} onOpenQuickAdd={(m) => { if (m === 'item') setActiveSection('item-reg'); else setActiveSection('party'); }} currentEntry={currentEntry} setCurrentEntry={setCurrentEntry} items={items} onAddItem={handleAddItem} onRemoveItem={(id) => setItems(items.filter(i => i.id !== id))} onEditItem={(item) => setCurrentEntry(item)} summary={summary} onSaveRecord={async () => {
+        {activeSection === 'daily'  && groups && customers && vehicles && catalog &&  <DailyTransactionsView customerInfo={customerInfo} setCustomerInfo={setCustomerInfo} groups={groups} customers={customers} catalog={catalog} vehicles={vehicles} onOpenQuickAdd={(m) => { if (m === 'item') setActiveSection('item-reg'); else setActiveSection('party'); }} currentEntry={currentEntry} setCurrentEntry={setCurrentEntry} items={items} onAddItem={handleAddItem} onRemoveItem={(id) => setItems(items.filter(i => i.id !== id))} onEditItem={(item) => setCurrentEntry(item)} summary={summary} onSaveRecord={async () => {
           if(!customerInfo.customerName) return showNotify("Transaction save failed: Select client", "error");
           const selected = customers.find(c => c.name === customerInfo.customerName);
           if (!selected?.id) return showNotify("Transaction save failed: Unknown customer", "error");

@@ -1,23 +1,21 @@
-from sqlalchemy.orm import Session
-from sqlalchemy import func
 from datetime import date
+from sqlalchemy.orm import Session
 
 from app.models.collection_item import CollectionItem
 from app.models.settlement import Settlement
 from app.models.settlement_item import SettlementItem
 from app.models.farmer import Farmer
 from app.models.advance import Advance
-from app.services.audit_service import log_audit
+from app.models.vendor import Vendor
+
 from app.utils.serializer import serialize_model
-from backend.app.models import farmer, vendor
 from app.services.sms_service import send_sms
 from app.services.sms_templates import settlement_template
 from app.services.pdf_service import generate_settlement_pdf
-from backend.app.models import settlement_item
 
 
+DEFAULT_ADVANCE_DEDUCTION_PERCENT = 20  # client requirement
 
-before_farmer = serialize_model(farmer)
 
 def calculate_settlement(
     db: Session,
@@ -25,31 +23,69 @@ def calculate_settlement(
     farmer_id: int,
     date_from: date,
     date_to: date,
-    override_advance_deduction=None,
-    user_id: int | None = None
+    override_advance_percent: float | None = None,
+    user_id: int | None = None,
 ):
-    # 1️⃣ Fetch collection items
-    items = db.query(CollectionItem).filter(
-        CollectionItem.vendor_id == vendor_id,
-        CollectionItem.farmer_id == farmer_id,
-        CollectionItem.date >= date_from,
-        CollectionItem.date <= date_to
-    ).all()
+    """
+    Generates settlement for a farmer within a date range.
+    """
+
+    # -------------------------------------------------
+    # 1️⃣ Fetch farmer
+    # -------------------------------------------------
+    farmer = (
+        db.query(Farmer)
+        .filter(Farmer.id == farmer_id, Farmer.vendor_id == vendor_id)
+        .first()
+    )
+
+    if not farmer:
+        raise ValueError("Farmer not found")
+
+    before_farmer = serialize_model(farmer)
+
+    # -------------------------------------------------
+    # 2️⃣ Fetch vendor
+    # -------------------------------------------------
+    vendor = (
+        db.query(Vendor)
+        .filter(Vendor.id == vendor_id)
+        .first()
+    )
+
+    if not vendor:
+        raise ValueError("Vendor not found")
+
+    # -------------------------------------------------
+    # 3️⃣ Fetch collection items
+    # -------------------------------------------------
+    items = (
+        db.query(CollectionItem)
+        .filter(
+            CollectionItem.vendor_id == vendor_id,
+            CollectionItem.farmer_id == farmer_id,
+            CollectionItem.date >= date_from,
+            CollectionItem.date <= date_to,
+        )
+        .all()
+    )
 
     if not items:
         raise ValueError("No collection data found for given period")
 
-    # 2️⃣ Totals
-    total_qty = sum(item.qty_kg for item in items)
-    total_amount = sum(item.line_total for item in items)
+    # -------------------------------------------------
+    # 4️⃣ Totals
+    # -------------------------------------------------
+    total_qty = sum(i.qty_kg for i in items)
+    total_amount = sum(i.line_total for i in items)
 
-    total_labour = sum(item.total_labour or 0 for item in items)
-    total_coolie = sum(item.coolie_cost or 0 for item in items)
-    total_transport = sum(item.transport_cost or 0 for item in items)
+    total_labour = sum(i.total_labour or 0 for i in items)
+    total_coolie = sum(i.coolie_cost or 0 for i in items)
+    total_transport = sum(i.transport_cost or 0 for i in items)
 
-    # 3️⃣ Commission logic
-    farmer = db.query(Farmer).filter(Farmer.id == farmer_id).first()
-
+    # -------------------------------------------------
+    # 5️⃣ Commission logic
+    # -------------------------------------------------
     if farmer.commission_percent is not None:
         commission_percent = farmer.commission_percent
     elif farmer.group and farmer.group.commission_percent is not None:
@@ -59,15 +95,22 @@ def calculate_settlement(
 
     total_commission = (total_amount * commission_percent) / 100
 
-    # 4️⃣ Advance deduction
-    DEFAULT_ADVANCE_DEDUCTION_PERCENT = 20
+    # -------------------------------------------------
+    # 6️⃣ Advance deduction logic (PERCENT-BASED)
+    # -------------------------------------------------
+    deduction_percent = (
+        override_advance_percent
+        if override_advance_percent is not None
+        else DEFAULT_ADVANCE_DEDUCTION_PERCENT
+    )
 
     advance_balance = farmer.advance_total or 0
-    max_deductible = (total_amount * DEFAULT_ADVANCE_DEDUCTION_PERCENT) / 100
-
+    max_deductible = (total_amount * deduction_percent) / 100
     advance_deducted = min(advance_balance, max_deductible)
 
-    # 5️⃣ Net payable
+    # -------------------------------------------------
+    # 7️⃣ Net payable
+    # -------------------------------------------------
     net_payable = (
         total_amount
         - total_commission
@@ -77,7 +120,9 @@ def calculate_settlement(
         - advance_deducted
     )
 
-    # 6️⃣ Create settlement record
+    # -------------------------------------------------
+    # 8️⃣ Create settlement
+    # -------------------------------------------------
     settlement = Settlement(
         vendor_id=vendor_id,
         farmer_id=farmer_id,
@@ -91,78 +136,65 @@ def calculate_settlement(
         commission_percent=commission_percent,
         total_commission=total_commission,
         advance_deducted=advance_deducted,
-        net_payable=net_payable
+        net_payable=net_payable,
     )
-    
 
     db.add(settlement)
     db.flush()  # get settlement.id
 
-    # 7️⃣ Link settlement items
+    # -------------------------------------------------
+    # 9️⃣ Settlement items
+    # -------------------------------------------------
     for item in items:
         db.add(
             SettlementItem(
                 settlement_id=settlement.id,
                 collection_item_id=item.id,
-                line_total=item.line_total
+                line_total=item.line_total,
             )
         )
 
-    # 8️⃣ Update advance ledger
+    # -------------------------------------------------
+    # 🔟 Advance ledger update
+    # -------------------------------------------------
     if advance_deducted > 0:
         db.add(
             Advance(
                 vendor_id=vendor_id,
                 farmer_id=farmer_id,
                 amount=-advance_deducted,
-                note=f"Deducted in settlement {date_from} to {date_to}"
+                note=f"Advance adjusted in settlement {date_from} to {date_to}",
             )
         )
         farmer.advance_total -= advance_deducted
-        
+
+    # -------------------------------------------------
+    # 1️⃣1️⃣ PDF generation
+    # -------------------------------------------------
     pdf_url = generate_settlement_pdf(
         settlement=settlement,
         farmer=farmer,
         vendor=vendor,
-        settlement_items=settlement_item
+        settlement_items=items,
     )
 
     settlement.pdf_url = pdf_url
 
+    # -------------------------------------------------
+    # 1️⃣2️⃣ Commit transaction
+    # -------------------------------------------------
     db.commit()
     db.refresh(settlement)
-    
-    # 🧾 Audit: Settlement created
-    log_audit(
-        db=db,
-        vendor_id=vendor_id,
-        user_id=None,  # will add later from route
-        table_name="settlements",
-        record_id=settlement.id,
-        action="INSERT",
-        before_data=None,
-        after_data=serialize_model(settlement)
-    )
 
-    # 🧾 Audit: Farmer advance updated
-    log_audit(
-        db=db,
-        vendor_id=vendor_id,
-        user_id=None,
-        table_name="farmers",
-        record_id=farmer.id,
-        action="UPDATE",
-        before_data=before_farmer,
-        after_data=serialize_model(farmer)
-    )
-    
-    # 📩 Send settlement SMS
+    # -------------------------------------------------
+    # 1️⃣3️⃣ SMS notification
+    # -------------------------------------------------
     message = settlement_template(
         farmer_name=farmer.name,
         date_from=str(date_from),
         date_to=str(date_to),
         net_payable=float(net_payable),
-        advance_deducted=float(advance_deducted)
+        advance_deducted=float(advance_deducted),
     )
 
     send_sms(
@@ -171,8 +203,7 @@ def calculate_settlement(
         farmer_id=farmer.id,
         phone=farmer.phone,
         message=message,
-        sms_type="settlement"
+        sms_type="settlement",
     )
-
 
     return settlement
