@@ -1,18 +1,22 @@
-﻿import React, { useEffect, useState, useMemo, useRef } from "react";
+import React, { useState, useMemo, useEffect, useRef } from 'react';
+import useAuth from './hooks/useAuth';
+import Login from './pages/Login';
+import { Flower2, Receipt, FolderPlus, PackagePlus, Users, Plus, Trash2, Save, UserPlus, Check, X, ChevronDown, Calculator, Sparkles, Monitor, Database, Activity, ArrowRight, Truck, Clock, List, ChevronLeft, ChevronRight, Info, AlertCircle, CheckCircle2, XCircle, Printer, Search, Edit2, MessageSquare, FileText, LayoutPanelTop, BarChart3, Settings2, Play, MoreHorizontal, WalletCards, UserCheck, History, Landmark, ArrowDownToLine, ArrowUpFromLine, Coins, ArrowDownRight, ArrowUpRight, FileBarChart, Layers, Send, Smartphone } from 'lucide-react';
+import SearchableSelect from './components/shared/SearchableSelect';
+import Toast from './components/shared/Toast';
+import { api } from './utils/api';
+import ReportsWindow from './components/reports/ReportsView';
+import DailySaleView from './components/reports/DailySaleView';
+import PartyDetailsView from './components/utility/PartyDetailsView';
+import AdvanceTrackerView from './components/utility/AdvanceTrackerView';
+import { SilkSummaryView } from './components/utility/SilkSummaryView';
+import SaalaView from './components/saala/SaalaView';
+import SmsView from './components/utility/SmsView';
+import { DEFAULT_STATES, resetComponentState } from './utils/stateManager';
 
-import {
-  Flower2, Receipt, FolderPlus, PackagePlus, Users, Plus, Trash2, Save,
-  UserPlus, X, Edit2, Printer, Truck, WalletCards, Coins, Activity, Sparkles,
-  Database, Monitor, Smartphone, Send, Settings2,
-  ChevronDown, Layers, FileBarChart, UserCheck, List, BarChart3, 
-  ArrowRight, Search, Landmark
-} from "lucide-react";
+// --- SHARED UI COMPONENTS ---
 
-import SearchableSelect from "./components/shared/SearchableSelect";
-import Toast from "./components/shared/Toast";
-import Login from "./components/auth/Login";
-import ReportsWindow from "./components/reports/ReportsView";
-import api from "./config/api";
+// ...existing code...
 
 // --- CORE FUNCTIONAL MODULES ---
 
@@ -29,6 +33,11 @@ function GroupCustomerRegistryForm({ title = 'ADD GROUP', initialTab = 'group', 
       setGroups(prev => [...prev, created]);
       setGroupName('');
       showNotify?.('Group added successfully', 'success');
+      
+      // Return focus to group name input field
+      setTimeout(() => {
+        document.querySelector('input[placeholder="Enter group name"]')?.focus();
+      }, 100);
     } catch (e) {
       showNotify?.(`Group add failed: ${e.message}`, 'error');
     }
@@ -50,59 +59,64 @@ function GroupCustomerRegistryForm({ title = 'ADD GROUP', initialTab = 'group', 
         address: custForm.address,
       });
 
-      setCustomers(prev => [...prev, { id: created.id, group: groupName, name: created.name, contact: (created.contact || created.phone), address: created.address }]);
-      setCustForm({ groupName: '', name: '', contact: '', address: '' });
+      setCustomers(prev => [...prev, { id: created.id, group: groupName, name: created.name, contact: created.contact, address: created.address }]);
+      setCustForm({ groupName: custForm.groupName, name: '', contact: '', address: '' });
       showNotify?.('Customer added successfully', 'success');
+      
+      // Return focus to customer name input field (keep group selection)
+      setTimeout(() => {
+        document.querySelector('input[placeholder="Enter customer name"]')?.focus();
+      }, 100);
     } catch (e) {
       showNotify?.(`Customer add failed: ${e.message}`, 'error');
     }
   };
 
   return (
-    <div className="flex-1 flex flex-col h-full bg-[#f1f3f5] overflow-hidden">
-      <div className="bg-slate-800 px-4 py-2 flex justify-between items-center text-white shrink-0 shadow-lg">
-        <h1 className="text-[14px] font-black uppercase flex items-center gap-2"><FolderPlus className="w-4 h-4 text-rose-500" /> {String(title)}</h1>
-        <button onClick={onCancel} className="p-1 hover:bg-rose-600"><X className="w-4 h-4" /></button>
+    <div className="flex-1 flex flex-col h-full bg-slate-100 overflow-hidden">
+      <div className="bg-slate-800 px-5 py-3 flex justify-between items-center text-white shrink-0 shadow-lg">
+        <h1 className="text-base font-bold uppercase flex items-center gap-2.5 tracking-wide"><FolderPlus className="w-5 h-5 text-primary-400" /> {String(title)}</h1>
+        <button onClick={onCancel} className="p-1.5 rounded hover:bg-white/10 transition-colors"><X className="w-5 h-5" /></button>
       </div>
 
-      <div className="p-4 flex-1 overflow-auto">
-        <div className="max-w-[760px] mx-auto bg-white border-2 border-slate-300 shadow-sm overflow-hidden">
-          <div className="bg-white border-b border-slate-200 px-4 py-2 flex gap-2">
-            <button type="button" onClick={() => setTab('group')} className={`px-4 h-8 text-[10px] font-black uppercase border ${tab === 'group' ? 'bg-slate-900 text-white border-slate-900' : 'bg-slate-50 text-slate-700 border-slate-300 hover:bg-slate-100'}`}>Group Addition</button>
-            <button type="button" onClick={() => setTab('customer')} className={`px-4 h-8 text-[10px] font-black uppercase border ${tab === 'customer' ? 'bg-slate-900 text-white border-slate-900' : 'bg-slate-50 text-slate-700 border-slate-300 hover:bg-slate-100'}`}>Customer Addition</button>
+      <div className="p-6 flex-1 overflow-auto">
+        <div className="max-w-[760px] mx-auto bg-white border border-slate-200 shadow-card rounded-sm overflow-hidden">
+          <div className="bg-slate-50 border-b border-slate-200 px-5 py-3 flex gap-3">
+            <button type="button" onClick={() => setTab('group')} className={`px-5 h-10 text-sm font-semibold uppercase border rounded-sm transition-all ${tab === 'group' ? 'bg-slate-800 text-white border-slate-800 shadow-sm' : 'bg-white text-slate-600 border-slate-300 hover:bg-slate-100 hover:border-slate-400'}`}>Group Addition</button>
+            <button type="button" onClick={() => setTab('customer')} className={`px-5 h-10 text-sm font-semibold uppercase border rounded-sm transition-all ${tab === 'customer' ? 'bg-slate-800 text-white border-slate-800 shadow-sm' : 'bg-white text-slate-600 border-slate-300 hover:bg-slate-100 hover:border-slate-400'}`}>Customer Addition</button>
           </div>
 
-          <div className="p-4">
-            {tab === 'group' && (
-              <div className="space-y-4">
-                <div>
-                  <label className="text-[9px] font-black uppercase text-slate-500">Group Name</label>
-                  <input type="text" className="w-full border p-2 text-[11px] font-bold outline-none" value={groupName} onChange={e => setGroupName(e.target.value)} />
-                </div>
-                <button onClick={addGroup} className="w-full bg-rose-600 text-white py-3 font-black uppercase text-[10px] shadow-lg hover:bg-rose-700 transition-all">Add Group</button>
-              </div>
-            )}
+          <div className="p-5">
+        {tab === 'group' && (
+          <div className="space-y-5">
+            <div>
+              <label className="text-xs font-semibold uppercase text-slate-600 tracking-wide block mb-1.5">Group Name</label>
+              <input type="text" className="w-full border border-slate-300 rounded-sm px-3 py-2.5 text-sm font-medium outline-none focus:border-primary-500 focus:ring-2 focus:ring-primary-50 transition-all" style={{height: '42px'}} value={groupName} onChange={e => setGroupName(e.target.value)} placeholder="Enter group name" />
+            </div>
+            <button onClick={addGroup} className="w-full bg-primary-600 text-white py-3 font-semibold uppercase text-sm shadow-md hover:bg-primary-700 rounded-sm transition-all" style={{height: '44px'}}>Add Group</button>
+          </div>
+        )}
 
-            {tab === 'customer' && (
-              <div className="space-y-4">
-                <SearchableSelect label="Target Group" options={groups.map(g => g.name)} value={custForm.groupName} onChange={(val) => setCustForm({ ...custForm, groupName: val })} placeholder="Select group" />
-                <div>
-                  <label className="text-[9px] font-black uppercase text-slate-500">Customer Name</label>
-                  <input type="text" className="w-full border p-2 text-[11px] font-bold outline-none" value={custForm.name} onChange={e => setCustForm({ ...custForm, name: e.target.value })} />
-                </div>
-                <div className="grid grid-cols-2 gap-3">
-                  <div>
-                    <label className="text-[9px] font-black uppercase text-slate-500">Phone</label>
-                    <input type="text" className="w-full border p-2 text-[11px] font-bold outline-none" value={custForm.contact} onChange={e => setCustForm({ ...custForm, contact: e.target.value })} />
-                  </div>
-                  <div>
-                    <label className="text-[9px] font-black uppercase text-slate-500">Address</label>
-                    <input type="text" className="w-full border p-2 text-[11px] font-bold outline-none" value={custForm.address} onChange={e => setCustForm({ ...custForm, address: e.target.value })} />
-                  </div>
-                </div>
-                <button onClick={addCustomer} className="w-full bg-rose-600 text-white py-3 font-black uppercase text-[10px] shadow-lg hover:bg-rose-700 transition-all">Add Customer</button>
+        {tab === 'customer' && (
+          <div className="space-y-5">
+            <SearchableSelect label="Target Group" options={groups.map(g => g.name)} value={custForm.groupName} onChange={(val) => setCustForm({ ...custForm, groupName: val })} placeholder="Select group" />
+            <div>
+              <label className="text-xs font-semibold uppercase text-slate-600 tracking-wide block mb-1.5">Customer Name</label>
+              <input type="text" className="w-full border border-slate-300 rounded-sm px-3 py-2.5 text-sm font-medium outline-none focus:border-primary-500 focus:ring-2 focus:ring-primary-50 transition-all" style={{height: '42px'}} value={custForm.name} onChange={e => setCustForm({ ...custForm, name: e.target.value })} placeholder="Enter customer name" />
+            </div>
+            <div className="grid grid-cols-2 gap-4">
+              <div>
+                <label className="text-xs font-semibold uppercase text-slate-600 tracking-wide block mb-1.5">Phone</label>
+                <input type="text" className="w-full border border-slate-300 rounded-sm px-3 py-2.5 text-sm font-medium outline-none focus:border-primary-500 focus:ring-2 focus:ring-primary-50 transition-all" style={{height: '42px'}} value={custForm.contact} onChange={e => setCustForm({ ...custForm, contact: e.target.value })} placeholder="Phone number" />
               </div>
-            )}
+              <div>
+                <label className="text-xs font-semibold uppercase text-slate-600 tracking-wide block mb-1.5">Address</label>
+                <input type="text" className="w-full border border-slate-300 rounded-sm px-3 py-2.5 text-sm font-medium outline-none focus:border-primary-500 focus:ring-2 focus:ring-primary-50 transition-all" style={{height: '42px'}} value={custForm.address} onChange={e => setCustForm({ ...custForm, address: e.target.value })} placeholder="Address" />
+              </div>
+            </div>
+            <button onClick={addCustomer} className="w-full bg-primary-600 text-white py-3 font-semibold uppercase text-sm shadow-md hover:bg-primary-700 rounded-sm transition-all" style={{height: '44px'}}>Add Customer</button>
+          </div>
+        )}
           </div>
         </div>
       </div>
@@ -112,19 +126,19 @@ function GroupCustomerRegistryForm({ title = 'ADD GROUP', initialTab = 'group', 
 
 function ItemRegistryForm({ form, setForm, onSave, onCancel }) {
   return (
-    <div className="flex-1 flex flex-col h-full bg-[#f1f3f5] overflow-hidden">
-      <div className="bg-slate-800 px-4 py-2 flex justify-between items-center text-white shrink-0 shadow-lg">
-        <h1 className="text-[14px] font-black uppercase flex items-center gap-2"><PackagePlus className="w-4 h-4 text-rose-500" /> NEW ITEM</h1>
-        <button onClick={onCancel} className="p-1 hover:bg-rose-600"><X className="w-4 h-4" /></button>
+    <div className="flex-1 flex flex-col h-full bg-slate-100 overflow-hidden">
+      <div className="bg-slate-800 px-5 py-3 flex justify-between items-center text-white shrink-0 shadow-lg">
+        <h1 className="text-base font-bold uppercase flex items-center gap-2.5 tracking-wide"><PackagePlus className="w-5 h-5 text-primary-400" /> NEW ITEM</h1>
+        <button onClick={onCancel} className="p-1.5 rounded hover:bg-white/10 transition-colors"><X className="w-5 h-5" /></button>
       </div>
-      <div className="p-4 flex-1 overflow-auto">
-        <div className="max-w-[560px] mx-auto bg-white border-2 border-slate-300 shadow-sm p-4 space-y-4">
+      <div className="p-6 flex-1 overflow-auto">
+        <div className="max-w-[560px] mx-auto bg-white border border-slate-200 shadow-card rounded-sm p-6 space-y-5">
           <div>
-            <label className="text-[9px] font-black uppercase text-slate-500">Code</label>
-            <input type="text" className="w-full border p-2 text-[11px] font-bold outline-none" value={form.itemCode} onChange={e => setForm({ ...form, itemCode: e.target.value })} />
+            <label className="text-xs font-semibold uppercase text-slate-600 tracking-wide block mb-1.5">Code</label>
+            <input type="text" className="w-full border border-slate-300 rounded-sm px-3 py-2.5 text-sm font-medium outline-none focus:border-primary-500 focus:ring-2 focus:ring-primary-50 transition-all" style={{height: '42px'}} value={form.itemCode} onChange={e => setForm({ ...form, itemCode: e.target.value })} placeholder="Enter item code" />
           </div>
-          <div><label className="text-[9px] font-black uppercase text-slate-500">Product Name</label><input type="text" className="w-full border p-2 text-[11px] font-bold outline-none" value={form.itemName} onChange={e => setForm({...form, itemName: e.target.value})} /></div>
-          <button onClick={onSave} className="w-full bg-emerald-600 text-white py-3 font-black uppercase text-[10px] shadow-lg hover:bg-emerald-700 transition-all">Add to Inventory</button>
+          <div><label className="text-xs font-semibold uppercase text-slate-600 tracking-wide block mb-1.5">Product Name</label><input type="text" className="w-full border border-slate-300 rounded-sm px-3 py-2.5 text-sm font-medium outline-none focus:border-primary-500 focus:ring-2 focus:ring-primary-50 transition-all" style={{height: '42px'}} value={form.itemName} onChange={e => setForm({...form, itemName: e.target.value})} placeholder="Enter product name" /></div>
+          <button onClick={onSave} className="w-full bg-emerald-600 text-white py-3 font-semibold uppercase text-sm shadow-md hover:bg-emerald-700 rounded-sm transition-all" style={{height: '44px'}}>Add to Inventory</button>
         </div>
       </div>
     </div>
@@ -141,22 +155,22 @@ function GroupAdvanceView({ groups, customers, advanceStore, onCancel }) {
   }, [groups, customers, advanceStore]);
 
   return (
-    <div className="flex-1 flex flex-col h-full bg-slate-50 overflow-hidden">
-      <div className="bg-slate-800 px-4 py-2 flex justify-between items-center text-white shrink-0 shadow-lg">
-        <h1 className="text-[14px] font-black uppercase flex items-center gap-2"><WalletCards className="w-4 h-4 text-rose-500" /> GROUP WISE ADVANCE</h1>
-        <button onClick={onCancel} className="p-1 hover:bg-rose-600"><X className="w-4 h-4" /></button>
+    <div className="flex-1 flex flex-col h-full bg-slate-100 overflow-hidden">
+      <div className="bg-slate-800 px-5 py-3 flex justify-between items-center text-white shrink-0 shadow-lg">
+        <h1 className="text-base font-bold uppercase flex items-center gap-2.5 tracking-wide"><WalletCards className="w-5 h-5 text-primary-400" /> GROUP WISE ADVANCE</h1>
+        <button onClick={onCancel} className="p-1.5 rounded hover:bg-white/10 transition-colors"><X className="w-5 h-5" /></button>
       </div>
-      <div className="p-4 flex-1 overflow-auto">
-        <table className="w-full bg-white border-2 border-slate-300 text-[11px] text-left">
-          <thead className="bg-slate-200 sticky top-0 uppercase font-black text-[9px] z-10 border-b-2 border-slate-400">
-            <tr><th className="p-3">Group Name</th><th className="p-3 text-center">Customers</th><th className="p-3 text-right">Advance Aggregate</th></tr>
+      <div className="p-5 flex-1 overflow-auto">
+        <table className="w-full bg-white border border-slate-200 shadow-card text-sm text-left rounded-sm overflow-hidden">
+          <thead className="bg-slate-50 sticky top-0 uppercase font-semibold text-xs z-10 border-b border-slate-200">
+            <tr><th className="px-4 py-3.5 text-slate-600">Group Name</th><th className="px-4 py-3.5 text-center text-slate-600">Customers</th><th className="px-4 py-3.5 text-right text-slate-600">Advance Aggregate</th></tr>
           </thead>
           <tbody>
             {data.map((r, i) => (
-              <tr key={i} className="border-b hover:bg-slate-50 transition-colors">
-                <td className="p-3 font-bold text-slate-800">{String(r.name)}</td>
-                <td className="p-3 text-center text-slate-500">{String(r.count)}</td>
-                <td className="p-3 text-right font-black text-emerald-600">₹{r.balance.toLocaleString()}</td>
+              <tr key={i} className="border-b border-slate-100 hover:bg-slate-50 transition-colors">
+                <td className="px-4 py-3.5 font-semibold text-slate-800">{String(r.name)}</td>
+                <td className="px-4 py-3.5 text-center text-slate-500">{String(r.count)}</td>
+                <td className="px-4 py-3.5 text-right font-bold text-emerald-600">₹{r.balance.toLocaleString()}</td>
               </tr>
             ))}
           </tbody>
@@ -179,22 +193,22 @@ function GroupPaymentView({ groups, customers, ledgerStore, onCancel }) {
   }, [groups, customers, ledgerStore]);
 
   return (
-    <div className="flex-1 flex flex-col h-full bg-slate-50 overflow-hidden">
-      <div className="bg-slate-800 px-4 py-2 flex justify-between items-center text-white shrink-0 shadow-lg">
-        <h1 className="text-[14px] font-black uppercase flex items-center gap-2"><Coins className="w-4 h-4 text-rose-500" /> GROUP WISE PAYMENT</h1>
-        <button onClick={onCancel} className="p-1 hover:bg-rose-600"><X className="w-4 h-4" /></button>
+    <div className="flex-1 flex flex-col h-full bg-slate-100 overflow-hidden">
+      <div className="bg-slate-800 px-5 py-3 flex justify-between items-center text-white shrink-0 shadow-lg">
+        <h1 className="text-base font-bold uppercase flex items-center gap-2.5 tracking-wide"><Coins className="w-5 h-5 text-primary-400" /> GROUP WISE PAYMENT</h1>
+        <button onClick={onCancel} className="p-1.5 rounded hover:bg-white/10 transition-colors"><X className="w-5 h-5" /></button>
       </div>
-      <div className="p-4 flex-1 overflow-auto">
-        <table className="w-full bg-white border-2 border-slate-300 text-[11px] text-left">
-          <thead className="bg-slate-200 sticky top-0 uppercase font-black text-[9px] z-10 border-b-2 border-slate-400">
-            <tr><th className="p-3">Group Name</th><th className="p-3 text-center">Customers</th><th className="p-3 text-right">Payment Aggregate</th></tr>
+      <div className="p-5 flex-1 overflow-auto">
+        <table className="w-full bg-white border border-slate-200 shadow-card text-sm text-left rounded-sm overflow-hidden">
+          <thead className="bg-slate-50 sticky top-0 uppercase font-semibold text-xs z-10 border-b border-slate-200">
+            <tr><th className="px-4 py-3.5 text-slate-600">Group Name</th><th className="px-4 py-3.5 text-center text-slate-600">Customers</th><th className="px-4 py-3.5 text-right text-slate-600">Payment Aggregate</th></tr>
           </thead>
           <tbody>
             {data.map((r, i) => (
-              <tr key={i} className="border-b hover:bg-slate-50 transition-colors">
-                <td className="p-3 font-bold text-slate-800">{String(r.name)}</td>
-                <td className="p-3 text-center text-slate-500">{String(r.count)}</td>
-                <td className="p-3 text-right font-black text-blue-600">₹{r.paid.toLocaleString()}</td>
+              <tr key={i} className="border-b border-slate-100 hover:bg-slate-50 transition-colors">
+                <td className="px-4 py-3.5 font-semibold text-slate-800">{String(r.name)}</td>
+                <td className="px-4 py-3.5 text-center text-slate-500">{String(r.count)}</td>
+                <td className="px-4 py-3.5 text-right font-bold text-primary-600">₹{r.paid.toLocaleString()}</td>
               </tr>
             ))}
           </tbody>
@@ -204,64 +218,18 @@ function GroupPaymentView({ groups, customers, ledgerStore, onCancel }) {
   );
 }
 
-function SmsView({ customers, ledgerStore, onCancel, showNotify }) {
-  const [selectedGroup, setSelectedGroup] = useState('All Groups');
-  const pendingSms = useMemo(() => {
-    const list = customers.filter(c => selectedGroup === 'All Groups' || c.group === selectedGroup);
-    return list.map(c => {
-      const ledger = ledgerStore[c.name] || [];
-      const gross = ledger.reduce((acc, e) => acc + (Number(e.qty)*Number(e.rate)), 0);
-      const paid = ledger.reduce((acc, e) => acc + Number(e.paidAmt || 0), 0);
-      return { ...c, gross, paid, balance: gross - paid };
-    });
-  }, [customers, ledgerStore, selectedGroup]);
 
-  return (
-    <div className="flex-1 flex flex-col h-full bg-[#f4f7f9] overflow-hidden">
-      <div className="bg-slate-800 px-4 py-2 flex justify-between items-center text-white shrink-0">
-        <h1 className="text-[14px] font-black uppercase flex items-center gap-2"><Smartphone className="w-4 h-4 text-rose-500" /> DAILY SMS BROADCAST</h1>
-        <button onClick={onCancel} className="p-1 hover:bg-rose-600"><X className="w-4 h-4" /></button>
-      </div>
-      <div className="p-4 flex-1 flex flex-col gap-4 overflow-hidden">
-        <div className="bg-white border p-4 shadow-sm flex items-center justify-between shrink-0">
-          <div className="flex items-center gap-4">
-            <div className="w-48"><SearchableSelect label="Group Filter" options={['All Groups', ...new Set(customers.map(c => c.group))]} value={selectedGroup} onChange={setSelectedGroup} /></div>
-            <div className="mt-4"><p className="text-[10px] font-black uppercase text-slate-400">Total Recipients: {pendingSms.length}</p></div>
-          </div>
-          <button onClick={() => showNotify("SMS Broadcast Initiated", "success")} className="bg-emerald-600 text-white px-6 py-2 rounded-none font-black uppercase text-[10px] flex items-center gap-2 hover:bg-emerald-700 shadow-lg"><Send className="w-3.5 h-3.5" /> Send Summaries</button>
-        </div>
-        <div className="flex-1 bg-white border-2 border-slate-300 overflow-auto">
-          <table className="w-full text-left text-[11px]">
-            <thead className="bg-slate-50 sticky top-0 uppercase font-black text-[8px] z-10 border-b">
-              <tr><th className="p-3">Customer</th><th className="p-3">Phone</th><th className="p-3">Daily Balance</th><th className="p-3 text-right">Status</th></tr>
-            </thead>
-            <tbody>
-              {pendingSms.map((p, i) => (
-                <tr key={i} className="border-b hover:bg-slate-50">
-                  <td className="p-3 font-bold text-slate-800">{String(p.name)}</td>
-                  <td className="p-3 font-mono text-slate-500">{String(p.contact)}</td>
-                  <td className="p-3 font-black text-rose-600">₹{String(p.balance)}</td>
-                  <td className="p-3 text-right"><span className="bg-amber-50 text-amber-600 text-[8px] font-black uppercase px-2 py-1">Pending</span></td>
-                </tr>
-              ))}
-            </tbody>
-          </table>
-        </div>
-      </div>
-    </div>
-  );
-}
 
 function UtilityPlaceholderView({ title, onCancel }) {
   return (
-    <div className="flex-1 flex flex-col h-full bg-[#f1f3f5] overflow-hidden">
-      <div className="bg-slate-800 px-4 py-2 flex justify-between items-center text-white shrink-0 shadow-lg">
-        <h1 className="text-[14px] font-black uppercase flex items-center gap-2"><Settings2 className="w-4 h-4 text-rose-500" /> {String(title)}</h1>
-        <button onClick={onCancel} className="p-1 hover:bg-rose-600"><X className="w-4 h-4" /></button>
+    <div className="flex-1 flex flex-col h-full bg-slate-100 overflow-hidden">
+      <div className="bg-slate-800 px-5 py-3 flex justify-between items-center text-white shrink-0 shadow-lg">
+        <h1 className="text-base font-bold uppercase flex items-center gap-2.5 tracking-wide"><Settings2 className="w-5 h-5 text-primary-400" /> {String(title)}</h1>
+        <button onClick={onCancel} className="p-1.5 rounded hover:bg-white/10 transition-colors"><X className="w-5 h-5" /></button>
       </div>
       <div className="p-6 flex-1 overflow-auto">
-        <div className="max-w-[720px] mx-auto bg-white border-2 border-slate-300 shadow-sm p-6">
-          <div className="text-[11px] font-bold text-slate-700">This screen is not implemented yet.</div>
+        <div className="max-w-[720px] mx-auto bg-white border border-slate-200 shadow-card rounded-sm p-8">
+          <div className="text-sm font-medium text-slate-600">This screen is not implemented yet.</div>
         </div>
       </div>
     </div>
@@ -286,20 +254,20 @@ function GroupTotalView({ groups, customers, ledgerStore, onCancel }) {
   }, [groups, customers, ledgerStore]);
 
   return (
-    <div className="flex-1 flex flex-col h-full bg-slate-50 overflow-hidden">
-      <div className="bg-slate-800 px-4 py-2 flex justify-between items-center text-white shrink-0 shadow-lg">
-        <h1 className="text-[14px] font-black uppercase flex items-center gap-2"><Activity className="w-4 h-4 text-rose-500" /> GROUP TOTAL REPORT</h1>
-        <button onClick={onCancel} className="p-1 hover:bg-rose-600"><X className="w-4 h-4" /></button>
+    <div className="flex-1 flex flex-col h-full bg-slate-100 overflow-hidden">
+      <div className="bg-slate-800 px-5 py-3 flex justify-between items-center text-white shrink-0 shadow-lg">
+        <h1 className="text-base font-bold uppercase flex items-center gap-2.5 tracking-wide"><Activity className="w-5 h-5 text-primary-400" /> GROUP TOTAL REPORT</h1>
+        <button onClick={onCancel} className="p-1.5 rounded hover:bg-white/10 transition-colors"><X className="w-5 h-5" /></button>
       </div>
-      <div className="p-4 flex-1 overflow-auto">
-        <table className="w-full bg-white border-2 border-slate-300 text-[11px] text-left">
-          <thead className="bg-slate-200 sticky top-0 uppercase text-[9px] font-black z-10 border-b-2">
-            <tr><th className="p-3">Group Name</th><th className="p-3 text-center">Customers</th><th className="p-3 text-right">Total Qty</th><th className="p-3 text-right">Gross Value</th><th className="p-3 text-right text-emerald-700">Total Paid</th><th className="p-3 text-right text-rose-700">Net Dues</th></tr>
+      <div className="p-5 flex-1 overflow-auto">
+        <table className="w-full bg-white border border-slate-200 shadow-card text-sm text-left rounded-sm overflow-hidden">
+          <thead className="bg-slate-50 sticky top-0 uppercase text-xs font-semibold z-10 border-b border-slate-200">
+            <tr><th className="px-4 py-3.5 text-slate-600">Group Name</th><th className="px-4 py-3.5 text-center text-slate-600">Customers</th><th className="px-4 py-3.5 text-right text-slate-600">Total Qty</th><th className="px-4 py-3.5 text-right text-slate-600">Gross Value</th><th className="px-4 py-3.5 text-right text-emerald-700">Total Paid</th><th className="px-4 py-3.5 text-right text-accent-600">Net Dues</th></tr>
           </thead>
           <tbody>
             {reportData.map((row, idx) => (
-              <tr key={idx} className="border-b hover:bg-slate-50 transition-colors">
-                <td className="p-3 font-bold text-slate-800">{String(row.groupName)}</td><td className="p-3 text-center text-slate-500">{String(row.custCount)}</td><td className="p-3 text-right font-black">{String(row.qtyTotal)}</td><td className="p-3 text-right font-black">₹{row.grossTotal.toLocaleString()}</td><td className="p-3 text-right font-black text-emerald-600">₹{row.paidTotal.toLocaleString()}</td><td className="p-3 text-right font-black text-rose-600 bg-rose-50/20">₹{row.balance.toLocaleString()}</td>
+              <tr key={idx} className="border-b border-slate-100 hover:bg-slate-50 transition-colors">
+                <td className="px-4 py-3.5 font-semibold text-slate-800">{String(row.groupName)}</td><td className="px-4 py-3.5 text-center text-slate-500">{String(row.custCount)}</td><td className="px-4 py-3.5 text-right font-bold">{String(row.qtyTotal)}</td><td className="px-4 py-3.5 text-right font-bold">₹{row.grossTotal.toLocaleString()}</td><td className="px-4 py-3.5 text-right font-bold text-emerald-600">₹{row.paidTotal.toLocaleString()}</td><td className="px-4 py-3.5 text-right font-bold text-accent-600 bg-accent-50/30">₹{row.balance.toLocaleString()}</td>
               </tr>
             ))}
           </tbody>
@@ -372,67 +340,67 @@ function GroupPrintingView({ groups, customers, ledgerStore, onCancel }) {
   };
 
   return (
-    <div className="flex-1 flex flex-col h-full bg-[#f4f7f9] overflow-hidden">
-      <div className="bg-slate-800 px-4 py-2 flex justify-between items-center text-white shadow-lg shrink-0">
-        <h1 className="text-[14px] font-black uppercase flex items-center gap-2"><Printer className="w-4 h-4 text-rose-500" /> GROUP PRINTING</h1>
-        <button onClick={onCancel} className="p-1 hover:bg-rose-600"><X className="w-4 h-4" /></button>
+    <div className="flex-1 flex flex-col h-full bg-slate-100 overflow-hidden">
+      <div className="bg-slate-800 px-5 py-3 flex justify-between items-center text-white shadow-lg shrink-0">
+        <h1 className="text-base font-bold uppercase flex items-center gap-2.5 tracking-wide"><Printer className="w-5 h-5 text-primary-400" /> GROUP PRINTING</h1>
+        <button onClick={onCancel} className="p-1.5 rounded hover:bg-white/10 transition-colors"><X className="w-5 h-5" /></button>
       </div>
 
-      <div className="p-4 flex-1 flex flex-col gap-4 overflow-hidden">
-        <section className="bg-white border p-4 shadow-sm shrink-0">
+      <div className="p-5 flex-1 flex flex-col gap-5 overflow-hidden">
+        <section className="bg-white border border-slate-200 p-5 shadow-card rounded-sm shrink-0">
           <div className="grid grid-cols-12 gap-4 items-end">
             <div className="col-span-4">
-              <label className="text-[9px] font-black text-slate-500 uppercase block mb-0.5">From Date</label>
-              <input type="date" className="w-full border p-1 text-[11px] font-bold h-[28px]" value={fromDate} onChange={e => setFromDate(e.target.value)} />
+              <label className="text-xs font-semibold text-slate-600 uppercase tracking-wide block mb-1.5">From Date</label>
+              <input type="date" className="w-full border border-slate-300 rounded-sm px-3 py-2 text-sm font-medium" style={{height: '36px'}} value={fromDate} onChange={e => setFromDate(e.target.value)} />
             </div>
             <div className="col-span-4">
-              <label className="text-[9px] font-black text-slate-500 uppercase block mb-0.5">To Date</label>
-              <input type="date" className="w-full border p-1 text-[11px] font-bold h-[28px]" value={toDate} onChange={e => setToDate(e.target.value)} />
+              <label className="text-xs font-semibold text-slate-600 uppercase tracking-wide block mb-1.5">To Date</label>
+              <input type="date" className="w-full border border-slate-300 rounded-sm px-3 py-2 text-sm font-medium" style={{height: '36px'}} value={toDate} onChange={e => setToDate(e.target.value)} />
             </div>
             <div className="col-span-4">
               <SearchableSelect label="Group Name" options={groups.map(g => g.name)} value={selGroup} onChange={setSelGroup} placeholder="Select group" />
             </div>
 
             <div className="col-span-4">
-              <label className="text-[9px] font-black text-slate-500 uppercase block mb-0.5">Commission (%)</label>
-              <input type="number" className="w-full border p-1 text-[11px] font-bold h-[28px] text-right" value={commissionPct} onChange={e => setCommissionPct(e.target.value)} />
+              <label className="text-xs font-semibold text-slate-600 uppercase tracking-wide block mb-1.5">Commission (%)</label>
+              <input type="number" className="w-full border border-slate-300 rounded-sm px-3 py-2 text-sm font-medium text-right" style={{height: '36px'}} value={commissionPct} onChange={e => setCommissionPct(e.target.value)} />
             </div>
 
-            <div className="col-span-8 flex items-end gap-2">
-              <button onClick={handlePrint} disabled={!selGroup || isPrinting} className="bg-slate-800 text-white px-8 h-8 font-black uppercase text-[10px] flex items-center gap-2 shadow-md disabled:opacity-40"><Printer className="w-3.5 h-3.5" /> Print</button>
-              <button onClick={onCancel} className="bg-slate-200 text-slate-800 px-8 h-8 font-black uppercase text-[10px] border border-slate-300 shadow-md">Cancel</button>
+            <div className="col-span-8 flex items-end gap-3">
+              <button onClick={handlePrint} disabled={!selGroup || isPrinting} className="bg-slate-800 text-white px-8 font-semibold uppercase text-sm flex items-center gap-2 shadow-md disabled:opacity-40 rounded-sm transition-all hover:bg-slate-700" style={{height: '40px'}}><Printer className="w-4 h-4" /> Print</button>
+              <button onClick={onCancel} className="bg-white text-slate-700 px-8 font-semibold uppercase text-sm border border-slate-300 shadow-sm rounded-sm transition-all hover:bg-slate-50" style={{height: '40px'}}>Cancel</button>
             </div>
           </div>
 
-          <div className="mt-2 text-[10px] font-bold text-slate-500 min-h-[14px]">
+          <div className="mt-3 text-sm font-medium text-slate-500 min-h-[20px]">
             {isPrinting ? 'Printing...' : ''}
           </div>
         </section>
 
-        <div className="flex-1 border-2 border-slate-300 overflow-auto p-8 font-serif shadow-inner bg-stone-50">
+        <div className="flex-1 border border-slate-200 overflow-auto p-8 font-serif shadow-card bg-white rounded-sm">
           {(!selGroup || printData.length === 0) ? (
-            <div className="text-center text-slate-300 mt-20 font-sans italic">Select group and click Print to generate patti report</div>
+            <div className="text-center text-slate-400 mt-20 font-sans text-base">Select group and click Print to generate patti report</div>
           ) : (
             <div className="space-y-12 max-w-3xl mx-auto font-sans">
               {printData.map((p, i) => (
-                <div key={i} className="border-b-2 border-dashed border-stone-300 pb-12 last:border-0">
+                <div key={i} className="border-b-2 border-dashed border-slate-200 pb-12 last:border-0">
                   <div className="flex justify-between items-start mb-6">
                     <div>
-                      <h2 className="text-2xl font-black uppercase text-stone-800">{String(p.name)}</h2>
-                      <p className="text-stone-500 text-sm">{String(p.address)}</p>
+                      <h2 className="text-2xl font-bold uppercase text-slate-800">{String(p.name)}</h2>
+                      <p className="text-slate-500 text-sm mt-1">{String(p.address)}</p>
                     </div>
                     <div className="text-right">
-                      <p className="text-[10px] font-sans font-black uppercase text-stone-400">Patti Report</p>
-                      <p className="text-stone-600 text-xs">{String(fromDate)} to {String(toDate)}</p>
+                      <p className="text-xs font-sans font-semibold uppercase text-slate-400">Patti Report</p>
+                      <p className="text-slate-600 text-sm mt-1">{String(fromDate)} to {String(toDate)}</p>
                     </div>
                   </div>
 
-                  <div className="grid grid-cols-5 border border-stone-800">
-                    <div className="p-3 border-r border-stone-800"><p className="text-[8px] uppercase font-sans font-black">Gross</p><p className="text-lg">₹{Number(p.gross || 0).toLocaleString()}</p></div>
-                    <div className="p-3 border-r border-stone-800"><p className="text-[8px] uppercase font-sans font-black">Commission</p><p className="text-lg">₹{Number(p.commission || 0).toLocaleString()}</p></div>
-                    <div className="p-3 border-r border-stone-800"><p className="text-[8px] uppercase font-sans font-black">Net</p><p className="text-lg">₹{Number(p.net || 0).toLocaleString()}</p></div>
-                    <div className="p-3 border-r border-stone-800"><p className="text-[8px] uppercase font-sans font-black">Paid</p><p className="text-lg">₹{Number(p.paid || 0).toLocaleString()}</p></div>
-                    <div className="p-3 bg-stone-200"><p className="text-[8px] uppercase font-sans font-black text-rose-600">Balance</p><p className="text-lg font-bold">₹{Number(p.balance || 0).toLocaleString()}</p></div>
+                  <div className="grid grid-cols-5 border border-slate-300 rounded-sm overflow-hidden">
+                    <div className="p-4 border-r border-slate-200 bg-slate-50"><p className="text-xs uppercase font-sans font-semibold text-slate-500">Gross</p><p className="text-xl font-bold mt-1">₹{Number(p.gross || 0).toLocaleString()}</p></div>
+                    <div className="p-4 border-r border-slate-200 bg-slate-50"><p className="text-xs uppercase font-sans font-semibold text-slate-500">Commission</p><p className="text-xl font-bold mt-1">₹{Number(p.commission || 0).toLocaleString()}</p></div>
+                    <div className="p-4 border-r border-slate-200 bg-slate-50"><p className="text-xs uppercase font-sans font-semibold text-slate-500">Net</p><p className="text-xl font-bold mt-1">₹{Number(p.net || 0).toLocaleString()}</p></div>
+                    <div className="p-4 border-r border-slate-200 bg-slate-50"><p className="text-xs uppercase font-sans font-semibold text-slate-500">Paid</p><p className="text-xl font-bold mt-1 text-emerald-600">₹{Number(p.paid || 0).toLocaleString()}</p></div>
+                    <div className="p-4 bg-accent-50"><p className="text-xs uppercase font-sans font-semibold text-accent-600">Balance</p><p className="text-xl font-bold mt-1 text-accent-600">₹{Number(p.balance || 0).toLocaleString()}</p></div>
                   </div>
                 </div>
               ))}
@@ -459,25 +427,25 @@ function VehicleView({ vehicles, setVehicles, onCancel }) {
     }
   };
   return (
-    <div className="flex-1 flex flex-col h-full bg-[#f1f3f5] overflow-hidden">
-      <div className="bg-slate-800 px-4 py-2 flex justify-between items-center text-white shrink-0"><h1 className="text-[14px] font-black uppercase flex items-center gap-2"><Truck className="w-4 h-4 text-rose-500" /> EXTRA VEHICLE MANAGEMENT</h1><button onClick={onCancel} className="p-1 hover:bg-rose-600"><X className="w-4 h-4" /></button></div>
-      <div className="flex-1 flex p-4 gap-4 overflow-hidden">
-        <div className="w-80 bg-white border-2 border-slate-300 p-4 shadow-sm h-fit">
-          <h3 className="text-[10px] font-black uppercase text-slate-500 mb-4 tracking-widest">Add Vehicle</h3>
-          <div className="space-y-4">
-            <div><label className="text-[9px] font-black uppercase text-slate-400">Vehicle Name / Plate</label><input type="text" className="w-full border p-2 h-10 font-bold outline-none" value={newVehicle} onChange={e => setNewVehicle(e.target.value)} /></div>
-            <button onClick={handleAdd} className="w-full bg-slate-800 text-white py-3 font-black uppercase text-[10px] hover:bg-rose-600 transition-all">Register</button>
+    <div className="flex-1 flex flex-col h-full bg-slate-100 overflow-hidden">
+      <div className="bg-slate-800 px-5 py-3 flex justify-between items-center text-white shrink-0 shadow-lg"><h1 className="text-base font-bold uppercase flex items-center gap-2.5 tracking-wide"><Truck className="w-5 h-5 text-primary-400" /> EXTRA VEHICLE MANAGEMENT</h1><button onClick={onCancel} className="p-1.5 rounded hover:bg-white/10 transition-colors"><X className="w-5 h-5" /></button></div>
+      <div className="flex-1 flex p-5 gap-5 overflow-hidden">
+        <div className="w-80 bg-white border border-slate-200 p-5 shadow-card rounded-sm h-fit">
+          <h3 className="text-sm font-semibold uppercase text-slate-600 mb-5 tracking-wide flex items-center gap-2"><Truck className="w-4 h-4 text-slate-400" /> Add Vehicle</h3>
+          <div className="space-y-5">
+            <div><label className="text-xs font-semibold uppercase text-slate-500 tracking-wide block mb-1.5">Vehicle Name / Plate</label><input type="text" className="w-full border border-slate-300 rounded-sm px-3 py-2.5 text-sm font-medium outline-none focus:border-primary-500 focus:ring-2 focus:ring-primary-50 transition-all" style={{height: '42px'}} value={newVehicle} onChange={e => setNewVehicle(e.target.value)} placeholder="Enter vehicle name or plate" /></div>
+            <button onClick={handleAdd} className="w-full bg-slate-800 text-white py-3 font-semibold uppercase text-sm hover:bg-primary-600 transition-all rounded-sm shadow-sm" style={{height: '44px'}}>Register</button>
           </div>
         </div>
-        <div className="flex-1 bg-white border-2 border-slate-300 shadow-sm overflow-hidden flex flex-col">
-          <div className="bg-slate-100 p-2 border-b font-black text-[9px] uppercase text-slate-500">Registry List</div>
-          <div className="flex-1 overflow-auto"><table className="w-full text-left text-[11px]">
-              <thead className="bg-slate-50 sticky top-0 uppercase text-[9px] font-black"><tr><th className="p-3">Vehicle Description</th><th className="p-3 text-right">Action</th></tr></thead>
+        <div className="flex-1 bg-white border border-slate-200 shadow-card rounded-sm overflow-hidden flex flex-col">
+          <div className="bg-slate-50 px-4 py-3 border-b border-slate-200 font-semibold text-sm uppercase text-slate-600 tracking-wide">Registry List</div>
+          <div className="flex-1 overflow-auto"><table className="w-full text-left text-sm">
+              <thead className="bg-slate-50 sticky top-0 uppercase text-xs font-semibold border-b border-slate-200"><tr><th className="px-4 py-3.5 text-slate-600">Vehicle Description</th><th className="px-4 py-3.5 text-right text-slate-600">Action</th></tr></thead>
               <tbody>{vehicles.map(v => (
-                <tr key={v.id} className="border-b hover:bg-slate-50">
-                  <td className="p-3 font-bold text-slate-800">{String(v.name)}</td>
-                  <td className="p-3 text-right">
-                    <button onClick={async () => { await api.deleteVehicle(v.id); setVehicles(vehicles.filter(x => x.id !== v.id)); }} className="text-slate-300 hover:text-red-600"><Trash2 className="w-4 h-4"/></button>
+                <tr key={v.id} className="border-b border-slate-100 hover:bg-slate-50 transition-colors group">
+                  <td className="px-4 py-3.5 font-semibold text-slate-800">{String(v.name)}</td>
+                  <td className="px-4 py-3.5 text-right">
+                    <button onClick={async () => { await api.deleteVehicle(v.id); setVehicles(vehicles.filter(x => x.id !== v.id)); }} className="text-slate-300 hover:text-red-500 opacity-0 group-hover:opacity-100 transition-all p-1"><Trash2 className="w-4 h-4"/></button>
                   </td>
                 </tr>
               ))}</tbody>
@@ -488,120 +456,84 @@ function VehicleView({ vehicles, setVehicles, onCancel }) {
   );
 }
 
-function DailySaleView({ customers, catalog, onCancel }) {
-  const [formData, setFormData] = useState({ target: '', fromDate: new Date().toISOString().split('T')[0], toDate: new Date().toISOString().split('T')[0] });
-  const [data, setData] = useState([]); 
-  const summary = useMemo(() => data.reduce((acc, item) => ({ qty: acc.qty + Number(item.qty || 0), total: acc.total + (Number(item.qty || 0) * Number(item.rate || 0)) }), { qty: 0, total: 0 }), [data]);
-  const handleGo = () => { setData([ { sl: 1, party: 'Global Traders', item: 'White Lilies', qty: 30, rate: 250 }, { sl: 2, party: 'City Fresh', item: 'Red Rose', qty: 100, rate: 45 } ]); };
-  return (
-    <div className="flex-1 flex flex-col h-full bg-[#f4f7f9] overflow-hidden relative">
-      <div className="bg-slate-800 px-4 py-2 flex justify-between items-center text-white shrink-0 shadow-lg"><h1 className="text-[14px] font-black uppercase flex items-center gap-2"><Monitor className="w-3.5 h-3.5 text-rose-500" /> DAILY SALE ANALYSIS</h1><button onClick={onCancel} className="p-1 hover:bg-rose-600"><X className="w-4 h-4" /></button></div>
-      <div className="flex-1 p-3 flex flex-col gap-3 overflow-hidden">
-        <section className="bg-white border border-slate-400 p-3 shadow-md flex flex-col gap-2 shrink-0">
-          <div className="flex items-end gap-3">
-            <div className="w-[350px]">
-              <SearchableSelect label="Party/Item filter" options={[...customers.map(c => c.name), ...catalog.map(i => i.itemName)]} value={formData.target} onChange={val => setFormData({...formData, target: val})} />
-            </div>
-            <button onClick={handleGo} className="bg-slate-800 text-white px-8 h-[28px] text-[10px] font-black uppercase hover:bg-rose-600 shadow-md transition-all">Apply</button>
-          </div>
-          <div className="flex gap-4">
-            <div className="w-48"><label className="text-[9px] font-black text-slate-500 uppercase block mb-0.5">Start Date</label><input type="date" className="w-full border p-1 text-[11px] font-bold h-[28px]" value={formData.fromDate} onChange={e => setFormData({...formData, fromDate: e.target.value})} /></div>
-            <div className="w-48"><label className="text-[9px] font-black text-slate-500 uppercase block mb-0.5">End Date</label><input type="date" className="w-full border p-1 text-[11px] font-bold h-[28px]" value={formData.toDate} onChange={e => setFormData({...formData, toDate: e.target.value})} /></div>
-          </div>
-        </section>
-        <section className="flex-1 bg-white border-2 border-slate-400 shadow-xl overflow-hidden flex flex-col">
-          <div className="overflow-auto flex-1 bg-slate-50"><table className="w-full border-collapse text-[11px] table-fixed text-left">
-              <thead className="sticky top-0 bg-slate-200 border-b-2 font-black uppercase text-[9px] z-10"><tr><th className="p-2 w-12 text-center">Sl</th><th className="p-2">Party Name</th><th className="p-2">Product</th><th className="p-2 text-right">Qty</th><th className="p-2 text-right">Total</th></tr></thead>
-              <tbody>{data.map((item, idx) => (<tr key={idx} className="hover:bg-rose-50 border-b bg-white"><td className="p-2 text-center text-slate-400 font-bold">{String(idx + 1)}</td><td className="p-2 font-bold text-slate-800">{String(item.party)}</td><td className="p-2 font-bold">{String(item.item)}</td><td className="p-2 text-right font-black">{String(item.qty)}</td><td className="p-2 text-right font-black text-rose-600">₹{(item.qty * item.rate).toLocaleString()}</td></tr>))}</tbody>
-          </table></div>
-        </section>
-        <section className="flex justify-end items-center gap-6 bg-white p-3 border border-slate-400 shadow-md">
-          <div className="flex items-center gap-3"><span className="text-[10px] font-black text-slate-600">AGGREGATE QTY</span><input type="text" readOnly className="w-24 bg-slate-100 p-1 text-[12px] font-black text-right outline-none" value={String(summary.qty)} /></div>
-          <div className="flex items-center gap-3"><span className="text-[10px] font-black text-slate-600">SALE VALUE</span><input type="text" readOnly className="w-48 bg-rose-600 text-white p-1 text-[14px] font-black text-right outline-none" value={`₹ ${summary.total.toLocaleString()}`} /></div>
-        </section>
-      </div>
-    </div>
-  );
-}
-
-function DailyTransactionsView({ customerInfo, setCustomerInfo, groups, customers, catalog, vehicles, onOpenQuickAdd, currentEntry, setCurrentEntry, items, onAddItem, onRemoveItem, onEditItem, summary, onSaveRecord, onViewReport, advanceStore, commissionPct, setCommissionPct }) {
+function DailyTransactionsView({ customerInfo, setCustomerInfo, groups, customers, catalog, vehicles, onOpenQuickAdd, currentEntry, setCurrentEntry, items, onAddItem, onRemoveItem, onEditItem, summary, onSaveRecord, onViewReport, advanceStore, commissionPct, setCommissionPct, groupRef }) {
   const vRef = useRef(null); const cRef = useRef(null); const nRef = useRef(null); const qRef = useRef(null); const rRef = useRef(null); const lRef = useRef(null); const coRef = useRef(null); const pRef = useRef(null); const remRef = useRef(null);
   const filteredCustomers = customers.filter(c => !customerInfo.groupName || c.group === customerInfo.groupName);
   const remAdvance = advanceStore[customerInfo.customerName]?.balance || 0;
-  const handleCustomerSelect = (name) => { const c = customers.find(x => x.name === name); if (c) setCustomerInfo({ customerName: name, groupName: c.group, contactNo: (c.contact || c.phone), address: c.address }); else setCustomerInfo({ ...customerInfo, customerName: name }); };
+  const handleCustomerSelect = (name) => { const c = customers.find(x => x.name === name); if (c) setCustomerInfo({ customerName: name, groupName: c.group, contactNo: c.contact, address: c.address }); else setCustomerInfo({ ...customerInfo, customerName: name }); };
   const handleKey = (e, next) => { if (e.key === 'Enter') { e.preventDefault(); next?.current?.focus(); } };
 
   return (
-    <div className="flex-1 flex flex-row gap-2 h-full p-2 bg-[#f1f3f5] overflow-hidden">
-      <div className="flex-1 flex flex-col gap-2 overflow-hidden">
-        <section className="bg-white border border-slate-300 p-3 shadow-sm shrink-0">
-          <div className="flex items-center gap-2 mb-2 text-rose-600 font-black text-[9px] uppercase border-b pb-1"><Users className="w-3 h-3" /> Trading Client Data</div>
+    <div className="flex-1 flex flex-row gap-3 h-full p-3 bg-slate-100 overflow-hidden">
+      <div className="flex-1 flex flex-col gap-3 overflow-hidden">
+        <section className="bg-white border border-slate-200 p-4 shadow-card rounded-sm shrink-0">
+          <div className="flex items-center gap-2 mb-3 text-primary-600 font-semibold text-xs uppercase border-b border-slate-100 pb-2"><Users className="w-4 h-4" /> Trading Client Data</div>
           <div className="grid grid-cols-5 gap-4">
-            <SearchableSelect label="Group Category" options={groups.map(g => g.name)} value={customerInfo.groupName} onChange={(val) => setCustomerInfo({...customerInfo, groupName: val, customerName: ''})} placeholder="Filter Group" />
-            <div className="flex gap-1 items-end overflow-visible"><SearchableSelect label="Party/Customer" options={filteredCustomers.map(c => c.name)} value={customerInfo.customerName} onChange={handleCustomerSelect} placeholder="Search Party" className="flex-1" /><button onClick={() => onOpenQuickAdd('customer')} className="p-1.5 bg-slate-100 border border-slate-400 hover:bg-rose-600 hover:text-white transition-all mb-0.5 shadow-sm"><UserPlus className="w-3 h-3" /></button></div>
-            <div><label className="text-[9px] font-bold text-slate-500 uppercase">Address</label><input type="text" readOnly className="w-full bg-slate-50 border p-1 text-[11px] text-slate-600 cursor-not-allowed" value={String(customerInfo.address || '--')} /></div>
-            <div><label className="text-[9px] font-bold text-slate-500 uppercase">Phone</label><input type="text" readOnly className="w-full bg-slate-50 border p-1 text-[11px] text-slate-600 cursor-not-allowed" value={String(customerInfo.contactNo || '--')} /></div>
-            <div><label className="text-[9px] font-bold text-rose-600 uppercase">Rem. Advance</label><input type="text" readOnly className="w-full bg-rose-50 border border-rose-200 text-rose-600 p-1 text-[11px] font-black cursor-not-allowed" value={`₹ ${remAdvance.toFixed(2)}`} /></div>
+            <SearchableSelect inputRef={groupRef} label="Group Category" options={groups.map(g => g.name)} value={customerInfo.groupName} onChange={(val) => setCustomerInfo({...customerInfo, groupName: val, customerName: ''})} placeholder="Filter Group" />
+            <div className="flex gap-1.5 items-end overflow-visible"><SearchableSelect label="Party/Customer" options={filteredCustomers.map(c => c.name)} value={customerInfo.customerName} onChange={handleCustomerSelect} placeholder="Search Party" className="flex-1" /><button onClick={() => onOpenQuickAdd('customer')} className="p-2 bg-slate-100 border border-slate-300 rounded-sm hover:bg-primary-600 hover:text-white hover:border-primary-600 transition-all shadow-sm" style={{height: '36px'}}><UserPlus className="w-4 h-4" /></button></div>
+            <div><label className="text-xs font-semibold text-slate-600 uppercase tracking-wide block mb-1">Address</label><input type="text" readOnly className="w-full bg-slate-50 border border-slate-200 rounded-sm px-3 py-2 text-sm text-slate-600 cursor-not-allowed" style={{height: '36px'}} value={String(customerInfo.address || '--')} /></div>
+            <div><label className="text-xs font-semibold text-slate-600 uppercase tracking-wide block mb-1">Phone</label><input type="text" readOnly className="w-full bg-slate-50 border border-slate-200 rounded-sm px-3 py-2 text-sm text-slate-600 cursor-not-allowed" style={{height: '36px'}} value={String(customerInfo.contactNo || '--')} /></div>
+            <div><label className="text-xs font-semibold text-accent-600 uppercase tracking-wide block mb-1">Rem. Advance</label><input type="text" readOnly className="w-full bg-accent-50 border border-accent-200 rounded-sm text-accent-600 px-3 py-2 text-sm font-bold cursor-not-allowed" style={{height: '36px'}} value={`₹ ${remAdvance.toFixed(2)}`} /></div>
           </div>
         </section>
-        <section className="bg-white border border-slate-400 shadow-sm flex flex-col relative z-30 shrink-0 overflow-visible">
-          <div className="bg-slate-100 px-3 py-1 border-b text-slate-700 font-black text-[9px] uppercase flex items-center gap-2"><Database className="w-3 h-3" /> Data Entry Row</div>
-          <div className="p-2 border-b bg-slate-50 overflow-x-auto">
-            <div className="flex items-end gap-1 min-w-[1050px]">
-              <div className="w-[85px]"><label className="text-[8px] font-black text-slate-500 uppercase text-center block">Date</label><input type="date" className="w-full text-[11px] border border-slate-400 px-1 py-0.5 font-bold h-[28px] outline-none" value={currentEntry.date} onChange={e => setCurrentEntry({...currentEntry, date: e.target.value})} /></div>
-              <div className="w-[110px]"><SearchableSelect inputRef={vRef} label="Vehicle" options={vehicles.map(v => v.name)} value={currentEntry.vehicle} onChange={(v) => setCurrentEntry({...currentEntry, vehicle: v})} onEnterNext={() => cRef.current?.focus()} /></div>
-              <div className="w-[100px] flex items-end gap-1"><SearchableSelect inputRef={cRef} label="Item Code" options={catalog.map(i => i.itemCode)} value={currentEntry.itemCode} onChange={(c) => { const item = catalog.find(x => x.itemCode === c); setCurrentEntry({...currentEntry, itemCode: c, itemName: item?.itemName || currentEntry.itemName}); }} onEnterNext={() => nRef.current?.focus()} /><button onClick={() => onOpenQuickAdd('item')} className="bg-slate-200 border border-slate-400 p-1.5 hover:bg-rose-600 hover:text-white h-[28px]"><PackagePlus className="w-3 h-3" /></button></div>
-              <div className="w-[120px]"><SearchableSelect inputRef={nRef} label="Product" options={catalog.map(i => i.itemName)} value={currentEntry.itemName} onChange={(n) => { const item = catalog.find(x => x.itemName === n); setCurrentEntry({...currentEntry, itemName: n, itemCode: item?.itemCode || currentEntry.itemCode}); }} onEnterNext={() => qRef.current?.focus()} /></div>
-              <div className="w-[60px]"><label className="text-[8px] font-black uppercase text-slate-500 block text-center">Qty</label><input ref={qRef} type="number" className="w-full border px-1.5 h-[28px] text-right text-[11px] outline-none focus:border-rose-600" value={currentEntry.qty} onChange={e => setCurrentEntry({...currentEntry, qty: e.target.value})} onKeyDown={e => handleKey(e, rRef)} /></div>
-              <div className="w-[70px]"><label className="text-[8px] font-black uppercase text-slate-500 block text-center">Rate</label><input ref={rRef} type="number" className="w-full border px-1.5 h-[28px] text-right text-[11px] outline-none focus:border-rose-600" value={currentEntry.rate} onChange={e => setCurrentEntry({...currentEntry, rate: e.target.value})} onKeyDown={e => handleKey(e, lRef)} /></div>
-              <div className="w-[60px]"><label className="text-[8px] font-black uppercase text-slate-500 block text-center">Lag.</label><input ref={lRef} type="number" className="w-full border px-1.5 h-[28px] text-right text-[11px] outline-none focus:border-rose-600" value={currentEntry.laguage} onChange={e => setCurrentEntry({...currentEntry, laguage: e.target.value})} onKeyDown={e => handleKey(e, coRef)} /></div>
-              <div className="w-[60px]"><label className="text-[8px] font-black uppercase text-slate-500 block text-center">Coolie</label><input ref={coRef} type="number" className="w-full border px-1.5 h-[28px] text-right text-[11px] outline-none focus:border-rose-600" value={currentEntry.coolie} onChange={e => setCurrentEntry({...currentEntry, coolie: e.target.value})} onKeyDown={e => handleKey(e, pRef)} /></div>
-              <div className="w-[80px]"><label className="text-[8px] font-black uppercase text-slate-500 block text-center">Paid</label><input ref={pRef} type="number" className="w-full border px-1.5 h-[28px] text-right text-[11px] outline-none focus:border-rose-600" value={currentEntry.paidAmt} onChange={e => setCurrentEntry({...currentEntry, paidAmt: e.target.value})} onKeyDown={e => handleKey(e, remRef)} /></div>
-              <div className="w-[120px]"><SearchableSelect inputRef={remRef} label="Remarks" options={['Regular', 'Urgent', 'Special']} value={currentEntry.remarks} onChange={(rem) => setCurrentEntry({...currentEntry, remarks: rem})} onEnterNext={() => onAddItem()} /></div>
-              <div className="ml-auto pr-1"><button onClick={onAddItem} className="bg-slate-900 text-white px-8 h-[28px] text-[9px] font-black uppercase hover:bg-rose-600 shadow-md transition-all active:translate-y-px">{currentEntry.id ? 'UPDATE' : 'ADD'}</button></div>
+        <section className="bg-white border border-slate-200 shadow-card rounded-sm flex flex-col relative z-30 shrink-0 overflow-visible">
+          <div className="bg-slate-50 px-4 py-2.5 border-b border-slate-200 text-slate-700 font-semibold text-xs uppercase flex items-center gap-2 tracking-wide"><Database className="w-4 h-4 text-slate-400" /> Data Entry Row</div>
+          <div className="p-3 border-b border-slate-100 bg-white overflow-x-auto">
+            <div className="flex items-end gap-2 min-w-[1100px]">
+              <div className="w-[95px]"><label className="text-xs font-semibold text-slate-600 uppercase text-center block mb-1">Date</label><input type="date" className="w-full text-sm border border-slate-300 rounded-sm px-2 py-1.5 font-medium outline-none focus:border-primary-500 focus:ring-2 focus:ring-primary-50" style={{height: '36px'}} value={currentEntry.date} onChange={e => setCurrentEntry({...currentEntry, date: e.target.value})} /></div>
+              <div className="w-[120px]"><SearchableSelect inputRef={vRef} label="Vehicle" options={vehicles.map(v => v.name)} value={currentEntry.vehicle} onChange={(v) => setCurrentEntry({...currentEntry, vehicle: v})} onEnterNext={() => cRef.current?.focus()} /></div>
+              <div className="w-[110px] flex items-end gap-1"><SearchableSelect inputRef={cRef} label="Item Code" options={catalog.map(i => i.itemCode)} value={currentEntry.itemCode} onChange={(c) => { const item = catalog.find(x => x.itemCode === c); setCurrentEntry({...currentEntry, itemCode: c, itemName: item?.itemName || currentEntry.itemName}); }} onEnterNext={() => nRef.current?.focus()} /><button onClick={() => onOpenQuickAdd('item')} className="bg-slate-100 border border-slate-300 rounded-sm p-1.5 hover:bg-primary-600 hover:text-white hover:border-primary-600 transition-all" style={{height: '36px'}}><PackagePlus className="w-4 h-4" /></button></div>
+              <div className="w-[130px]"><SearchableSelect inputRef={nRef} label="Product" options={catalog.map(i => i.itemName)} value={currentEntry.itemName} onChange={(n) => { const item = catalog.find(x => x.itemName === n); setCurrentEntry({...currentEntry, itemName: n, itemCode: item?.itemCode || currentEntry.itemCode}); }} onEnterNext={() => qRef.current?.focus()} /></div>
+              <div className="w-[70px]"><label className="text-xs font-semibold uppercase text-slate-600 block text-center mb-1">Qty</label><input ref={qRef} type="number" className="w-full border border-slate-300 rounded-sm px-2 text-right text-sm font-medium outline-none focus:border-primary-500 focus:ring-2 focus:ring-primary-50" style={{height: '36px'}} value={currentEntry.qty} onChange={e => setCurrentEntry({...currentEntry, qty: e.target.value})} onKeyDown={e => handleKey(e, rRef)} /></div>
+              <div className="w-[80px]"><label className="text-xs font-semibold uppercase text-slate-600 block text-center mb-1">Rate</label><input ref={rRef} type="number" className="w-full border border-slate-300 rounded-sm px-2 text-right text-sm font-medium outline-none focus:border-primary-500 focus:ring-2 focus:ring-primary-50" style={{height: '36px'}} value={currentEntry.rate} onChange={e => setCurrentEntry({...currentEntry, rate: e.target.value})} onKeyDown={e => handleKey(e, lRef)} /></div>
+              <div className="w-[70px]"><label className="text-xs font-semibold uppercase text-slate-600 block text-center mb-1">Lag.</label><input ref={lRef} type="number" className="w-full border border-slate-300 rounded-sm px-2 text-right text-sm font-medium outline-none focus:border-primary-500 focus:ring-2 focus:ring-primary-50" style={{height: '36px'}} value={currentEntry.laguage} onChange={e => setCurrentEntry({...currentEntry, laguage: e.target.value})} onKeyDown={e => handleKey(e, coRef)} /></div>
+              <div className="w-[70px]"><label className="text-xs font-semibold uppercase text-slate-600 block text-center mb-1">Coolie</label><input ref={coRef} type="number" className="w-full border border-slate-300 rounded-sm px-2 text-right text-sm font-medium outline-none focus:border-primary-500 focus:ring-2 focus:ring-primary-50" style={{height: '36px'}} value={currentEntry.coolie} onChange={e => setCurrentEntry({...currentEntry, coolie: e.target.value})} onKeyDown={e => handleKey(e, pRef)} /></div>
+              <div className="w-[90px]"><label className="text-xs font-semibold uppercase text-slate-600 block text-center mb-1">Paid</label><input ref={pRef} type="number" className="w-full border border-slate-300 rounded-sm px-2 text-right text-sm font-medium outline-none focus:border-primary-500 focus:ring-2 focus:ring-primary-50" style={{height: '36px'}} value={currentEntry.paidAmt} onChange={e => setCurrentEntry({...currentEntry, paidAmt: e.target.value})} onKeyDown={e => handleKey(e, remRef)} /></div>
+              <div className="w-[130px]"><SearchableSelect inputRef={remRef} label="Remarks" options={['Regular', 'Urgent', 'Special']} value={currentEntry.remarks} onChange={(rem) => setCurrentEntry({...currentEntry, remarks: rem})} onEnterNext={() => onAddItem()} /></div>
+              <div className="ml-auto pr-1"><button onClick={onAddItem} className="bg-slate-800 text-white px-6 text-sm font-semibold uppercase hover:bg-primary-600 shadow-md rounded-sm transition-all active:translate-y-px" style={{height: '36px'}}>{currentEntry.id ? 'UPDATE' : 'ADD'}</button></div>
             </div>
           </div>
           <div className="flex-1 overflow-auto bg-white custom-table-scroll" style={{ maxHeight: '400px' }}>
-            <table className="w-full text-left text-[11px] border-collapse relative">
-              <thead className="sticky top-0 bg-[#15803d] text-white z-20 border-b-2 font-black uppercase text-[8px] shadow-sm">
+            <table className="w-full text-left text-sm border-collapse relative">
+              <thead className="sticky top-0 bg-emerald-700 text-white z-20 border-b-2 font-semibold uppercase text-xs shadow-md">
                 <tr>
-                  <th className="p-2 border border-green-800 w-12 text-center">Sl.No.</th>
-                  <th className="p-2 border border-green-800 w-24">vehicle</th>
-                  <th className="p-2 border border-green-800 w-24">Date</th>
-                  <th className="p-2 border border-green-800 w-24">Item Code</th>
-                  <th className="p-2 border border-green-800">Item Name</th>
-                  <th className="p-2 border border-green-800 w-16 text-right">Qty</th>
-                  <th className="p-2 border border-green-800 w-16 text-right">Rate</th>
-                  <th className="p-2 border border-green-800 w-24 text-right">Total</th>
-                  <th className="p-2 border border-green-800 w-16 text-right">Laguage</th>
-                  <th className="p-2 border border-green-800 w-24 text-right">L. Amount</th>
-                  <th className="p-2 border border-green-800 w-16 text-right">Coolie</th>
-                  <th className="p-2 border border-green-800 w-24 text-right">Paid Amount</th>
-                  <th className="p-2 border border-green-800 w-28 text-left">Remarks</th>
-                  <th className="p-2 border border-green-800 w-16 text-right">Action</th>
+                  <th className="px-3 py-3 border border-emerald-800 w-14 text-center">Sl.No.</th>
+                  <th className="px-3 py-3 border border-emerald-800 w-24">Vehicle</th>
+                  <th className="px-3 py-3 border border-emerald-800 w-24">Date</th>
+                  <th className="px-3 py-3 border border-emerald-800 w-24">Item Code</th>
+                  <th className="px-3 py-3 border border-emerald-800">Item Name</th>
+                  <th className="px-3 py-3 border border-emerald-800 w-16 text-right">Qty</th>
+                  <th className="px-3 py-3 border border-emerald-800 w-16 text-right">Rate</th>
+                  <th className="px-3 py-3 border border-emerald-800 w-24 text-right">Total</th>
+                  <th className="px-3 py-3 border border-emerald-800 w-20 text-right">Luggage</th>
+                  <th className="px-3 py-3 border border-emerald-800 w-24 text-right">L. Amount</th>
+                  <th className="px-3 py-3 border border-emerald-800 w-16 text-right">Coolie</th>
+                  <th className="px-3 py-3 border border-emerald-800 w-24 text-right">Paid Amount</th>
+                  <th className="px-3 py-3 border border-emerald-800 w-28 text-left">Remarks</th>
+                  <th className="px-3 py-3 border border-emerald-800 w-20 text-center">Action</th>
                 </tr>
               </thead>
               <tbody>
-                {items.length === 0 ? <tr><td colSpan="14" className="p-12 text-center text-slate-300 italic font-black text-[10px] tracking-widest uppercase">No transactions recorded for this session</td></tr> : items.map((item, idx) => {
+                {items.length === 0 ? <tr><td colSpan="14" className="p-12 text-center text-slate-400 italic font-medium text-sm tracking-wide">No transactions recorded for this session</td></tr> : items.map((item, idx) => {
                   const grossVal = Number(item.qty) * Number(item.rate);
                   const lagVal = Number(item.laguage || 0) * Number(item.qty);
                   const coolieVal = Number(item.coolie || 0);
                   return (
-                  <tr key={item.id} className="hover:bg-rose-50 border-b group transition-colors">
-                    <td className="p-2 border-r text-center text-slate-400 font-bold">{String(idx+1)}</td>
-                    <td className="p-2 border-r font-bold text-slate-700">{String(item.vehicle || '--')}</td>
-                    <td className="p-2 border-r text-slate-500">{String(item.date)}</td>
-                    <td className="p-2 border-r text-slate-500">{String(item.itemCode || '--')}</td>
-                    <td className="p-2 border-r font-bold text-slate-800">{String(item.itemName)}</td>
-                    <td className="p-2 border-r text-right font-black">{String(item.qty)}</td>
-                    <td className="p-2 border-r text-right font-mono">₹{String(item.rate)}</td>
-                    <td className="p-2 border-r text-right font-black text-rose-600">₹{grossVal.toLocaleString()}</td>
-                    <td className="p-2 border-r text-right text-slate-500 italic">{String(item.laguage || 0)}</td>
-                    <td className="p-2 border-r text-right font-bold text-blue-600">₹{lagVal.toLocaleString()}</td>
-                    <td className="p-2 border-r text-right text-slate-500 italic">₹{String(item.coolie || 0)}</td>
-                    <td className="p-2 border-r text-right text-emerald-600 font-bold">₹{String(item.paidAmt||0)}</td>
-                    <td className="p-2 border-r italic text-slate-400">{String(item.remarks || '--')}</td>
-                    <td className="p-2 text-right space-x-1"><button onClick={()=>onEditItem(item)} className="p-1 text-blue-600 opacity-0 group-hover:opacity-100 transition-all"><Edit2 className="w-3.5 h-3.5"/></button><button onClick={()=>onRemoveItem(item.id)} className="p-1 text-red-600 opacity-0 group-hover:opacity-100 transition-all"><Trash2 className="w-3.5 h-3.5"/></button></td>
+                  <tr key={item.id} className="hover:bg-primary-50 border-b border-slate-100 group transition-colors">
+                    <td className="px-3 py-2.5 border-r border-slate-100 text-center text-slate-400 font-semibold">{String(idx+1)}</td>
+                    <td className="px-3 py-2.5 border-r border-slate-100 font-semibold text-slate-700">{String(item.vehicle || '--')}</td>
+                    <td className="px-3 py-2.5 border-r border-slate-100 text-slate-600">{String(item.date)}</td>
+                    <td className="px-3 py-2.5 border-r border-slate-100 text-slate-600">{String(item.itemCode || '--')}</td>
+                    <td className="px-3 py-2.5 border-r border-slate-100 font-semibold text-slate-800">{String(item.itemName)}</td>
+                    <td className="px-3 py-2.5 border-r border-slate-100 text-right font-bold">{String(item.qty)}</td>
+                    <td className="px-3 py-2.5 border-r border-slate-100 text-right font-mono">₹{String(item.rate)}</td>
+                    <td className="px-3 py-2.5 border-r border-slate-100 text-right font-bold text-primary-600">₹{grossVal.toLocaleString()}</td>
+                    <td className="px-3 py-2.5 border-r border-slate-100 text-right text-slate-500">{String(item.laguage || 0)}</td>
+                    <td className="px-3 py-2.5 border-r border-slate-100 text-right font-semibold text-blue-600">₹{lagVal.toLocaleString()}</td>
+                    <td className="px-3 py-2.5 border-r border-slate-100 text-right text-slate-500">₹{String(item.coolie || 0)}</td>
+                    <td className="px-3 py-2.5 border-r border-slate-100 text-right text-emerald-600 font-semibold">₹{String(item.paidAmt||0)}</td>
+                    <td className="px-3 py-2.5 border-r border-slate-100 text-slate-500">{String(item.remarks || '--')}</td>
+                    <td className="px-3 py-2.5 text-center space-x-1"><button onClick={()=>onEditItem(item)} className="p-1.5 text-blue-600 opacity-0 group-hover:opacity-100 transition-all hover:bg-blue-50 rounded"><Edit2 className="w-4 h-4"/></button><button onClick={()=>onRemoveItem(item.id)} className="p-1.5 text-red-600 opacity-0 group-hover:opacity-100 transition-all hover:bg-red-50 rounded"><Trash2 className="w-4 h-4"/></button></td>
                   </tr>
                 )})}
               </tbody>
@@ -609,195 +541,18 @@ function DailyTransactionsView({ customerInfo, setCustomerInfo, groups, customer
           </div>
         </section>
       </div>
-      <aside className="w-[320px] bg-slate-800 flex flex-col p-4 shrink-0 shadow-2xl">
-        <h3 className="text-[10px] font-black text-rose-400 uppercase tracking-widest flex items-center gap-2 mb-4"><Sparkles className="w-3.5 h-3.5" /> AGGREGATE SUMMARY</h3>
-        <div className="space-y-3 flex-1 overflow-auto text-white scrollbar-thin">
-          <div className="flex flex-col gap-1"><label className="text-[9px] font-black text-slate-500 uppercase">Item Qty Total</label><input type="text" readOnly className="bg-slate-700/50 p-2 text-lg font-black text-right border-slate-600 outline-none" value={String(summary.qty)} /></div>
-          <div className="flex flex-col gap-1"><label className="text-[9px] font-black text-slate-500 uppercase">Total Gross Amount</label><input type="text" readOnly className="bg-slate-700/50 p-2 text-lg font-black text-right text-emerald-400 border-slate-600 outline-none" value={`₹ ${summary.itemTotal.toFixed(2)}`} /></div>
-          <div className="grid grid-cols-2 gap-2 p-2 bg-slate-900/50 border border-slate-700"><div className="flex flex-col gap-1"><label className="text-[8px] text-rose-400 uppercase font-black">Commission %</label><input type="number" className="bg-slate-800 p-1 font-black text-right outline-none focus:border-rose-500" value={commissionPct} onChange={e => setCommissionPct(e.target.value)} /></div><div className="flex flex-col gap-1"><label className="text-[8px] text-slate-500 uppercase font-black">Commission Val</label><input type="text" readOnly className="bg-slate-700/20 p-1 text-right text-slate-400 outline-none" value={summary.totalCommission.toFixed(2)} /></div></div>
-          <div className="flex flex-col gap-1"><label className="text-[9px] font-black text-slate-500 uppercase">Coolie Aggregate</label><input type="text" readOnly className="bg-slate-700/50 p-2 text-lg font-black text-right border-slate-600 outline-none" value={`₹ ${summary.coolieTotal.toFixed(2)}`} /></div>
-          <div className="flex flex-col gap-1"><label className="text-[9px] font-black text-slate-500 uppercase">Laggage Aggregate</label><input type="text" readOnly className="bg-slate-700/50 p-2 text-lg font-black text-right border-slate-600 outline-none" value={`₹ ${summary.laguageTotal.toFixed(2)}`} /></div>
-          <div className="pt-4 border-t border-white/10 text-center"><p className="text-[9px] text-rose-400 uppercase font-black tracking-widest">Net Final Amount</p><p className="text-3xl font-black text-rose-500 tabular-nums drop-shadow-xl">₹ {summary.netTotal.toFixed(2)}</p></div>
+      <aside className="w-[340px] bg-slate-800 flex flex-col p-5 shrink-0 shadow-2xl">
+        <h3 className="text-xs font-semibold text-primary-400 uppercase tracking-wider flex items-center gap-2 mb-5"><Sparkles className="w-4 h-4" /> Aggregate Summary</h3>
+        <div className="space-y-4 flex-1 overflow-auto text-white scrollbar-thin">
+          <div className="flex flex-col gap-1.5"><label className="text-xs font-medium text-slate-400">Item Qty Total</label><input type="text" readOnly className="bg-slate-700/50 px-3 py-2.5 text-lg font-bold text-right rounded-sm border border-slate-600 outline-none" value={String(summary.qty)} /></div>
+          <div className="flex flex-col gap-1.5"><label className="text-xs font-medium text-slate-400">Total Gross Amount</label><input type="text" readOnly className="bg-slate-700/50 px-3 py-2.5 text-lg font-bold text-right text-emerald-400 rounded-sm border border-slate-600 outline-none" value={`₹ ${summary.itemTotal.toFixed(2)}`} /></div>
+          <div className="grid grid-cols-2 gap-3 p-3 bg-slate-900/50 rounded border border-slate-700"><div className="flex flex-col gap-1.5"><label className="text-xs font-medium text-primary-400">Commission %</label><input type="number" className="bg-slate-800 px-2 py-2 font-semibold text-right rounded-sm border border-slate-600 outline-none focus:border-primary-500" value={commissionPct} onChange={e => setCommissionPct(e.target.value)} /></div><div className="flex flex-col gap-1.5"><label className="text-xs font-medium text-slate-500">Commission Val</label><input type="text" readOnly className="bg-slate-700/20 px-2 py-2 text-right text-slate-400 rounded-sm border border-slate-600 outline-none" value={summary.totalCommission.toFixed(2)} /></div></div>
+          <div className="flex flex-col gap-1.5"><label className="text-xs font-medium text-slate-400">Coolie Aggregate</label><input type="text" readOnly className="bg-slate-700/50 px-3 py-2.5 text-lg font-bold text-right rounded-sm border border-slate-600 outline-none" value={`₹ ${summary.coolieTotal.toFixed(2)}`} /></div>
+          <div className="flex flex-col gap-1.5"><label className="text-xs font-medium text-slate-400">Luggage Aggregate</label><input type="text" readOnly className="bg-slate-700/50 px-3 py-2.5 text-lg font-bold text-right rounded-sm border border-slate-600 outline-none" value={`₹ ${summary.laguageTotal.toFixed(2)}`} /></div>
+          <div className="pt-5 border-t border-white/10 text-center"><p className="text-xs text-primary-400 font-semibold tracking-wider mb-2">Net Final Amount</p><p className="text-3xl font-bold text-primary-500 tabular-nums drop-shadow-xl">₹ {summary.netTotal.toFixed(2)}</p></div>
         </div>
-        <div className="mt-4 space-y-2"><button onClick={onSaveRecord} className="w-full bg-rose-600 py-3 font-black uppercase text-[11px] text-white flex items-center justify-center gap-2 hover:bg-rose-700 shadow-lg transition-all"><Save className="w-4 h-4" /> Save Master Journal</button><button onClick={onViewReport} disabled={!customerInfo.customerName} className="w-full bg-slate-700 py-3 font-black uppercase text-[11px] text-white border border-slate-600 disabled:opacity-30 hover:bg-slate-600 transition-all">Client Account Statement</button></div>
+        <div className="mt-5 space-y-3"><button onClick={onSaveRecord} className="w-full bg-primary-600 py-3 font-semibold text-sm text-white flex items-center justify-center gap-2 hover:bg-primary-700 rounded-sm shadow-lg transition-all"><Save className="w-4 h-4" /> Save Master Journal</button><button onClick={onViewReport} disabled={!customerInfo.customerName} className="w-full bg-slate-700 py-3 font-semibold text-sm text-white border border-slate-600 rounded-sm disabled:opacity-30 hover:bg-slate-600 transition-all">Client Account Statement</button></div>
       </aside>
-    </div>
-  );
-}
-
-function AdvanceView({ groups, customers, advanceStore, onSaveAdvance, onCancel }) {
-  const [selectedCustomer, setSelectedCustomer] = useState('');
-  const [giveAmt, setGiveAmt] = useState('');
-  const [deductAmt, setDeductAmt] = useState('');
-  const [date, setDate] = useState(new Date().toISOString().split('T')[0]);
-  const [remarks, setRemarks] = useState('');
-
-  const handleSave = () => {
-    const g = parseFloat(giveAmt) || 0;
-    const d = parseFloat(deductAmt) || 0;
-    if (!selectedCustomer) {
-      return;
-    }
-    onSaveAdvance(selectedCustomer, g, d, date, remarks);
-    setGiveAmt('');
-    setDeductAmt('');
-    setRemarks('');
-  };
-
-  return (
-    <div className="flex-1 flex flex-col h-full bg-[#f1f3f5] overflow-hidden">
-      <div className="bg-slate-800 px-4 py-2 flex justify-between items-center text-white shrink-0 shadow-lg">
-        <h1 className="text-[14px] font-black uppercase flex items-center gap-2"><WalletCards className="w-4 h-4 text-rose-500" /> ADVANCE TRACKER</h1>
-        <button onClick={onCancel} className="p-1 hover:bg-rose-600"><X className="w-4 h-4" /></button>
-      </div>
-      <div className="flex-1 flex p-4 gap-4 overflow-hidden">
-        <div className="w-80 bg-white border-2 border-slate-300 p-4 shadow-sm h-fit">
-          <h3 className="text-[10px] font-black uppercase text-slate-500 mb-4">Manage Advance</h3>
-          <div className="space-y-4">
-            <SearchableSelect 
-              label="Customer" 
-              options={customers.map(c => c.name)} 
-              value={selectedCustomer} 
-              onChange={setSelectedCustomer} 
-            />
-            <div>
-              <label className="text-[9px] font-black uppercase text-slate-400">Give Advance</label>
-              <input type="number" className="w-full border p-2 h-10 font-bold outline-none" value={giveAmt} onChange={e => setGiveAmt(e.target.value)} />
-            </div>
-            <div>
-              <label className="text-[9px] font-black uppercase text-slate-400">Deduct Advance</label>
-              <input type="number" className="w-full border p-2 h-10 font-bold outline-none" value={deductAmt} onChange={e => setDeductAmt(e.target.value)} />
-            </div>
-            <div>
-              <label className="text-[9px] font-black uppercase text-slate-400">Date</label>
-              <input type="date" className="w-full border p-2 h-10 font-bold outline-none" value={date} onChange={e => setDate(e.target.value)} />
-            </div>
-            <div>
-              <label className="text-[9px] font-black uppercase text-slate-400">Remarks</label>
-              <input type="text" className="w-full border p-2 h-10 font-bold outline-none" value={remarks} onChange={e => setRemarks(e.target.value)} />
-            </div>
-            <button onClick={handleSave} className="w-full bg-emerald-600 text-white py-3 font-black uppercase text-[10px] hover:bg-emerald-700 transition-all">Update Ledger</button>
-          </div>
-        </div>
-        <div className="flex-1 bg-white border-2 border-slate-300 shadow-sm overflow-hidden flex flex-col">
-          <div className="bg-slate-100 p-2 border-b font-black text-[9px] uppercase text-slate-500">Advance Ledger</div>
-          <div className="flex-1 overflow-auto">
-            <table className="w-full text-left text-[11px]">
-              <thead className="bg-slate-50 sticky top-0 uppercase text-[9px] font-black">
-                <tr>
-                  <th className="p-3">Customer</th>
-                  <th className="p-3 text-right">Given</th>
-                  <th className="p-3 text-right">Deducted</th>
-                  <th className="p-3 text-right">Balance</th>
-                </tr>
-              </thead>
-              <tbody>
-                {customers.map(c => {
-                  const adv = advanceStore[c.name] || { given: 0, deducted: 0, balance: 0 };
-                  return (
-                    <tr key={c.name} className="border-b hover:bg-slate-50">
-                      <td className="p-3 font-bold text-slate-800">{String(c.name)}</td>
-                      <td className="p-3 text-right text-emerald-600 font-bold">₹{adv.given.toFixed(2)}</td>
-                      <td className="p-3 text-right text-rose-600 font-bold">₹{adv.deducted.toFixed(2)}</td>
-                      <td className="p-3 text-right font-black">₹{adv.balance.toFixed(2)}</td>
-                    </tr>
-                  );
-                })}
-              </tbody>
-            </table>
-          </div>
-        </div>
-      </div>
-    </div>
-  );
-}
-
-function SaalaView({ saalaPeople, setSaalaPeople, saalaPayments, setSaalaPayments, onCancel, showNotify }) {
-  const [newSaala, setNewSaala] = useState('');
-  const [paymentForm, setPaymentForm] = useState({ saalaId: '', amount: '', date: new Date().toISOString().split('T')[0], remarks: '' });
-
-  const addSaala = async () => {
-    const name = String(newSaala || '').trim();
-    if (!name) return;
-    try {
-      const created = await api.createSaala(name);
-      setSaalaPeople([...saalaPeople, created]);
-      setNewSaala('');
-      showNotify('SAALA added', 'success');
-    } catch (e) {
-      showNotify(`Failed: ${e.message}`, 'error');
-    }
-  };
-
-  const addPayment = async () => {
-    const amount = parseFloat(paymentForm.amount) || 0;
-    if (!paymentForm.saalaId || amount <= 0) return;
-    try {
-      const created = await api.createSaalaPayment({
-        saalaId: paymentForm.saalaId,
-        amount,
-        date: paymentForm.date,
-        remarks: paymentForm.remarks
-      });
-      setSaalaPayments([...saalaPayments, created]);
-      setPaymentForm({ saalaId: '', amount: '', date: new Date().toISOString().split('T')[0], remarks: '' });
-      showNotify('Payment recorded', 'success');
-    } catch (e) {
-      showNotify(`Failed: ${e.message}`, 'error');
-    }
-  };
-
-  return (
-    <div className="flex-1 flex flex-col h-full bg-[#f1f3f5] overflow-hidden">
-      <div className="bg-slate-800 px-4 py-2 flex justify-between items-center text-white shrink-0">
-        <h1 className="text-[14px] font-black uppercase flex items-center gap-2"><Landmark className="w-4 h-4 text-rose-500" /> SAALA (CREDIT) MANAGEMENT</h1>
-        <button onClick={onCancel} className="p-1 hover:bg-rose-600"><X className="w-4 h-4" /></button>
-      </div>
-      <div className="flex-1 flex p-4 gap-4 overflow-hidden">
-        <div className="w-80 bg-white border-2 border-slate-300 p-4 shadow-sm h-fit space-y-4">
-          <div>
-            <h3 className="text-[10px] font-black uppercase text-slate-500 mb-4">Add SAALA</h3>
-            <input type="text" className="w-full border p-2 h-10 font-bold outline-none" value={newSaala} onChange={e => setNewSaala(e.target.value)} placeholder="SAALA Name" />
-            <button onClick={addSaala} className="w-full bg-slate-800 text-white py-3 font-black uppercase text-[10px] hover:bg-rose-600 transition-all mt-2">Add SAALA</button>
-          </div>
-          <div>
-            <h3 className="text-[10px] font-black uppercase text-slate-500 mb-4">Record Payment</h3>
-            <select className="w-full border p-2 h-10 font-bold outline-none mb-2" value={paymentForm.saalaId} onChange={e => setPaymentForm({...paymentForm, saalaId: e.target.value})}>
-              <option value="">Select SAALA</option>
-              {saalaPeople.map(s => <option key={s.id} value={s.id}>{s.name}</option>)}
-            </select>
-            <input type="number" className="w-full border p-2 h-10 font-bold outline-none mb-2" value={paymentForm.amount} onChange={e => setPaymentForm({...paymentForm, amount: e.target.value})} placeholder="Amount" />
-            <input type="date" className="w-full border p-2 h-10 font-bold outline-none mb-2" value={paymentForm.date} onChange={e => setPaymentForm({...paymentForm, date: e.target.value})} />
-            <input type="text" className="w-full border p-2 h-10 font-bold outline-none mb-2" value={paymentForm.remarks} onChange={e => setPaymentForm({...paymentForm, remarks: e.target.value})} placeholder="Remarks" />
-            <button onClick={addPayment} className="w-full bg-emerald-600 text-white py-3 font-black uppercase text-[10px] hover:bg-emerald-700 transition-all">Record Payment</button>
-          </div>
-        </div>
-        <div className="flex-1 bg-white border-2 border-slate-300 shadow-sm overflow-hidden flex flex-col">
-          <div className="bg-slate-100 p-2 border-b font-black text-[9px] uppercase text-slate-500">SAALA Payments</div>
-          <div className="flex-1 overflow-auto">
-            <table className="w-full text-left text-[11px]">
-              <thead className="bg-slate-50 sticky top-0 uppercase text-[9px] font-black">
-                <tr>
-                  <th className="p-3">SAALA</th>
-                  <th className="p-3">Date</th>
-                  <th className="p-3 text-right">Amount</th>
-                  <th className="p-3">Remarks</th>
-                </tr>
-              </thead>
-              <tbody>
-                {saalaPayments.map(p => (
-                  <tr key={p.id} className="border-b hover:bg-slate-50">
-                    <td className="p-3 font-bold text-slate-800">{String(p.saalaName || '')}</td>
-                    <td className="p-3">{String(p.date)}</td>
-                    <td className="p-3 text-right font-black text-emerald-600">₹{Number(p.amount || 0).toFixed(2)}</td>
-                    <td className="p-3">{String(p.remarks || '')}</td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
-          </div>
-        </div>
-      </div>
     </div>
   );
 }
@@ -805,22 +560,16 @@ function SaalaView({ saalaPeople, setSaalaPeople, saalaPayments, setSaalaPayment
 // --- MAIN APPLICATION SHELL ---
 
 export default function App() {
-  const [isAuthenticated, setIsAuthenticated] = useState(false);
-  const [checkingAuth, setCheckingAuth] = useState(true);
-
-  useEffect(() => {
-    const token = localStorage.getItem("token");
-    if (token) {
-      setIsAuthenticated(true);
-    }
-    setCheckingAuth(false);
-  }, []);
-
+  const auth = useAuth();
+  if (!auth.authenticated) {
+    return <Login onLogin={auth.login} loading={auth.loading} error={auth.error} />;
+  }
   const [activeSection, setActiveSection] = useState('daily');
   const [notification, setNotification] = useState({ message: '', type: 'info' });
   const [itemForm, setItemForm] = useState({ itemCode: '', itemName: '' });
-
   
+  // Track previous section to detect navigation changes
+  const prevActiveSectionRef = useRef(activeSection);
 
   const [groupPattiForm, setGroupPattiForm] = useState({
     fromDate: new Date().toISOString().split('T')[0],
@@ -864,32 +613,17 @@ export default function App() {
   const [currentEntry, setCurrentEntry] = useState({ date: new Date().toISOString().split('T')[0], vehicle: '', itemCode: '', itemName: '', qty: '', rate: '', laguage: '', coolie: '', paidAmt: '', remarks: '' });
   const [items, setItems] = useState([]);
   const [commissionPct, setCommissionPct] = useState(12);
+  const groupRef = useRef(null);
+  const prevAuthenticatedRef = useRef(auth.authenticated);
 
-  // 🔐 Auth check on app load
+  // Redirect to daily section after login
   useEffect(() => {
-    const token = localStorage.getItem("token");
-
-    // 🚫 No token → directly logout
-    if (!token) {
-      setIsAuthenticated(false);
-      setCheckingAuth(false);
-      return;
+    // Only redirect if user just became authenticated (transition from false to true)
+    if (auth.authenticated && !prevAuthenticatedRef.current) {
+      setActiveSection('daily');
     }
-
-    // ✅ Verify token ONCE with backend
-    api
-      .me()
-      .then(() => {
-        setIsAuthenticated(true);
-      })
-      .catch(() => {
-        localStorage.removeItem("token");
-        setIsAuthenticated(false);
-      })
-      .finally(() => {
-        setCheckingAuth(false);
-      });
-  }, []);
+    prevAuthenticatedRef.current = auth.authenticated;
+  }, [auth.authenticated]);
 
   const showNotify = (m, t = 'info') => { setNotification({ message: m, type: t }); setTimeout(() => setNotification({ message: '', type: 'info' }), 3000); };
 
@@ -902,6 +636,104 @@ export default function App() {
     window.addEventListener('afterprint', handleAfter);
     return () => window.removeEventListener('afterprint', handleAfter);
   }, []);
+
+  // High-level keyboard navigation using only arrows + Enter.
+  // Arrows change active module when focus is not inside a text input/textarea/select.
+  useEffect(() => {
+    const sections = ['daily', 'group-reg', 'reports', 'advance', 'saala'];
+
+    const handleKeyDown = (e) => {
+      const tag = (e.target && e.target.tagName) || '';
+      const isTextField = ['INPUT', 'TEXTAREA', 'SELECT'].includes(tag);
+      if (isTextField) return; // do not hijack typing/navigation inside fields
+
+      if (e.key === 'ArrowLeft' || e.key === 'ArrowRight') {
+        const idx = sections.indexOf(activeSection);
+        if (idx === -1) return;
+        const delta = e.key === 'ArrowRight' ? 1 : -1;
+        const next = (idx + delta + sections.length) % sections.length;
+        setActiveSection(sections[next]);
+        e.preventDefault();
+      }
+    };
+
+    window.addEventListener('keydown', handleKeyDown);
+    return () => window.removeEventListener('keydown', handleKeyDown);
+  }, [activeSection]);
+
+  // Close all dropdown menus when clicking outside
+  useEffect(() => {
+    const handleClickOutside = (event) => {
+      const navElement = document.querySelector('nav');
+      if (navElement && !navElement.contains(event.target)) {
+        setShowTMenu(false);
+        setShowUMenu(false);
+        setShowMMenu(false);
+      }
+    };
+
+    document.addEventListener('mousedown', handleClickOutside);
+    return () => document.removeEventListener('mousedown', handleClickOutside);
+  }, []);
+
+  // Update previous section ref
+  useEffect(() => {
+    prevActiveSectionRef.current = activeSection;
+  }, [activeSection]);
+  
+  // Reset component states when navigating to a new section
+  useEffect(() => {
+    const prevSection = prevActiveSectionRef.current;
+    
+    // Only reset if we're actually changing sections (not initial render)
+    if (prevSection !== activeSection && prevSection) {
+      // Reset various component states based on the section being left
+      switch (prevSection) {
+        case 'daily':
+          // Reset daily transaction state
+          setCustomerInfo(DEFAULT_STATES.dailyTransaction.customerInfo);
+          setCurrentEntry(DEFAULT_STATES.dailyTransaction.currentEntry);
+          setItems(DEFAULT_STATES.dailyTransaction.items);
+          setCommissionPct(DEFAULT_STATES.dailyTransaction.commissionPct);
+          break;
+        case 'reports':
+          // Reset reports state when leaving
+          break;
+        case 'daily-sale':
+          // DailySaleView manages its own state reset
+          break;
+        case 'group-print':
+          // Reset group patti form
+          setGroupPattiForm(DEFAULT_STATES.groupPattiForm);
+          break;
+        case 'group-total':
+          // Reset group total form
+          setGroupTotalForm(DEFAULT_STATES.groupTotalForm);
+          break;
+        case 'daily-rate-sales':
+          // Reset items daily sale rate form
+          setItemsDailySaleRateForm(DEFAULT_STATES.itemsDailySaleRateForm);
+          setItemsDailySaleRateRows([]);
+          setIsItemsDailySaleRateOpen(false);
+          break;
+        case 'sms':
+        case 'sms-single':
+          // Reset SMS view state - the component handles its own state
+          break;
+        default:
+          break;
+      }
+    }
+  }, [activeSection, setCustomerInfo, setCurrentEntry, setItems, setCommissionPct, 
+      setGroupPattiForm, setGroupTotalForm, setItemsDailySaleRateForm, 
+      setItemsDailySaleRateRows, setIsItemsDailySaleRateOpen]);
+
+  // Close dropdowns when navigating to a new section
+  useEffect(() => {
+    setShowTMenu(false);
+    setShowUMenu(false);
+    setShowMMenu(false);
+  }, [activeSection]);
 
   const loadItemsDailySaleRate = async () => {
     const from = String(itemsDailySaleRateForm.fromDate || '');
@@ -1101,6 +933,9 @@ export default function App() {
   useEffect(() => {
     let cancelled = false;
     (async () => {
+      // Only fetch data if authenticated
+      if (!auth.authenticated) return;
+        
       try {
         const [gRows, cRows, catRows, vRows] = await Promise.all([
           api.listGroups(),
@@ -1108,23 +943,45 @@ export default function App() {
           api.listCatalog(),
           api.listVehicles(),
         ]);
-
+  
         if (cancelled) return;
         setGroups(gRows);
-        setCustomers(cRows.map(c => ({ id: c.id, group: c.groupName || '', name: c.name, contact: c.contact, address: c.address })));
+        const mappedCustomers = cRows.map(c => ({ id: c.id, group: c.groupName || '', name: c.name, contact: c.contact, address: c.address }));
+        setCustomers(mappedCustomers);
         setCatalog(catRows);
         setVehicles(vRows);
+  
+        // hydrate advanceStore from backend logs (used in Daily + Reports)
+        const advancePairs = await Promise.all(
+          mappedCustomers.map(async (cust) => {
+            if (!cust?.id) return [cust?.name || '', { given: 0, deducted: 0, balance: 0 }];
+            try {
+              const summary = await api.getCustomerAdvances(cust.id);
+              return [cust.name, { given: Number(summary?.given || 0), deducted: Number(summary?.deducted || 0), balance: Number(summary?.balance || 0) }];
+            } catch {
+              return [cust.name, { given: 0, deducted: 0, balance: 0 }];
+            }
+          })
+        );
+        if (cancelled) return;
+        const nextAdvanceStore = {};
+        for (const [name, val] of advancePairs) {
+          if (!name) continue;
+          nextAdvanceStore[name] = val;
+        }
+        setAdvanceStore(nextAdvanceStore);
       } catch (e) {
         showNotify(`Backend not reachable: ${e.message}`, 'error');
       }
     })();
     return () => { cancelled = true; };
-  }, []);
+  }, [auth.authenticated]);
 
   useEffect(() => {
     let cancelled = false;
     (async () => {
-      if (!customerInfo.customerName) {
+      // Only fetch data if authenticated
+      if (!auth.authenticated || !customerInfo.customerName) {
         setItems([]);
         return;
       }
@@ -1136,9 +993,13 @@ export default function App() {
       }
 
       try {
+        // Only fetch today's transactions for the daily transaction view
+        const today = new Date().toISOString().split('T')[0];
         const rows = await api.listTransactions(selected.id);
+        // Filter to only include today's transactions
+        const todayRows = rows.filter(r => r.date === today);
         if (cancelled) return;
-        setItems(rows.map(r => ({
+        setItems(todayRows.map(r => ({
           id: r.id,
           date: r.date,
           vehicle: r.vehicle,
@@ -1156,7 +1017,7 @@ export default function App() {
       }
     })();
     return () => { cancelled = true; };
-  }, [customerInfo.customerName, customers]);
+  }, [auth.authenticated, customerInfo.customerName, customers]);
 
   const summary = useMemo(() => {
     const totals = items.reduce((acc, item) => {
@@ -1183,44 +1044,50 @@ export default function App() {
     else setItems([...items, { ...currentEntry, id }]);
     setCurrentEntry({ ...currentEntry, id: null, vehicle: '', itemCode: '', itemName: '', qty: '', rate: '', laguage: '', coolie: '', paidAmt: '', remarks: '' });
     showNotify("Transaction Row Saved", "success");
+    
+    // Return focus to group selection field
+    setTimeout(() => {
+      groupRef.current?.focus();
+    }, 100);
+    
     return true;
   };
 
   const [showTMenu, setShowTMenu] = useState(false); const [showUMenu, setShowUMenu] = useState(false); const [showMMenu, setShowMMenu] = useState(false);
 
   const GroupPattiPrintingPage = () => (
-    <div className="flex-1 flex flex-col h-full bg-[#f1f3f5] overflow-hidden">
-      <div className="bg-slate-800 px-4 py-2 flex justify-between items-center text-white shrink-0 shadow-lg">
-        <h1 className="text-[14px] font-black uppercase flex items-center gap-2"><Printer className="w-4 h-4 text-rose-500" /> GROUP PATTI PRINTING</h1>
-        <button onClick={() => setActiveSection('daily')} className="p-1 hover:bg-rose-600"><X className="w-4 h-4" /></button>
+    <div className="flex-1 flex flex-col h-full bg-slate-50 overflow-hidden">
+      <div className="bg-slate-800 px-5 py-3 flex justify-between items-center text-white shrink-0 shadow-lg">
+        <h1 className="text-base font-semibold flex items-center gap-2"><Printer className="w-5 h-5 text-primary-400" /> Group Patti Printing</h1>
+        <button onClick={() => setActiveSection('daily')} className="p-1.5 hover:bg-slate-700 rounded transition-colors"><X className="w-4 h-4" /></button>
       </div>
 
       <div className="p-6 flex-1 overflow-auto">
-        <div className="max-w-[720px] mx-auto bg-white border-2 border-slate-300 shadow-sm p-6 space-y-4">
-          <div className="grid grid-cols-2 gap-3">
+        <div className="max-w-[720px] mx-auto bg-white border border-slate-200 shadow-card rounded-sm p-6 space-y-5">
+          <div className="grid grid-cols-2 gap-4">
             <div>
-              <label className="text-[9px] font-black uppercase text-slate-500">From Date</label>
-              <input type="date" className="w-full border p-2 text-[11px] font-bold outline-none" value={groupPattiForm.fromDate} onChange={e => setGroupPattiForm({ ...groupPattiForm, fromDate: e.target.value })} />
+              <label className="text-xs font-medium text-slate-600 block mb-1">From Date</label>
+              <input type="date" className="w-full border border-slate-300 px-3 text-sm font-medium rounded-sm outline-none focus:border-primary-500 focus:ring-2 focus:ring-primary-50 transition-all" style={{ height: '40px' }} value={groupPattiForm.fromDate} onChange={e => setGroupPattiForm({ ...groupPattiForm, fromDate: e.target.value })} />
             </div>
             <div>
-              <label className="text-[9px] font-black uppercase text-slate-500">To Date</label>
-              <input type="date" className="w-full border p-2 text-[11px] font-bold outline-none" value={groupPattiForm.toDate} onChange={e => setGroupPattiForm({ ...groupPattiForm, toDate: e.target.value })} />
+              <label className="text-xs font-medium text-slate-600 block mb-1">To Date</label>
+              <input type="date" className="w-full border border-slate-300 px-3 text-sm font-medium rounded-sm outline-none focus:border-primary-500 focus:ring-2 focus:ring-primary-50 transition-all" style={{ height: '40px' }} value={groupPattiForm.toDate} onChange={e => setGroupPattiForm({ ...groupPattiForm, toDate: e.target.value })} />
             </div>
           </div>
 
           <SearchableSelect label="Group Name" options={groups.map(g => g.name)} value={groupPattiForm.groupName} onChange={(val) => setGroupPattiForm({ ...groupPattiForm, groupName: val })} placeholder="Select group" />
 
           <div>
-            <label className="text-[9px] font-black uppercase text-slate-500">Commission (%)</label>
-            <input type="number" className="w-full border p-2 text-[11px] font-bold outline-none text-right" value={groupPattiForm.commissionPct} onChange={e => setGroupPattiForm({ ...groupPattiForm, commissionPct: e.target.value })} />
+            <label className="text-xs font-medium text-slate-600 block mb-1">Commission (%)</label>
+            <input type="number" className="w-full border border-slate-300 px-3 text-sm font-medium rounded-sm outline-none text-right focus:border-primary-500 focus:ring-2 focus:ring-primary-50 transition-all" style={{ height: '40px' }} value={groupPattiForm.commissionPct} onChange={e => setGroupPattiForm({ ...groupPattiForm, commissionPct: e.target.value })} />
           </div>
 
-          <div className="flex gap-2">
-            <button onClick={handleGroupPattiPrint} disabled={!groupPattiForm.groupName || isGroupPattiPrinting} className="flex-1 bg-slate-800 text-white py-3 font-black uppercase text-[10px] shadow-md disabled:opacity-40">Print</button>
-            <button onClick={() => { setIsGroupPattiPrinting(false); setActiveSection('daily'); }} className="flex-1 bg-slate-200 text-slate-800 py-3 font-black uppercase text-[10px] border border-slate-300 shadow-md">Cancel</button>
+          <div className="flex gap-3 pt-2">
+            <button onClick={handleGroupPattiPrint} disabled={!groupPattiForm.groupName || isGroupPattiPrinting} className="flex-1 bg-primary-600 text-white py-3 font-semibold text-sm rounded-sm shadow-md disabled:opacity-40 hover:bg-primary-700 transition-colors">Print</button>
+            <button onClick={() => { setIsGroupPattiPrinting(false); setActiveSection('daily'); }} className="flex-1 bg-slate-100 text-slate-700 py-3 font-semibold text-sm border border-slate-300 rounded-sm shadow-sm hover:bg-slate-200 transition-colors">Cancel</button>
           </div>
 
-          <div className="text-[10px] font-bold text-slate-500 min-h-[14px]">
+          <div className="text-sm font-medium text-slate-500 min-h-[20px]">
             {isGroupPattiPrinting ? 'Printing...' : ''}
           </div>
         </div>
@@ -1229,33 +1096,33 @@ export default function App() {
   );
 
   const GroupTotalReportPage = () => (
-    <div className="flex-1 flex flex-col h-full bg-[#f1f3f5] overflow-hidden">
-      <div className="bg-slate-800 px-4 py-2 flex justify-between items-center text-white shrink-0 shadow-lg">
-        <h1 className="text-[14px] font-black uppercase flex items-center gap-2"><Layers className="w-4 h-4 text-rose-500" /> GROUP TOTAL REPORT</h1>
-        <button onClick={() => setActiveSection('daily')} className="p-1 hover:bg-rose-600"><X className="w-4 h-4" /></button>
+    <div className="flex-1 flex flex-col h-full bg-slate-50 overflow-hidden">
+      <div className="bg-slate-800 px-5 py-3 flex justify-between items-center text-white shrink-0 shadow-lg">
+        <h1 className="text-base font-semibold flex items-center gap-2"><Layers className="w-5 h-5 text-primary-400" /> Group Total Report</h1>
+        <button onClick={() => setActiveSection('daily')} className="p-1.5 hover:bg-slate-700 rounded transition-colors"><X className="w-4 h-4" /></button>
       </div>
 
       <div className="p-6 flex-1 overflow-auto">
-        <div className="max-w-[720px] mx-auto bg-white border-2 border-slate-300 shadow-sm p-6 space-y-4">
-          <div className="grid grid-cols-2 gap-3">
+        <div className="max-w-[720px] mx-auto bg-white border border-slate-200 shadow-card rounded-sm p-6 space-y-5">
+          <div className="grid grid-cols-2 gap-4">
             <div>
-              <label className="text-[9px] font-black uppercase text-slate-500">From Date</label>
-              <input type="date" className="w-full border p-2 text-[11px] font-bold outline-none" value={groupTotalForm.fromDate} onChange={e => setGroupTotalForm({ ...groupTotalForm, fromDate: e.target.value })} />
+              <label className="text-xs font-medium text-slate-600 block mb-1">From Date</label>
+              <input type="date" className="w-full border border-slate-300 px-3 text-sm font-medium rounded-sm outline-none focus:border-primary-500 focus:ring-2 focus:ring-primary-50 transition-all" style={{ height: '40px' }} value={groupTotalForm.fromDate} onChange={e => setGroupTotalForm({ ...groupTotalForm, fromDate: e.target.value })} />
             </div>
             <div>
-              <label className="text-[9px] font-black uppercase text-slate-500">To Date</label>
-              <input type="date" className="w-full border p-2 text-[11px] font-bold outline-none" value={groupTotalForm.toDate} onChange={e => setGroupTotalForm({ ...groupTotalForm, toDate: e.target.value })} />
+              <label className="text-xs font-medium text-slate-600 block mb-1">To Date</label>
+              <input type="date" className="w-full border border-slate-300 px-3 text-sm font-medium rounded-sm outline-none focus:border-primary-500 focus:ring-2 focus:ring-primary-50 transition-all" style={{ height: '40px' }} value={groupTotalForm.toDate} onChange={e => setGroupTotalForm({ ...groupTotalForm, toDate: e.target.value })} />
             </div>
           </div>
 
           <SearchableSelect label="Group Name" options={groups.map(g => g.name)} value={groupTotalForm.groupName} onChange={(val) => setGroupTotalForm({ ...groupTotalForm, groupName: val })} placeholder="Select group" />
 
-          <div className="flex gap-2">
-            <button onClick={handleGroupTotalPrint} disabled={!groupTotalForm.groupName || isGroupTotalPrinting} className="flex-1 bg-slate-800 text-white py-3 font-black uppercase text-[10px] shadow-md disabled:opacity-40">Print</button>
-            <button onClick={() => { setIsGroupTotalPrinting(false); setActiveSection('daily'); }} className="flex-1 bg-slate-200 text-slate-800 py-3 font-black uppercase text-[10px] border border-slate-300 shadow-md">Cancel</button>
+          <div className="flex gap-3 pt-2">
+            <button onClick={handleGroupTotalPrint} disabled={!groupTotalForm.groupName || isGroupTotalPrinting} className="flex-1 bg-primary-600 text-white py-3 font-semibold text-sm rounded-sm shadow-md disabled:opacity-40 hover:bg-primary-700 transition-colors">Print</button>
+            <button onClick={() => { setIsGroupTotalPrinting(false); setActiveSection('daily'); }} className="flex-1 bg-slate-100 text-slate-700 py-3 font-semibold text-sm border border-slate-300 rounded-sm shadow-sm hover:bg-slate-200 transition-colors">Cancel</button>
           </div>
 
-          <div className="text-[10px] font-bold text-slate-500 min-h-[14px]">
+          <div className="text-sm font-medium text-slate-500 min-h-[20px]">
             {isGroupTotalPrinting ? 'Printing...' : ''}
           </div>
         </div>
@@ -1263,52 +1130,15 @@ export default function App() {
     </div>
   );
 
-  const handleLogout = () => {
-    localStorage.removeItem("token");
-    setIsAuthenticated(false);
-  };
-
-  // ⏳ Loading state
-  if (checkingAuth) {
-    return (
-      <div className="h-screen flex items-center justify-center text-slate-500">
-        Checking authentication...
-      </div>
-    );
-  }
-
-  // 🔒 Not logged in → show login
-  if (!isAuthenticated) {
-    return (
-      <Login
-        onLoginSuccess={() => {
-          setIsAuthenticated(true);
-        }}
-      />
-    );
-  }
-
-
-  // ✅ Logged in → show EXISTING APP UI
   return (
     <div className="h-screen flex flex-col bg-white overflow-hidden text-slate-900 font-sans">
-      {/* Optional global logout button */}
-      <div className="fixed top-2 right-2 z-50">
-        <button
-          onClick={handleLogout}
-          className="bg-rose-600 text-white px-3 py-1 text-xs font-black uppercase"
-        >
-          Logout
-        </button>
-      </div>
-
       <Toast message={notification.message} type={notification.type} onClose={() => setNotification({ message: '', type: 'info' })} />
-      <nav className="h-10 bg-slate-900 flex items-center px-4 shrink-0 z-[4000] border-b border-black/50 shadow-2xl">
+      <nav className="h-12 bg-slate-900 flex items-center px-5 shrink-0 z-[4000] border-b border-black/50 shadow-2xl">
         <div className="flex items-center gap-6 h-full">
-          <div className="flex items-center gap-2 pr-6 border-r border-slate-700 cursor-pointer h-full" onClick={() => setActiveSection('daily')}><Flower2 className="w-4 h-4 text-rose-50" /><span className="text-[11px] font-black text-white italic tracking-widest">SKFS ERP v5.0.4</span></div>
+          <div className="flex items-center gap-2 pr-6 border-r border-slate-700 cursor-pointer h-full" onClick={() => setActiveSection('daily')}><Flower2 className="w-5 h-5 text-primary-400" /><span className="text-sm font-bold text-white tracking-wide">SKFS ERP</span><span className="text-xs text-slate-400 font-medium">v5.0.4</span></div>
           
-          <div className="relative h-full flex items-center"><button onClick={() => setShowTMenu(!showTMenu)} className={`flex items-center gap-2 px-4 h-full text-[10px] font-black uppercase transition-all ${showTMenu ? 'bg-white text-slate-900 shadow-xl' : 'text-slate-300 hover:text-white'}`}>Transaction <ChevronDown className="w-3 h-3" /></button>
-            {showTMenu && <div className="absolute top-10 left-0 w-56 bg-white border border-slate-300 shadow-2xl py-1 animate-in slide-in-from-top-2 duration-150 rounded-none overflow-hidden z-[5000]">
+          <div className="relative h-full flex items-center"><button onClick={() => setShowTMenu(!showTMenu)} className={`flex items-center gap-2 px-4 h-full text-xs font-semibold transition-all ${showTMenu ? 'bg-white text-slate-900 shadow-xl' : 'text-slate-300 hover:text-white'}`}>Transaction <ChevronDown className="w-3.5 h-3.5" /></button>
+            {showTMenu && <div className="absolute top-12 left-0 w-56 bg-white border border-slate-200 shadow-dropdown py-1 animate-in slide-in-from-top-2 duration-150 rounded-sm overflow-hidden z-[5000]">
               {[ 
                 { id: 'daily', l: 'Daily Transaction', i: Receipt }, 
                 { id: 'group-reg', l: 'New Group', i: FolderPlus }, 
@@ -1316,15 +1146,15 @@ export default function App() {
                 { id: 'party', l: 'Party Details', i: Users }, 
                 { id: 'vehicle', l: 'Extra Vehicle', i: Truck } 
               ].map(item => (
-                <button key={item.id} onClick={() => { setShowTMenu(false); setActiveSection(item.id); }} className={`w-full text-left px-5 py-2.5 text-[11px] font-bold flex items-center gap-3 transition-colors ${activeSection === item.id ? 'bg-rose-600 text-white' : 'hover:bg-rose-600 hover:text-white'}`}><item.i className="w-3.5 h-3.5" /> {item.l}</button>
+                <button key={item.id} onClick={() => { setShowTMenu(false); setActiveSection(item.id); }} className={`w-full text-left px-4 py-2.5 text-sm font-medium flex items-center gap-3 transition-colors ${activeSection === item.id ? 'bg-primary-600 text-white' : 'text-slate-700 hover:bg-primary-50 hover:text-primary-700'}`}><item.i className="w-4 h-4" /> {item.l}</button>
               ))}
             </div>}
           </div>
 
-          <button onClick={() => { setShowTMenu(false); setShowUMenu(false); setShowMMenu(false); setActiveSection('reports'); }} className={`flex items-center gap-2 px-4 h-full text-[10px] font-black uppercase transition-all ${activeSection === 'reports' ? 'bg-white text-slate-900' : 'text-slate-300 hover:text-white'}`}>Reports</button>
+          <button onClick={() => { setShowTMenu(false); setShowUMenu(false); setShowMMenu(false); setActiveSection('reports'); }} className={`flex items-center gap-2 px-4 h-full text-xs font-semibold transition-all ${activeSection === 'reports' ? 'bg-white text-slate-900' : 'text-slate-300 hover:text-white'}`}>Reports</button>
 
-          <div className="relative h-full flex items-center"><button onClick={() => setShowUMenu(!showUMenu)} className={`flex items-center gap-2 px-4 h-full text-[10px] font-black uppercase transition-all ${showUMenu ? 'bg-white text-slate-900 shadow-xl' : 'text-slate-300 hover:text-white'}`}>Utility <ChevronDown className="w-3 h-3" /></button>
-            {showUMenu && <div className="absolute top-10 left-0 w-64 bg-white border border-slate-300 shadow-2xl py-1 animate-in slide-in-from-top-2 duration-150 rounded-none overflow-hidden z-[5000]">
+          <div className="relative h-full flex items-center"><button onClick={() => setShowUMenu(!showUMenu)} className={`flex items-center gap-2 px-4 h-full text-xs font-semibold transition-all ${showUMenu ? 'bg-white text-slate-900 shadow-xl' : 'text-slate-300 hover:text-white'}`}>Utility <ChevronDown className="w-3.5 h-3.5" /></button>
+            {showUMenu && <div className="absolute top-12 left-0 w-64 bg-white border border-slate-200 shadow-dropdown py-1 animate-in slide-in-from-top-2 duration-150 rounded-sm overflow-hidden z-[5000]">
               {[ 
                 { id: 'group-print', l: 'Group Printing', i: Printer },
                 { id: 'group-total', l: 'Group Total Report', i: Layers },
@@ -1366,24 +1196,19 @@ export default function App() {
                     return;
                   }
                   if (item.id === 'daily-sale') {
-                    setItemsDailySaleRateForm(prev => ({
-                      ...prev,
-                      itemName: '',
-                    }));
-                    setItemsDailySaleRateRows([]);
-                    setIsItemsDailySaleRateOpen(true);
+                    setActiveSection('daily-sale');
                     return;
                   }
                   setActiveSection(item.id);
-                }} className={`w-full text-left px-5 py-2.5 text-[11px] font-bold flex items-center gap-3 transition-colors ${activeSection === item.id ? 'bg-slate-100 text-slate-900 font-black' : 'hover:bg-slate-100 text-slate-700'}`}><item.i className="w-3.5 h-3.5" /> {item.l}</button>
+                }} className={`w-full text-left px-4 py-2.5 text-sm font-medium flex items-center gap-3 transition-colors ${activeSection === item.id ? 'bg-primary-50 text-primary-700' : 'text-slate-700 hover:bg-slate-50'}`}><item.i className="w-4 h-4" /> {item.l}</button>
               ))}
             </div>}
           </div>
 
-          <div className="relative h-full flex items-center"><button onClick={() => setShowMMenu(!showMMenu)} className={`flex items-center gap-2 px-4 h-full text-[10px] font-black uppercase transition-all ${showMMenu ? 'bg-white text-slate-900 shadow-xl' : 'text-slate-300 hover:text-white'}`}>More <ChevronDown className="w-3 h-3" /></button>
-            {showMMenu && <div className="absolute top-10 left-0 w-48 bg-white border border-slate-300 shadow-2xl py-1 animate-in slide-in-from-top-2 duration-150 rounded-none overflow-hidden z-[5000]">
-              {[ { id: 'advance', l: 'Advance Tracker', i: WalletCards }, { id: 'saala', l: 'SAALA (Credit)', i: Landmark } ].map(item => (
-                <button key={item.id} onClick={() => { setShowMMenu(false); setActiveSection(item.id); }} className={`w-full text-left px-5 py-2.5 text-[11px] font-bold flex items-center gap-3 transition-colors ${activeSection === item.id ? 'bg-slate-100 text-slate-900 font-black' : 'hover:bg-slate-100 text-slate-600'}`}><item.i className="w-3.5 h-3.5" /> {item.l}</button>
+          <div className="relative h-full flex items-center"><button onClick={() => setShowMMenu(!showMMenu)} className={`flex items-center gap-2 px-4 h-full text-xs font-semibold transition-all ${showMMenu ? 'bg-white text-slate-900 shadow-xl' : 'text-slate-300 hover:text-white'}`}>More <ChevronDown className="w-3.5 h-3.5" /></button>
+            {showMMenu && <div className="absolute top-12 left-0 w-52 bg-white border border-slate-200 shadow-dropdown py-1 animate-in slide-in-from-top-2 duration-150 rounded-sm overflow-hidden z-[5000]">
+              {[ { id: 'advance', l: 'Advance', i: WalletCards }, { id: 'saala', l: 'Saala (Credit)', i: Landmark }, { id: 'silk', l: 'Silk', i: Layers } ].map(item => (
+                <button key={item.id} onClick={() => { setShowMMenu(false); setActiveSection(item.id); }} className={`w-full text-left px-4 py-2.5 text-sm font-medium flex items-center gap-3 transition-colors ${activeSection === item.id ? 'bg-primary-50 text-primary-700' : 'text-slate-700 hover:bg-slate-50'}`}><item.i className="w-4 h-4" /> {item.l}</button>
               ))}
             </div>}
           </div>
@@ -1391,7 +1216,7 @@ export default function App() {
       </nav>
 
       <div className="flex-1 overflow-hidden flex flex-col bg-slate-100 relative">
-        {activeSection === 'daily'  && groups && customers && vehicles && catalog &&  <DailyTransactionsView customerInfo={customerInfo} setCustomerInfo={setCustomerInfo} groups={groups} customers={customers} catalog={catalog} vehicles={vehicles} onOpenQuickAdd={(m) => { if (m === 'item') setActiveSection('item-reg'); else setActiveSection('party'); }} currentEntry={currentEntry} setCurrentEntry={setCurrentEntry} items={items} onAddItem={handleAddItem} onRemoveItem={(id) => setItems(items.filter(i => i.id !== id))} onEditItem={(item) => setCurrentEntry(item)} summary={summary} onSaveRecord={async () => {
+        {activeSection === 'daily' && <DailyTransactionsView groupRef={groupRef} customerInfo={customerInfo} setCustomerInfo={setCustomerInfo} groups={groups} customers={customers} catalog={catalog} vehicles={vehicles} onOpenQuickAdd={(m) => { if (m === 'item') setActiveSection('item-reg'); else setActiveSection('party'); }} currentEntry={currentEntry} setCurrentEntry={setCurrentEntry} items={items} onAddItem={handleAddItem} onRemoveItem={(id) => setItems(items.filter(i => i.id !== id))} onEditItem={(item) => setCurrentEntry(item)} summary={summary} onSaveRecord={async () => {
           if(!customerInfo.customerName) return showNotify("Transaction save failed: Select client", "error");
           const selected = customers.find(c => c.name === customerInfo.customerName);
           if (!selected?.id) return showNotify("Transaction save failed: Unknown customer", "error");
@@ -1408,13 +1233,43 @@ export default function App() {
               paidAmt: i.paidAmt,
               remarks: i.remarks || '',
             })));
+            
+            // Reload data from backend to ensure consistency
+            const updatedItems = await api.listTransactions(selected.id);
+            setItems(updatedItems.map(r => ({
+              id: r.id,
+              date: r.date,
+              vehicle: r.vehicle,
+              itemCode: r.itemCode,
+              itemName: r.itemName,
+              qty: String(r.qty ?? ''),
+              rate: String(r.rate ?? ''),
+              laguage: String(r.laguage ?? ''),
+              coolie: String(r.coolie ?? ''),
+              paidAmt: String(r.paidAmt ?? ''),
+              remarks: r.remarks ?? '',
+            })));
+            
             showNotify("Session data synchronized successfully", "success");
+            
+            // Clear customer selection and return focus to group field
+            setCustomerInfo({ groupName: '', customerName: '', address: '', contactNo: '' });
+            setCurrentEntry({ date: new Date().toISOString().split('T')[0], vehicle: '', itemCode: '', itemName: '', qty: '', rate: '', laguage: '', coolie: '', paidAmt: '', remarks: '' });
+            setItems([]);
+            
+            // Return focus to group selection field
+            setTimeout(() => {
+              // Small delay to ensure state updates propagate to the UI
+              setTimeout(() => {
+                groupRef.current?.focus();
+              }, 50);
+            }, 100);
           } catch (e) {
             showNotify(`Save failed: ${e.message}`, 'error');
           }
         }} advanceStore={advanceStore} commissionPct={commissionPct} setCommissionPct={setCommissionPct} onViewReport={() => setActiveSection('reports')} />}
         {activeSection === 'group-reg' && <GroupCustomerRegistryForm title="NEW GROUP" initialTab="group" groups={groups} setGroups={setGroups} customers={customers} setCustomers={setCustomers} showNotify={showNotify} onCancel={() => setActiveSection('daily')} />}
-        {activeSection === 'party' && <GroupCustomerRegistryForm title="PARTY DETAILS" initialTab="customer" groups={groups} setGroups={setGroups} customers={customers} setCustomers={setCustomers} showNotify={showNotify} onCancel={() => setActiveSection('daily')} />}
+        {activeSection === 'party' && <PartyDetailsView customers={customers} showNotify={showNotify} onCancel={() => setActiveSection('daily')} />}
         {activeSection === 'item-reg' && <ItemRegistryForm form={itemForm} setForm={setItemForm} onSave={async () => {
           try {
             const created = await api.createCatalogItem({
@@ -1424,24 +1279,20 @@ export default function App() {
             setCatalog([...catalog, created]);
             setItemForm({ itemCode: '', itemName: '' });
             showNotify("New product registered successfully", "success");
+            
+            // Return focus to item code input field
+            setTimeout(() => {
+              document.querySelector('input[placeholder="Enter item code"]')?.focus();
+            }, 100);
           } catch (e) {
             showNotify(`Item add failed: ${e.message}`, 'error');
           }
         }} onCancel={() => setActiveSection('daily')} />}
-        {activeSection === 'advance' && <AdvanceView groups={groups} customers={customers} advanceStore={advanceStore} onSaveAdvance={(n, g, t, d, r) => {
-           setAdvanceStore(prev => {
-             const ex = prev[n] || { given: 0, deducted: 0, balance: 0, logs: [] };
-             const logs = [...ex.logs];
-             if (g > 0) logs.push({ type: 'give', val: g, date: d, remarks: r });
-             if (t > 0) logs.push({ type: 'deduct', val: t, date: d, remarks: r });
-             const newG = ex.given + g; const newT = ex.deducted + t;
-             return { ...prev, [n]: { given: newG, deducted: newT, balance: newG - newT, logs } };
-           });
-           showNotify("Advance Ledger Adjusted", "success");
-        }} onCancel={() => setActiveSection('daily')} />}
-        {activeSection === 'daily-sale' && <DailySaleView customers={customers} catalog={catalog} onCancel={() => setActiveSection('daily')} />}
-        {activeSection === 'saala' && <SaalaView saalaPeople={saalaPeople} setSaalaPeople={setSaalaPeople} saalaPayments={saalaPayments} setSaalaPayments={setSaalaPayments} onCancel={() => setActiveSection('daily')} showNotify={showNotify} />}
-        {activeSection === 'reports' && <ReportsWindow groups={groups} customers={customers} vehicles={vehicles} onCancel={() => setActiveSection('daily')} />}
+        {activeSection === 'advance' && <AdvanceTrackerView groups={groups} customers={customers} advanceStore={advanceStore} setAdvanceStore={setAdvanceStore} showNotify={showNotify} onCancel={() => setActiveSection('daily')} />}
+        {activeSection === 'daily-sale' && <DailySaleView onCancel={() => setActiveSection('daily')} />}
+        {activeSection === 'saala' && <SaalaView catalog={catalog} onCancel={() => setActiveSection('daily')} showNotify={showNotify} />}
+        {activeSection === 'silk' && <SilkSummaryView ledgerStore={ledgerStore} customers={customers} onCancel={() => setActiveSection('daily')} />}
+        {activeSection === 'reports' && <ReportsWindow groups={groups} customers={customers} vehicles={vehicles} advanceStore={advanceStore} onCancel={() => setActiveSection('daily')} />}
         {activeSection === 'group-total' && <GroupTotalReportPage />}
         {activeSection === 'group-print' && <GroupPattiPrintingPage />}
         {activeSection === 'group-adv' && <GroupAdvanceView groups={groups} customers={customers} advanceStore={advanceStore} onCancel={() => setActiveSection('daily')} />}

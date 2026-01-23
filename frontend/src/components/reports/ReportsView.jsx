@@ -1,6 +1,7 @@
-import React, { useEffect, useMemo, useState } from 'react';
+import React, { useEffect, useMemo, useState, useCallback } from 'react';
 import SearchableSelect from '../shared/SearchableSelect';
-import api from '../../config/api';
+import { api } from '../../utils/api';
+import { DEFAULT_STATES } from '../../utils/stateManager';
 
 function toNum(value) {
 	const n = Number(value);
@@ -11,15 +12,51 @@ function todayISO() {
 	return new Date().toISOString().split('T')[0];
 }
 
-export default function ReportsView({ groups, customers, vehicles, onCancel }) {
-	const [fromDate, setFromDate] = useState(todayISO());
-	const [toDate, setToDate] = useState(todayISO());
-	const [groupName, setGroupName] = useState('');
-	const [customerName, setCustomerName] = useState('');
-	const [vehicle, setVehicle] = useState('');
-	const [commissionPct, setCommissionPct] = useState(0);
-
-	const [rows, setRows] = useState([]);
+export default function ReportsView({ groups, customers, vehicles, advanceStore = {}, onCancel }) {
+	const [state, setState] = useState(DEFAULT_STATES.reports);
+	
+	const {
+		fromDate,
+		toDate,
+		groupName,
+		customerName,
+		vehicle,
+		commissionPct,
+		rows
+	} = state;
+	
+	// Functions to update individual state properties
+	const setFromDate = useCallback((value) => {
+		setState(prev => ({ ...prev, fromDate: value }));
+	}, []);
+	
+	const setToDate = useCallback((value) => {
+		setState(prev => ({ ...prev, toDate: value }));
+	}, []);
+	
+	const setGroupName = useCallback((value) => {
+		setState(prev => ({ ...prev, groupName: value }));
+	}, []);
+	
+	const setCustomerName = useCallback((value) => {
+		setState(prev => ({ ...prev, customerName: value }));
+	}, []);
+	
+	const setVehicle = useCallback((value) => {
+		setState(prev => ({ ...prev, vehicle: value }));
+	}, []);
+	
+	const setCommissionPct = useCallback((value) => {
+		setState(prev => ({ ...prev, commissionPct: value }));
+	}, []);
+	
+	const setRows = useCallback((value) => {
+		setState(prev => ({ ...prev, rows: value }));
+	}, []);
+	
+	const setAutoLoad = useCallback((value) => {
+		setState(prev => ({ ...prev, autoLoad: value }));
+	}, []);
 
 	const filteredCustomers = useMemo(() => {
 		return customers.filter(c => !groupName || c.group === groupName);
@@ -28,6 +65,11 @@ export default function ReportsView({ groups, customers, vehicles, onCancel }) {
 	const selectedCustomer = useMemo(() => {
 		return customers.find(c => c.name === customerName) || null;
 	}, [customers, customerName]);
+
+	const remAdvance = useMemo(() => {
+		const key = String(selectedCustomer?.name || '');
+		return Number(advanceStore?.[key]?.balance || 0);
+	}, [advanceStore, selectedCustomer?.name]);
 
 	const customerIndex = useMemo(() => {
 		if (!customerName) return -1;
@@ -40,15 +82,22 @@ export default function ReportsView({ groups, customers, vehicles, onCancel }) {
 			return;
 		}
 		const stillValid = filteredCustomers.some(c => c.name === customerName);
-		if (!stillValid) setCustomerName(filteredCustomers[0].name);
+		if (!stillValid) setCustomerName('');
 	}, [filteredCustomers, customerName]);
 
+	// autoLoad is now managed in our state system
+	const autoLoad = state.autoLoad;
+
+	// Note: autoLoad is now managed in state, but we need to maintain the original useEffect structure
+	// We'll update the state version of autoLoad separately
+	const [autoLoadLocal, setAutoLoadLocal] = useState(false);
+	
 	useEffect(() => {
 		let cancelled = false;
 
 		async function load() {
-			if (!selectedCustomer?.id) {
-				setRows([]);
+			if (!selectedCustomer?.id || !autoLoadLocal) {
+				if (!autoLoadLocal) setRows([]);
 				return;
 			}
 			try {
@@ -63,7 +112,19 @@ export default function ReportsView({ groups, customers, vehicles, onCancel }) {
 		return () => {
 			cancelled = true;
 		};
-	}, [selectedCustomer?.id]);
+	}, [selectedCustomer?.id, autoLoadLocal]);
+
+	const handleSubmit = async () => {
+		if (!selectedCustomer?.id) return;
+		setAutoLoad(true);
+		// Explicitly load data when submit is clicked
+		try {
+			const data = await api.listTransactions(selectedCustomer.id);
+			setRows(Array.isArray(data) ? data : []);
+		} catch {
+			setRows([]);
+		}
+	};
 
 	const filteredRows = useMemo(() => {
 		const f = String(fromDate || '').trim();
@@ -116,33 +177,49 @@ export default function ReportsView({ groups, customers, vehicles, onCancel }) {
 		setCustomerName(filteredCustomers[nextIdx].name);
 	};
 
+	// Reset state when component unmounts or is cancelled
+	useEffect(() => {
+		return () => {
+			// Reset to default state when component unmounts
+			setState(DEFAULT_STATES.reports);
+		};
+	}, []);
+
+	const handleCancel = () => {
+		// Reset state before cancelling
+		setState(DEFAULT_STATES.reports);
+		onCancel && onCancel();
+	};
+
 	return (
 		<div className="flex-1 flex flex-col h-full overflow-hidden bg-white">
-			<div className="bg-slate-800 px-4 py-2 text-white shrink-0">
-				<h2 className="text-[12px] font-black uppercase tracking-widest">Reports</h2>
+			<div className="bg-slate-800 px-5 py-3 text-white shrink-0">
+				<h2 className="text-base font-semibold tracking-wide">Reports</h2>
 			</div>
 
-			<div className="flex-1 flex overflow-hidden bg-[#f1f3f5]">
-				<div className="flex-1 flex flex-col overflow-hidden border-r border-slate-300">
-					<div className="bg-white border-b border-slate-300 shadow-sm shrink-0">
-						<div className="bg-slate-100 px-4 py-1 border-b text-slate-700 font-black text-[9px] uppercase">Filters</div>
-						<div className="p-3">
-							<div className="grid grid-cols-12 gap-3 items-end">
+			<div className="flex-1 flex overflow-hidden bg-slate-50">
+				<div className="flex-1 flex flex-col overflow-hidden border-r border-slate-200">
+					<div className="bg-white border-b border-slate-200 shadow-sm shrink-0">
+						<div className="bg-slate-100 px-4 py-2 border-b text-slate-600 font-semibold text-xs">Filters</div>
+						<div className="p-4">
+							<div className="grid grid-cols-12 gap-4 items-end">
 								<div className="col-span-2">
-									<label className="text-[9px] font-black uppercase text-slate-500 block mb-0.5">From Date</label>
+									<label className="text-xs font-medium text-slate-600 block mb-1.5">From Date</label>
 									<input
 										type="date"
-										className="w-full border border-slate-400 h-[28px] px-2 text-[11px] font-bold bg-white"
+										className="w-full border border-slate-300 rounded-sm px-3 text-sm font-medium bg-white focus:border-primary-500 focus:ring-2 focus:ring-primary-50 outline-none transition-colors"
+										style={{ height: '36px' }}
 										value={fromDate}
 										onChange={e => setFromDate(e.target.value)}
 									/>
 								</div>
 
 								<div className="col-span-2">
-									<label className="text-[9px] font-black uppercase text-slate-500 block mb-0.5">To Date</label>
+									<label className="text-xs font-medium text-slate-600 block mb-1.5">To Date</label>
 									<input
 										type="date"
-										className="w-full border border-slate-400 h-[28px] px-2 text-[11px] font-bold bg-white"
+										className="w-full border border-slate-300 rounded-sm px-3 text-sm font-medium bg-white focus:border-primary-500 focus:ring-2 focus:ring-primary-50 outline-none transition-colors"
+										style={{ height: '36px' }}
 										value={toDate}
 										onChange={e => setToDate(e.target.value)}
 									/>
@@ -159,8 +236,8 @@ export default function ReportsView({ groups, customers, vehicles, onCancel }) {
 								</div>
 
 								<div className="col-span-3">
-									<label className="text-[9px] font-black uppercase text-slate-500 block mb-0.5">Customer Name</label>
-									<div className="flex items-end gap-1">
+									<label className="text-xs font-medium text-slate-600 block mb-1">Customer Name</label>
+									<div className="flex items-end gap-1.5">
 										<div className="flex-1">
 											<SearchableSelect
 												label={null}
@@ -170,8 +247,8 @@ export default function ReportsView({ groups, customers, vehicles, onCancel }) {
 												placeholder="Select customer"
 											/>
 										</div>
-										<button type="button" className="w-7 h-[28px] border border-slate-400 bg-slate-100 font-black text-[12px]" onClick={goPrevCustomer} aria-label="Previous customer">{'<'}</button>
-										<button type="button" className="w-7 h-[28px] border border-slate-400 bg-slate-100 font-black text-[12px]" onClick={goNextCustomer} aria-label="Next customer">{'>'}</button>
+										<button type="button" className="w-8 border border-slate-300 bg-slate-100 font-semibold text-sm rounded-sm hover:bg-slate-200 transition-colors" style={{ height: '36px' }} onClick={goPrevCustomer} aria-label="Previous customer">{'<'}</button>
+										<button type="button" className="w-8 border border-slate-300 bg-slate-100 font-semibold text-sm rounded-sm hover:bg-slate-200 transition-colors" style={{ height: '36px' }} onClick={goNextCustomer} aria-label="Next customer">{'>'}</button>
 									</div>
 								</div>
 
@@ -186,45 +263,67 @@ export default function ReportsView({ groups, customers, vehicles, onCancel }) {
 								</div>
 
 								<div className="col-span-9">
-									<label className="text-[9px] font-black uppercase text-slate-500 block mb-0.5">Address</label>
+									<label className="text-xs font-medium text-slate-600 block mb-1">Address</label>
 									<textarea
-										className="w-full border border-slate-300 bg-slate-50 px-2 py-1 text-[11px] font-bold text-slate-600 h-[36px] resize-none"
+										className="w-full border border-slate-200 bg-slate-50 px-3 py-2 text-sm font-medium text-slate-600 h-[40px] resize-none rounded-sm"
 										readOnly
 										value={String(selectedCustomer?.address || '')}
 									/>
 								</div>
 
 								<div className="col-span-3">
-									<label className="text-[9px] font-black uppercase text-slate-500 block mb-0.5">Contact No</label>
+									<label className="text-xs font-medium text-slate-600 block mb-1">Contact No</label>
 									<input
-										className="w-full border border-slate-300 bg-slate-50 h-[28px] px-2 text-[11px] font-bold text-slate-600"
+										className="w-full border border-slate-200 bg-slate-50 px-3 text-sm font-medium text-slate-600 rounded-sm"
+										style={{ height: '36px' }}
 										readOnly
 										value={String(selectedCustomer?.contact || '')}
 									/>
 								</div>
+
+								<div className="col-span-3">
+									<label className="text-xs font-medium text-primary-600 block mb-1">Rem. Advance</label>
+									<input
+										className="w-full border border-primary-200 bg-primary-50 px-3 text-sm font-semibold text-primary-600 text-right rounded-sm"
+										style={{ height: '36px' }}
+										readOnly
+										value={`₹ ${remAdvance.toFixed(2)}`}
+									/>
+								</div>
 							</div>
+						</div>
+						<div className="flex justify-end p-4 bg-slate-50 border-t border-slate-200">
+							<button
+								type="button"
+								className="px-6 bg-primary-600 text-white text-sm font-semibold rounded-sm hover:bg-primary-700 transition-colors focus:outline-none focus:ring-2 focus:ring-primary-500 focus:ring-offset-2"
+								style={{ height: '40px' }}
+								onClick={handleSubmit}
+								tabIndex="0"
+							>
+								Submit
+							</button>
 						</div>
 					</div>
 
-					<div className="flex-1 overflow-hidden p-2">
-						<div className="h-full bg-white border border-slate-400 shadow-sm overflow-hidden flex flex-col">
+					<div className="flex-1 overflow-hidden p-3">
+						<div className="h-full bg-white border border-slate-200 shadow-card rounded-sm overflow-hidden flex flex-col">
 							<div className="flex-1 overflow-auto bg-white custom-table-scroll">
-								<table className="w-full text-[11px] border-collapse relative">
-									<thead className="sticky top-0 bg-[#15803d] text-white z-20 border-b-2 font-black uppercase text-[8px] shadow-sm">
+								<table className="w-full text-sm border-collapse relative">
+									<thead className="sticky top-0 bg-emerald-700 text-white z-20 border-b-2 font-semibold uppercase text-xs shadow-md">
 									<tr>
-											<th className="p-2 border border-green-800 w-12 text-center">Sl.No</th>
-											<th className="p-2 border border-green-800 w-24 text-center">Date</th>
-											<th className="p-2 border border-green-800 w-28">Vehicle</th>
-											<th className="p-2 border border-green-800 w-24">Item Code</th>
-											<th className="p-2 border border-green-800">Item Name</th>
-											<th className="p-2 border border-green-800 w-16 text-right">Qty</th>
-											<th className="p-2 border border-green-800 w-16 text-right">Rate</th>
-											<th className="p-2 border border-green-800 w-24 text-right">Total</th>
-											<th className="p-2 border border-green-800 w-16 text-right">Luggage</th>
-											<th className="p-2 border border-green-800 w-24 text-right">L. Amount</th>
-											<th className="p-2 border border-green-800 w-16 text-right">Coolie</th>
-											<th className="p-2 border border-green-800 w-24 text-right">Paid Amount</th>
-											<th className="p-2 border border-green-800 w-36 text-left">Remarks</th>
+											<th className="px-3 py-3 border border-emerald-800 w-14 text-center">Sl.No</th>
+											<th className="px-3 py-3 border border-emerald-800 w-24 text-center">Date</th>
+											<th className="px-3 py-3 border border-emerald-800 w-28">Vehicle</th>
+											<th className="px-3 py-3 border border-emerald-800 w-24">Item Code</th>
+											<th className="px-3 py-3 border border-emerald-800">Item Name</th>
+											<th className="px-3 py-3 border border-emerald-800 w-16 text-right">Qty</th>
+											<th className="px-3 py-3 border border-emerald-800 w-16 text-right">Rate</th>
+											<th className="px-3 py-3 border border-emerald-800 w-24 text-right">Total</th>
+											<th className="px-3 py-3 border border-emerald-800 w-20 text-right">Luggage</th>
+											<th className="px-3 py-3 border border-emerald-800 w-24 text-right">L. Amount</th>
+											<th className="px-3 py-3 border border-emerald-800 w-16 text-right">Coolie</th>
+											<th className="px-3 py-3 border border-emerald-800 w-24 text-right">Paid Amount</th>
+											<th className="px-3 py-3 border border-emerald-800 w-36 text-left">Remarks</th>
 									</tr>
 								</thead>
 								<tbody>
@@ -232,39 +331,39 @@ export default function ReportsView({ groups, customers, vehicles, onCancel }) {
 										const total = r.qty * r.rate;
 										const lagAmt = r.qty * r.laguage;
 										return (
-											<tr key={r.id ?? `${r.date}-${idx}`} className="hover:bg-rose-50 border-b group transition-colors">
-												<td className="p-2 border-r text-center text-slate-400 font-bold">{idx + 1}</td>
-												<td className="p-2 border-r text-center text-slate-600">{String(r.date || '')}</td>
-												<td className="p-2 border-r font-bold text-slate-700">{String(r.vehicle || '--')}</td>
-												<td className="p-2 border-r text-slate-500">{String(r.itemCode || '--')}</td>
-												<td className="p-2 border-r font-bold text-slate-800">{String(r.itemName || '')}</td>
-												<td className="p-2 border-r text-right font-black">{r.qty}</td>
-												<td className="p-2 border-r text-right font-mono">{String(r.rate)}</td>
-												<td className="p-2 border-r text-right font-black text-rose-600">{total.toLocaleString()}</td>
-												<td className="p-2 border-r text-right text-slate-500 italic">{String(r.laguage)}</td>
-												<td className="p-2 border-r text-right font-bold text-blue-600">{lagAmt.toLocaleString()}</td>
-												<td className="p-2 border-r text-right text-slate-500 italic">{r.coolie.toLocaleString()}</td>
-												<td className="p-2 border-r text-right text-emerald-600 font-bold">{r.paidAmt.toLocaleString()}</td>
-												<td className="p-2 italic text-slate-400">{String(r.remarks || '--')}</td>
+											<tr key={r.id ?? `${r.date}-${idx}`} className="hover:bg-primary-50 border-b border-slate-100 group transition-colors">
+												<td className="px-3 py-2.5 border-r border-slate-100 text-center text-slate-400 font-semibold">{idx + 1}</td>
+												<td className="px-3 py-2.5 border-r border-slate-100 text-center text-slate-600">{String(r.date || '')}</td>
+												<td className="px-3 py-2.5 border-r border-slate-100 font-semibold text-slate-700">{String(r.vehicle || '--')}</td>
+												<td className="px-3 py-2.5 border-r border-slate-100 text-slate-600">{String(r.itemCode || '--')}</td>
+												<td className="px-3 py-2.5 border-r border-slate-100 font-semibold text-slate-800">{String(r.itemName || '')}</td>
+												<td className="px-3 py-2.5 border-r border-slate-100 text-right font-bold">{r.qty}</td>
+												<td className="px-3 py-2.5 border-r border-slate-100 text-right font-mono">{String(r.rate)}</td>
+												<td className="px-3 py-2.5 border-r border-slate-100 text-right font-bold text-primary-600">{total.toLocaleString()}</td>
+												<td className="px-3 py-2.5 border-r border-slate-100 text-right text-slate-500">{String(r.laguage)}</td>
+												<td className="px-3 py-2.5 border-r border-slate-100 text-right font-semibold text-blue-600">{lagAmt.toLocaleString()}</td>
+												<td className="px-3 py-2.5 border-r border-slate-100 text-right text-slate-500">{r.coolie.toLocaleString()}</td>
+												<td className="px-3 py-2.5 border-r border-slate-100 text-right text-emerald-600 font-semibold">{r.paidAmt.toLocaleString()}</td>
+												<td className="px-3 py-2.5 text-slate-500">{String(r.remarks || '--')}</td>
 											</tr>
 										);
 									})}
 
 										{emptyRows.map(i => (
-											<tr key={`empty-${i}`} className="border-b">
-												<td className="p-2 border-r text-center text-slate-300">&nbsp;</td>
-												<td className="p-2 border-r text-center text-slate-300">&nbsp;</td>
-												<td className="p-2 border-r text-slate-300">&nbsp;</td>
-												<td className="p-2 border-r text-slate-300">&nbsp;</td>
-												<td className="p-2 border-r text-slate-300">&nbsp;</td>
-												<td className="p-2 border-r text-right text-slate-300">&nbsp;</td>
-												<td className="p-2 border-r text-right text-slate-300">&nbsp;</td>
-												<td className="p-2 border-r text-right text-slate-300">&nbsp;</td>
-												<td className="p-2 border-r text-right text-slate-300">&nbsp;</td>
-												<td className="p-2 border-r text-right text-slate-300">&nbsp;</td>
-												<td className="p-2 border-r text-right text-slate-300">&nbsp;</td>
-												<td className="p-2 border-r text-right text-slate-300">&nbsp;</td>
-												<td className="p-2 text-slate-300">&nbsp;</td>
+											<tr key={`empty-${i}`} className="border-b border-slate-100">
+												<td className="px-3 py-2.5 border-r border-slate-100 text-center text-slate-200">&nbsp;</td>
+												<td className="px-3 py-2.5 border-r border-slate-100 text-center text-slate-200">&nbsp;</td>
+												<td className="px-3 py-2.5 border-r border-slate-100 text-slate-200">&nbsp;</td>
+												<td className="px-3 py-2.5 border-r border-slate-100 text-slate-200">&nbsp;</td>
+												<td className="px-3 py-2.5 border-r border-slate-100 text-slate-200">&nbsp;</td>
+												<td className="px-3 py-2.5 border-r border-slate-100 text-right text-slate-200">&nbsp;</td>
+												<td className="px-3 py-2.5 border-r border-slate-100 text-right text-slate-200">&nbsp;</td>
+												<td className="px-3 py-2.5 border-r border-slate-100 text-right text-slate-200">&nbsp;</td>
+												<td className="px-3 py-2.5 border-r border-slate-100 text-right text-slate-200">&nbsp;</td>
+												<td className="px-3 py-2.5 border-r border-slate-100 text-right text-slate-200">&nbsp;</td>
+												<td className="px-3 py-2.5 border-r border-slate-100 text-right text-slate-200">&nbsp;</td>
+												<td className="px-3 py-2.5 border-r border-slate-100 text-right text-slate-200">&nbsp;</td>
+												<td className="px-3 py-2.5 text-slate-200">&nbsp;</td>
 											</tr>
 										))}
 								</tbody>
@@ -274,34 +373,36 @@ export default function ReportsView({ groups, customers, vehicles, onCancel }) {
 					</div>
 				</div>
 
-				<aside className="w-[320px] bg-slate-800 flex flex-col p-4 shrink-0 shadow-2xl">
-					<h3 className="text-[10px] font-black text-rose-400 uppercase tracking-widest mb-4">AGGREGATE SUMMARY</h3>
-					<div className="space-y-3 flex-1 overflow-auto text-white scrollbar-thin">
-						<div className="flex flex-col gap-1"><label className="text-[9px] font-black text-slate-500 uppercase">Qty</label><input type="text" readOnly className="bg-slate-700/50 p-2 text-lg font-black text-right border-slate-600 outline-none" value={String(summary.qty)} /></div>
-						<div className="flex flex-col gap-1"><label className="text-[9px] font-black text-slate-500 uppercase">Coolie</label><input type="text" readOnly className="bg-slate-700/50 p-2 text-lg font-black text-right border-slate-600 outline-none" value={summary.coolie.toFixed(2)} /></div>
-						<div className="flex flex-col gap-1"><label className="text-[9px] font-black text-slate-500 uppercase">Luggage Total</label><input type="text" readOnly className="bg-slate-700/50 p-2 text-lg font-black text-right border-slate-600 outline-none" value={summary.luggageTotal.toFixed(2)} /></div>
-						<div className="grid grid-cols-2 gap-2 p-2 bg-slate-900/50 border border-slate-700">
-							<div className="flex flex-col gap-1"><label className="text-[8px] text-rose-400 uppercase font-black">Commission %</label><input type="number" className="bg-slate-800 p-1 font-black text-right outline-none focus:border-rose-500" value={String(commissionPct)} onChange={e => setCommissionPct(e.target.value)} /></div>
-							<div className="flex flex-col gap-1"><label className="text-[8px] text-slate-500 uppercase font-black">Total Commission</label><input type="text" readOnly className="bg-slate-700/20 p-1 text-right text-slate-300 outline-none" value={summary.totalCommission.toFixed(2)} /></div>
+				<aside className="w-[340px] bg-slate-800 flex flex-col p-5 shrink-0 shadow-2xl">
+					<h3 className="text-xs font-semibold text-primary-400 uppercase tracking-wider mb-5">Aggregate Summary</h3>
+					<div className="space-y-4 flex-1 overflow-auto text-white scrollbar-thin">
+						<div className="flex flex-col gap-1.5"><label className="text-xs font-medium text-slate-400">Qty</label><input type="text" readOnly className="bg-slate-700/50 px-3 py-2.5 text-lg font-bold text-right rounded-sm border border-slate-600 outline-none" value={String(summary.qty)} /></div>
+						<div className="flex flex-col gap-1.5"><label className="text-xs font-medium text-slate-400">Coolie</label><input type="text" readOnly className="bg-slate-700/50 px-3 py-2.5 text-lg font-bold text-right rounded-sm border border-slate-600 outline-none" value={summary.coolie.toFixed(2)} /></div>
+						<div className="flex flex-col gap-1.5"><label className="text-xs font-medium text-slate-400">Luggage Total</label><input type="text" readOnly className="bg-slate-700/50 px-3 py-2.5 text-lg font-bold text-right rounded-sm border border-slate-600 outline-none" value={summary.luggageTotal.toFixed(2)} /></div>
+						<div className="grid grid-cols-2 gap-3 p-3 bg-slate-900/50 rounded border border-slate-700">
+							<div className="flex flex-col gap-1.5"><label className="text-xs font-medium text-primary-400">Commission %</label><input type="number" className="bg-slate-800 px-2 py-2 font-semibold text-right rounded-sm border border-slate-600 outline-none focus:border-primary-500" value={String(commissionPct)} onChange={e => setCommissionPct(e.target.value)} /></div>
+							<div className="flex flex-col gap-1.5"><label className="text-xs font-medium text-slate-500">Total Commission</label><input type="text" readOnly className="bg-slate-700/20 px-2 py-2 text-right text-slate-300 rounded-sm border border-slate-600 outline-none" value={summary.totalCommission.toFixed(2)} /></div>
 						</div>
-						<div className="flex flex-col gap-1"><label className="text-[9px] font-black text-slate-500 uppercase">Total</label><input type="text" readOnly className="bg-slate-700/50 p-2 text-lg font-black text-right text-emerald-400 border-slate-600 outline-none" value={summary.total.toFixed(2)} /></div>
-						<div className="flex flex-col gap-1"><label className="text-[9px] font-black text-slate-500 uppercase">Amount Paid</label><input type="text" readOnly className="bg-slate-700/50 p-2 text-lg font-black text-right border-slate-600 outline-none" value={summary.paid.toFixed(2)} /></div>
-						<div className="pt-4 border-t border-white/10 text-center"><p className="text-[9px] text-rose-400 uppercase font-black tracking-widest">Net Total</p><p className="text-3xl font-black text-rose-500 tabular-nums drop-shadow-xl">₹ {summary.netTotal.toFixed(2)}</p></div>
+						<div className="flex flex-col gap-1.5"><label className="text-xs font-medium text-slate-400">Total</label><input type="text" readOnly className="bg-slate-700/50 px-3 py-2.5 text-lg font-bold text-right text-emerald-400 rounded-sm border border-slate-600 outline-none" value={summary.total.toFixed(2)} /></div>
+						<div className="flex flex-col gap-1.5"><label className="text-xs font-medium text-slate-400">Amount Paid</label><input type="text" readOnly className="bg-slate-700/50 px-3 py-2.5 text-lg font-bold text-right rounded-sm border border-slate-600 outline-none" value={summary.paid.toFixed(2)} /></div>
+						<div className="pt-5 border-t border-white/10 text-center"><p className="text-xs text-primary-400 font-semibold tracking-wider mb-2">Net Total</p><p className="text-3xl font-bold text-primary-500 tabular-nums drop-shadow-xl">₹ {summary.netTotal.toFixed(2)}</p></div>
 					</div>
 				</aside>
 			</div>
 
-			<div className="shrink-0 border-t border-slate-300 bg-white p-3 flex justify-end gap-3">
+			<div className="shrink-0 border-t border-slate-200 bg-white p-4 flex justify-end gap-3">
 				<button
 					type="button"
-					className="px-6 h-9 border border-slate-400 bg-slate-800 text-white text-[11px] font-black uppercase"
+					className="px-6 bg-slate-800 text-white text-sm font-semibold rounded-sm hover:bg-slate-700 transition-colors"
+					style={{ height: '40px' }}
 					onClick={() => window.print()}
 				>
 					Print
 				</button>
 				<button
 					type="button"
-					className="px-6 h-9 border border-slate-400 bg-white text-slate-800 text-[11px] font-black uppercase"
+					className="px-6 border border-slate-300 bg-white text-slate-700 text-sm font-semibold rounded-sm hover:bg-slate-50 transition-colors"
+					style={{ height: '40px' }}
 					onClick={onCancel}
 				>
 					Cancel

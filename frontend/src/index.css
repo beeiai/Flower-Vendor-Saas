@@ -1,3 +1,180 @@
 @tailwind base;
 @tailwind components;
 @tailwind utilities;
+
+/* ============================================
+   ENTERPRISE UI DESIGN SYSTEM
+   Professional SaaS / ERP Styling
+   ============================================ */
+
+/* Base layer improvements */
+@layer base {
+  html {
+    font-size: 14px;
+    -webkit-font-smoothing: antialiased;
+    -moz-osx-font-smoothing: grayscale;
+  }
+  
+  body {
+    @apply text-slate-800 bg-slate-50;
+    line-height: 1.5;
+    letter-spacing: -0.01em;
+  }
+}
+
+/* Custom scrollbar for tables - refined */
+.custom-table-scroll::-webkit-scrollbar {
+  width: 10px;
+  height: 10px;
+}
+.custom-table-scroll::-webkit-scrollbar-track {
+  background: #f1f5f9;
+  border-radius: 5px;
+}
+.custom-table-scroll::-webkit-scrollbar-thumb {
+  background: #cbd5e1;
+  border-radius: 5px;
+  border: 2px solid #f1f5f9;
+}
+.custom-table-scroll::-webkit-scrollbar-thumb:hover {
+  background: #94a3b8;
+}
+
+/* Global scrollbar styling */
+::-webkit-scrollbar {
+  width: 8px;
+  height: 8px;
+}
+::-webkit-scrollbar-track {
+  background: #f8fafc;
+}
+::-webkit-scrollbar-thumb {
+  background: #cbd5e1;
+  border-radius: 4px;
+}
+::-webkit-scrollbar-thumb:hover {
+  background: #94a3b8;
+}
+
+/* Enhanced focus states - accessibility friendly */
+input:focus, select:focus, textarea:focus {
+  outline: none;
+  border-color: #0ea5e9 !important;
+  box-shadow: 0 0 0 3px rgba(14, 165, 233, 0.15);
+}
+
+/* Better button transitions */
+button {
+  transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+button:active {
+  transform: translateY(1px);
+}
+
+/* Table row hover enhancement - subtle */
+tbody tr {
+  transition: background-color 0.15s ease;
+}
+
+tbody tr:hover {
+  background-color: #f8fafc !important;
+}
+
+/* Enhanced table styling */
+table {
+  border-collapse: separate;
+  border-spacing: 0;
+}
+
+th {
+  letter-spacing: 0.025em;
+}
+
+td, th {
+  vertical-align: middle;
+}
+
+/* Smooth animations */
+@keyframes fadeIn {
+  from { opacity: 0; transform: translateY(-4px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+
+@keyframes slideDown {
+  from { opacity: 0; transform: translateY(-8px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+
+.animate-fadeIn {
+  animation: fadeIn 0.2s ease-out;
+}
+
+.animate-slideDown {
+  animation: slideDown 0.15s ease-out;
+}
+
+/* Form label styling - improved readability */
+label {
+  letter-spacing: 0.02em;
+}
+
+/* Input placeholder styling */
+input::placeholder,
+textarea::placeholder {
+  color: #94a3b8;
+  font-weight: 500;
+}
+
+/* Card/Panel shadow system */
+.shadow-panel {
+  box-shadow: 0 1px 3px 0 rgba(0, 0, 0, 0.05), 
+              0 1px 2px -1px rgba(0, 0, 0, 0.05);
+}
+
+.shadow-panel-hover {
+  box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.07), 
+              0 2px 4px -2px rgba(0, 0, 0, 0.05);
+}
+
+/* Improved disabled states */
+button:disabled,
+input:disabled,
+select:disabled,
+textarea:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
+}
+
+/* Selection styling */
+::selection {
+  background-color: #e0f2fe;
+  color: #0c4a6e;
+}
+
+/* Print styles */
+@media print {
+  nav, aside, .no-print { display: none !important; }
+  .print-only { display: block !important; }
+  body { background: white !important; }
+  * { -webkit-print-color-adjust: exact !important; print-color-adjust: exact !important; }
+}
+
+/* Utility classes for consistent spacing */
+@layer utilities {
+  .section-padding {
+    @apply p-5;
+  }
+  
+  .card-padding {
+    @apply p-4;
+  }
+  
+  .input-height {
+    height: 36px;
+  }
+  
+  .btn-height {
+    height: 40px;
+  }
+}

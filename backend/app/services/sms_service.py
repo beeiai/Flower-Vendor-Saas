@@ -57,3 +57,7 @@ def send_sms(
     )
 
     db.add(sms_log)
+    db.commit()
+    db.refresh(sms_log)
+    
+    return sms_log

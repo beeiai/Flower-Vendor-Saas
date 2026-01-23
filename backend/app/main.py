@@ -10,6 +10,11 @@ from fastapi.staticfiles import StaticFiles
 from app.core.startup import *  # noqa: F401
 from app.routes import farmers, farmer_groups, vehicles
 from app.routes import items as catalog_items
+from app.routes import advances
+from app.routes import silk
+from app.routes import reports
+from app.routes import sms
+from app.routes import saala
 from fastapi.middleware.cors import CORSMiddleware
 from app.core.config import settings
 from app.core.rate_limiter import rate_limit_middleware
@@ -36,15 +41,31 @@ app.add_middleware(
     allow_headers=["Authorization", "Content-Type"],
 )
 
-app.include_router(auth_router)
-app.include_router(settlement_router)
+app.include_router(auth_router, prefix="/api")
+app.include_router(settlement_router, prefix="/api")
 app.mount("/static", StaticFiles(directory="static"), name="static")
-app.include_router(farmers.router)
-app.include_router(farmer_groups.router)
-app.include_router(vehicles.router)
-app.include_router(catalog_items.router)
-app.include_router(catalog_items.alias)
-app.include_router(farmers.customers)
+app.include_router(farmers.router, prefix="/api")
+app.include_router(farmer_groups.router, prefix="/api")
+app.include_router(vehicles.router, prefix="/api")
+app.include_router(catalog_items.router, prefix="/api")
+app.include_router(catalog_items.alias, prefix="/api")
+app.include_router(farmers.customers, prefix="/api")
+app.include_router(advances.router, prefix="/api")
+app.include_router(silk.router, prefix="/api")
+app.include_router(reports.router, prefix="/api")
+app.include_router(sms.router, prefix="/api")
+app.include_router(saala.router, prefix="/api")
+
+
+@app.get("/api/health")
+def health() -> dict:
+    """Lightweight health check used by the SPA to verify backend availability.
+
+    Kept unauthenticated on purpose so that login screens can call it without
+    a JWT. Returns a minimal, stable payload.
+    """
+
+    return {"status": "ok"}
 
 
 @app.exception_handler(Exception)

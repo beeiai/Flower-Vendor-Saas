@@ -16,9 +16,10 @@ class CollectionItem(Base):
     id = Column(Integer, primary_key=True, index=True)
     
     vendor_id = Column(Integer, ForeignKey("vendors.id", ondelete="CASCADE"), nullable=False)
-    collection_id = Column(Integer, ForeignKey("collections.id", ondelete="CASCADE"), nullable=False)
+    collection_id = Column(Integer, ForeignKey("collections.id", ondelete="CASCADE"), nullable=True)
     farmer_id = Column(Integer, ForeignKey("farmers.id", ondelete="SET NULL"), nullable=True)
     group_id = Column(Integer, ForeignKey("farmer_groups.id", ondelete="SET NULL"), nullable=True)
+    vehicle_id = Column(Integer, ForeignKey("vehicles.id", ondelete="SET NULL"), nullable=True)
 
     date = Column(DATE, nullable=False)
 
@@ -43,6 +44,7 @@ class CollectionItem(Base):
     remarks = Column(Text, nullable=True)
 
     sms_sent = Column(Boolean, default=False)
+    is_locked = Column(Boolean, default=False, nullable=False)
 
     created_at = Column(TIMESTAMP, server_default=func.now())
 
@@ -51,3 +53,4 @@ class CollectionItem(Base):
     collection = relationship("Collection", backref="items")
     farmer = relationship("Farmer", backref="collection_items")
     group = relationship("FarmerGroup", backref="collection_items")
+    vehicle = relationship("Vehicle", backref="collection_items")

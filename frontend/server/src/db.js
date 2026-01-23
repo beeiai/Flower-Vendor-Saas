@@ -61,6 +61,31 @@ CREATE TABLE IF NOT EXISTS advances (
   created_at TEXT NOT NULL DEFAULT (datetime('now')),
   FOREIGN KEY (customer_id) REFERENCES customers(id) ON DELETE CASCADE
 );
+
+-- SAALA Module: Separate customers table for credit management
+CREATE TABLE IF NOT EXISTS saala_customers (
+  id INTEGER PRIMARY KEY AUTOINCREMENT,
+  name TEXT NOT NULL UNIQUE,
+  contact TEXT,
+  address TEXT,
+  created_at TEXT NOT NULL DEFAULT (datetime('now'))
+);
+
+-- SAALA Module: Transactions table for credit/payment tracking
+CREATE TABLE IF NOT EXISTS saala_transactions (
+  id INTEGER PRIMARY KEY AUTOINCREMENT,
+  customer_id INTEGER NOT NULL,
+  date TEXT NOT NULL,
+  itemCode TEXT,
+  itemName TEXT,
+  qty REAL NOT NULL DEFAULT 0,
+  rate REAL NOT NULL DEFAULT 0,
+  totalAmount REAL NOT NULL DEFAULT 0,
+  paidAmount REAL NOT NULL DEFAULT 0,
+  remarks TEXT,
+  created_at TEXT NOT NULL DEFAULT (datetime('now')),
+  FOREIGN KEY (customer_id) REFERENCES saala_customers(id) ON DELETE CASCADE
+);
 `);
 
 module.exports = { db };

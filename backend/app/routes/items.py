@@ -40,8 +40,10 @@ def create_item(data: ItemCreate, db: Session = Depends(get_db), user=Depends(ge
     exists = db.query(Catalog).filter(Catalog.vendor_id == user.vendor_id, Catalog.code == code).first()
     if exists:
         raise HTTPException(status_code=400, detail="Item code already exists")
+
+    # Persist in the canonical catalog table; the older `items` table is used
+    # elsewhere for transaction-level records.
     item = Catalog(vendor_id=user.vendor_id, code=code, name=name, rate=rate)
-    item = Item(vendor_id=user.vendor_id, code=code, name=name, rate=rate)
     db.add(item)
     db.commit()
     db.refresh(item)
@@ -66,7 +68,8 @@ def update_item(item_id: int, data: ItemUpdate, db: Session = Depends(get_db), u
 
 @router.delete("/{item_id}", operation_id="deleteCatalogItem")
 def delete_item(item_id: int, db: Session = Depends(get_db), user=Depends(get_current_user)):
-    item = db.query(Item).filter(Item.id == item_id, Item.vendor_id == user.vendor_id).first()
+    # Delete from the catalog table; transactional "items" are managed separately.
+    item = db.query(Catalog).filter(Catalog.id == item_id, Catalog.vendor_id == user.vendor_id).first()
     if not item:
         raise HTTPException(404, "Item not found")
 

@@ -149,6 +149,8 @@ def list_farmers_by_group(
             "label": label,
             "value": f.id,
             "phone": f.phone,
+            # Expose address so frontend can show it when a customer is selected.
+            "address": f.address,
         }
 
     return [to_select(f) for f in rows]
@@ -226,13 +228,16 @@ def select2(
 # ---------- Customers alias (some UIs use /customers) ----------
 customers = APIRouter(prefix="/customers", tags=["Customers"]) 
 
+
 @customers.get("/by-group/")
 def customers_by_group(group_id: int | None = None, group_name: str | None = None, q: str | None = None, db: Session = Depends(get_db), user = Depends(get_current_user)):
     return list_farmers_by_group(group_id=group_id, group_name=group_name, q=q, db=db, user=user)
 
+
 @customers.get("/group/{group_id}/")
 def customers_group_path(group_id: int, q: str | None = None, db: Session = Depends(get_db), user = Depends(get_current_user)):
     return list_farmers_group_path(group_id=group_id, q=q, db=db, user=user)
+
 
 @customers.get("/select2")
 def customers_select2(
@@ -264,6 +269,7 @@ def customers_select2(
         user=user,
     )
 
+
 # Root customers endpoint returning select list (no pagination) for UIs that call /customers with optional params
 @customers.get("/")
 def customers_root(
@@ -292,6 +298,100 @@ def customers_root(
         db=db,
         user=user,
     )
+
+
+# Compatibility create/delete endpoints so legacy /customers API continues to work
+from pydantic import BaseModel, ConfigDict
+
+
+class CustomerCompatCreate(BaseModel):
+    model_config = ConfigDict(extra="forbid")
+
+    name: str
+    groupId: int | None = None
+    contact: str | None = None
+    address: str | None = None
+
+
+@customers.post("/", status_code=201)
+def create_customer_compat(
+    payload: CustomerCompatCreate,
+    db: Session = Depends(get_db),
+    user=Depends(get_current_user),
+):
+    """Create a Farmer row from the simpler /customers payload.
+
+    This keeps the existing React UI contract while persisting into the
+    canonical farmers/farmer_groups tables.
+    """
+
+    # Resolve group by id within the vendor scope, if provided
+    group = None
+    if payload.groupId is not None:
+        group = (
+            db.query(FarmerGroup)
+            .filter(
+                FarmerGroup.id == payload.groupId,
+                FarmerGroup.vendor_id == user.vendor_id,
+            )
+            .first()
+        )
+        if not group:
+            raise HTTPException(status_code=400, detail="Farmer group not found")
+
+    farmer = Farmer(
+        vendor_id=user.vendor_id,
+        group_id=group.id if group else None,
+        farmer_code=_generate_farmer_code(db, user.vendor_id),
+        name=payload.name,
+        phone=payload.contact,
+        address=payload.address,
+        commission_percent=10,
+        advance_total=0,
+    )
+
+    db.add(farmer)
+    db.commit()
+    db.refresh(farmer)
+
+    # Shape matches list_farmers() output so frontend can reuse it
+    grp_name = farmer.group.name if getattr(farmer, "group", None) else None
+    return {
+        "id": farmer.id,
+        "name": farmer.name,
+        "group": grp_name,
+        "groupName": grp_name,
+        "contact": farmer.phone,
+        "address": farmer.address,
+    }
+
+
+@customers.delete("/{customer_id}/")
+def delete_customer_compat(
+    customer_id: int,
+    db: Session = Depends(get_db),
+    user=Depends(get_current_user),
+):
+    """Delete a farmer via /customers/{id}/ compatibility endpoint."""
+
+    farmer = db.query(Farmer).filter(
+        Farmer.id == customer_id,
+        Farmer.vendor_id == user.vendor_id,
+    ).first()
+
+    if not farmer:
+        raise HTTPException(status_code=404, detail="Customer not found")
+
+    if farmer.collections:
+        raise HTTPException(
+            status_code=400,
+            detail="Cannot delete customer with transaction history",
+        )
+
+    db.delete(farmer)
+    db.commit()
+
+    return {"message": "Customer deleted"}
 
 # ---------- READ (ONE) ----------
 @router.get("/{farmer_id}")
@@ -417,15 +517,108 @@ def replace_transactions(
     db: Session = Depends(get_db),
     user = Depends(get_current_user)
 ):
-    # This is a lightweight replace: echo back received items.
-    # Full persistence requires collection creation and validation; implement as needed later.
+    """
+    Update collection items for a farmer. Only add new transactions without deleting existing ones.
+    
+    The frontend sends items with the Daily Transactions UI shape; we persist
+    them as CollectionItem records.
+    """
     from logging import getLogger
+    from datetime import datetime
+    from app.models.vehicle import Vehicle
 
     logger = getLogger(__name__)
+
+    # Validate farmer ownership
+    farmer = db.query(Farmer).filter(
+        Farmer.id == farmer_id,
+        Farmer.vendor_id == user.vendor_id
+    ).first()
+    if not farmer:
+        raise HTTPException(404, "Farmer not found")
+
+    # Create new collection items from the provided transactions (add to existing ones)
+    created = []
+    for item_data in items:
+        # Parse date
+        date_str = item_data.get("date") or datetime.now().date().isoformat()
+        try:
+            item_date = datetime.fromisoformat(date_str).date()
+        except:
+            item_date = datetime.now().date()
+
+        # Resolve vehicle by name (or create a placeholder if not found)
+        vehicle_name = str(item_data.get("vehicle") or "").strip()
+        vehicle = None
+        if vehicle_name:
+            vehicle = db.query(Vehicle).filter(
+                Vehicle.vendor_id == user.vendor_id,
+                Vehicle.vehicle_name == vehicle_name
+            ).first()
+            if not vehicle:
+                # Try by vehicle_number as fallback
+                vehicle = db.query(Vehicle).filter(
+                    Vehicle.vendor_id == user.vendor_id,
+                    Vehicle.vehicle_number == vehicle_name
+                ).first()
+
+        qty = float(item_data.get("qty") or 0)
+        rate = float(item_data.get("rate") or 0)
+        laguage = float(item_data.get("laguage") or 0)
+        coolie = float(item_data.get("coolie") or 0)
+        paid_amt = float(item_data.get("paidAmt") or 0)
+
+        total_labour = qty * laguage
+        line_total = (qty * rate) - total_labour - coolie
+
+        collection_item = CollectionItem(
+            vendor_id=user.vendor_id,
+            collection_id=None,  # not using collection parent for now
+            farmer_id=farmer_id,
+            group_id=farmer.group_id,
+            date=item_date,
+            vehicle_number=vehicle.vehicle_number if vehicle else vehicle_name,
+            vehicle_name=vehicle.vehicle_name if vehicle else vehicle_name,
+            item_code=str(item_data.get("itemCode") or ""),
+            item_name=str(item_data.get("itemName") or ""),
+            qty_kg=qty,
+            rate_per_kg=rate,
+            labour_per_kg=laguage,
+            coolie_cost=coolie,
+            transport_cost=0,
+            total_labour=total_labour,
+            line_total=line_total,
+            paid_amount=paid_amt,
+            remarks=str(item_data.get("remarks") or ""),
+        )
+        db.add(collection_item)
+        created.append(collection_item)
+
+    db.commit()
+    for c in created:
+        db.refresh(c)
+
     logger.info(
-        "Transactions replace requested: farmer_id=%s, vendor_id=%s, items=%s",
+        "Transactions persisted: farmer_id=%s, vendor_id=%s, count=%s",
         farmer_id,
-        getattr(user, "vendor_id", None),
-        len(items),
+        user.vendor_id,
+        len(created),
     )
-    return items
+
+    # Return the same shape the frontend expects (so UI remains consistent)
+    return [
+        {
+            "id": c.id,
+            "date": c.date.isoformat() if c.date else None,
+            "vehicle": c.vehicle_name or c.vehicle_number or "",
+            "itemCode": c.item_code or "",
+            "itemName": c.item_name or "",
+            "qty": float(c.qty_kg or 0),
+            "rate": float(c.rate_per_kg or 0),
+            "laguage": float(c.labour_per_kg or 0),
+            "coolie": float(c.coolie_cost or 0),
+            "paidAmt": float(c.paid_amount or 0),
+            "remarks": c.remarks or "",
+        }
+        for c in created
+    ]

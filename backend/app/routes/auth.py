@@ -59,11 +59,14 @@ def login(
             detail="Invalid credentials"
         )
 
-    token = create_access_token({
-        "sub": user.email,
-        "vendor_id": user.vendor_id,
-        "role": user.role
-    })
+    token = create_access_token(
+        {
+            "sub": user.email,
+            "user_id": user.id,
+            "vendor_id": user.vendor_id,
+            "role": user.role,
+        }
+    )
 
     logger.info("User %s logged in", user.email)
 

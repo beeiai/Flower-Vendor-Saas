@@ -1,4 +1,5 @@
 from sqlalchemy import Column, Integer, String, Text, TIMESTAMP, func
+from sqlalchemy.orm import relationship
 from app.core.db import Base
 
 class Vendor(Base):
@@ -13,3 +14,6 @@ class Vendor(Base):
     address = Column(Text)
     plan_type = Column(String(50), default="basic")
     created_at = Column(TIMESTAMP, server_default=func.now())
+
+    # Relationships
+    saala_customers = relationship("SaalaCustomer", back_populates="vendor")

@@ -287,6 +287,172 @@ app.post('/api/customers/:customerId/advances', (req, res) => {
   res.status(201).json({ id: info.lastInsertRowid, ...parsed.data });
 });
 
+// =============================================================================
+// SAALA MODULE APIs
+// =============================================================================
+
+// --- SAALA Customers ---
+app.get('/api/saala/customers', (req, res) => {
+  const rows = db.prepare('SELECT id, name, contact, address FROM saala_customers ORDER BY name').all();
+  res.json(rows);
+});
+
+app.post('/api/saala/customers', (req, res) => {
+  const schema = z.object({
+    name: z.string().trim().min(1),
+    contact: z.string().trim().optional().default(''),
+    address: z.string().trim().optional().default(''),
+  });
+  const parsed = schema.safeParse(req.body);
+  if (!parsed.success) return res.status(400).json({ error: 'Invalid body', details: parsed.error.flatten() });
+
+  const { name, contact, address } = parsed.data;
+  try {
+    const info = db.prepare('INSERT INTO saala_customers (name, contact, address) VALUES (?,?,?)').run(name, contact, address);
+    res.status(201).json({ id: info.lastInsertRowid, name, contact, address });
+  } catch (e) {
+    if (String(e).includes('UNIQUE')) return res.status(409).json({ error: 'SAALA customer already exists' });
+    return res.status(500).json({ error: 'Failed to create SAALA customer' });
+  }
+});
+
+app.put('/api/saala/customers/:id', (req, res) => {
+  const id = Number(req.params.id);
+  if (!Number.isFinite(id)) return res.status(400).json({ error: 'Invalid id' });
+
+  const schema = z.object({
+    name: z.string().trim().min(1).optional(),
+    contact: z.string().trim().optional(),
+    address: z.string().trim().optional(),
+  });
+  const parsed = schema.safeParse(req.body);
+  if (!parsed.success) return res.status(400).json({ error: 'Invalid body', details: parsed.error.flatten() });
+
+  const updates = [];
+  const values = [];
+  if (parsed.data.name !== undefined) { updates.push('name = ?'); values.push(parsed.data.name); }
+  if (parsed.data.contact !== undefined) { updates.push('contact = ?'); values.push(parsed.data.contact); }
+  if (parsed.data.address !== undefined) { updates.push('address = ?'); values.push(parsed.data.address); }
+
+  if (updates.length === 0) return res.status(400).json({ error: 'No fields to update' });
+
+  values.push(id);
+  try {
+    const info = db.prepare(`UPDATE saala_customers SET ${updates.join(', ')} WHERE id = ?`).run(...values);
+    res.json({ updated: info.changes });
+  } catch (e) {
+    if (String(e).includes('UNIQUE')) return res.status(409).json({ error: 'Customer name already exists' });
+    return res.status(500).json({ error: 'Failed to update SAALA customer' });
+  }
+});
+
+app.delete('/api/saala/customers/:id', (req, res) => {
+  const id = Number(req.params.id);
+  if (!Number.isFinite(id)) return res.status(400).json({ error: 'Invalid id' });
+  const info = db.prepare('DELETE FROM saala_customers WHERE id = ?').run(id);
+  res.json({ deleted: info.changes });
+});
+
+// --- SAALA Transactions ---
+app.get('/api/saala/customers/:customerId/transactions', (req, res) => {
+  const customerId = Number(req.params.customerId);
+  if (!Number.isFinite(customerId)) return res.status(400).json({ error: 'Invalid customerId' });
+
+  const rows = db.prepare(`
+    SELECT id, date, itemCode, itemName, qty, rate, totalAmount, paidAmount, remarks
+    FROM saala_transactions
+    WHERE customer_id = ?
+    ORDER BY date DESC, id DESC
+  `).all(customerId);
+  res.json(rows);
+});
+
+app.post('/api/saala/customers/:customerId/transactions', (req, res) => {
+  const customerId = Number(req.params.customerId);
+  if (!Number.isFinite(customerId)) return res.status(400).json({ error: 'Invalid customerId' });
+
+  const schema = z.object({
+    date: z.string().trim().min(1),
+    itemCode: z.string().trim().optional().default(''),
+    itemName: z.string().trim().min(1),
+    qty: z.coerce.number().nonnegative().default(0),
+    rate: z.coerce.number().nonnegative().default(0),
+    totalAmount: z.coerce.number().nonnegative().default(0),
+    paidAmount: z.coerce.number().nonnegative().default(0),
+    remarks: z.string().trim().optional().default(''),
+  });
+
+  const parsed = schema.safeParse(req.body);
+  if (!parsed.success) return res.status(400).json({ error: 'Invalid body', details: parsed.error.flatten() });
+
+  const t = parsed.data;
+  const totalAmount = t.totalAmount || (t.qty * t.rate);
+  
+  const info = db.prepare(`
+    INSERT INTO saala_transactions (customer_id, date, itemCode, itemName, qty, rate, totalAmount, paidAmount, remarks)
+    VALUES (?,?,?,?,?,?,?,?,?)
+  `).run(customerId, t.date, t.itemCode, t.itemName, t.qty, t.rate, totalAmount, t.paidAmount, t.remarks);
+
+  res.status(201).json({ id: info.lastInsertRowid, ...t, totalAmount });
+});
+
+app.put('/api/saala/transactions/:id', (req, res) => {
+  const id = Number(req.params.id);
+  if (!Number.isFinite(id)) return res.status(400).json({ error: 'Invalid id' });
+
+  const schema = z.object({
+    date: z.string().trim().min(1),
+    itemCode: z.string().trim().optional().default(''),
+    itemName: z.string().trim().min(1),
+    qty: z.coerce.number().nonnegative().default(0),
+    rate: z.coerce.number().nonnegative().default(0),
+    totalAmount: z.coerce.number().nonnegative().default(0),
+    paidAmount: z.coerce.number().nonnegative().default(0),
+    remarks: z.string().trim().optional().default(''),
+  });
+
+  const parsed = schema.safeParse(req.body);
+  if (!parsed.success) return res.status(400).json({ error: 'Invalid body', details: parsed.error.flatten() });
+
+  const t = parsed.data;
+  const totalAmount = t.totalAmount || (t.qty * t.rate);
+  
+  const info = db.prepare(`
+    UPDATE saala_transactions
+    SET date = ?, itemCode = ?, itemName = ?, qty = ?, rate = ?, totalAmount = ?, paidAmount = ?, remarks = ?
+    WHERE id = ?
+  `).run(t.date, t.itemCode, t.itemName, t.qty, t.rate, totalAmount, t.paidAmount, t.remarks, id);
+
+  res.json({ updated: info.changes });
+});
+
+app.delete('/api/saala/transactions/:id', (req, res) => {
+  const id = Number(req.params.id);
+  if (!Number.isFinite(id)) return res.status(400).json({ error: 'Invalid id' });
+  const info = db.prepare('DELETE FROM saala_transactions WHERE id = ?').run(id);
+  res.json({ deleted: info.changes });
+});
+
+// Get SAALA customer summary (total credit, paid, balance)
+app.get('/api/saala/customers/:customerId/summary', (req, res) => {
+  const customerId = Number(req.params.customerId);
+  if (!Number.isFinite(customerId)) return res.status(400).json({ error: 'Invalid customerId' });
+
+  const result = db.prepare(`
+    SELECT 
+      COALESCE(SUM(totalAmount), 0) as totalCredit,
+      COALESCE(SUM(paidAmount), 0) as totalPaid
+    FROM saala_transactions
+    WHERE customer_id = ?
+  `).get(customerId);
+
+  const totalCredit = result?.totalCredit || 0;
+  const totalPaid = result?.totalPaid || 0;
+  const balance = totalCredit - totalPaid;
+
+  res.json({ totalCredit, totalPaid, balance });
+});
+
 const port = Number(process.env.PORT || 3001);
 app.listen(port, () => {
   // eslint-disable-next-line no-console
