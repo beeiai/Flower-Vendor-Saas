@@ -192,6 +192,17 @@ export const api = {
   // Daily transactions: backed by /farmers/{id}/transactions/ on FastAPI
   listTransactions: (customerId) => request(`/farmers/${customerId}/transactions/`),
   replaceTransactions: (customerId, rows) => request(`/farmers/${customerId}/transactions/`, { method: 'PUT', body: JSON.stringify(rows) }),
+  
+  // Individual transaction item APIs for immediate save
+  createFarmerTransaction: (farmerId, payload) => {
+    return request(`/farmers/${farmerId}/transactions/`, { method: 'POST', body: JSON.stringify(payload) });
+  },
+  updateCollectionItem: (itemId, payload) => {
+    return request(`/collections/${itemId}`, { method: 'PUT', body: JSON.stringify(payload) });
+  },
+  deleteCollectionItem: (itemId) => {
+    return request(`/collections/${itemId}`, { method: 'DELETE' });
+  },
 
   // Advances: implemented via FastAPI advances router on /customers/{id}/advances/
   getCustomerAdvances: (customerId) => request(`/customers/${customerId}/advances/`),

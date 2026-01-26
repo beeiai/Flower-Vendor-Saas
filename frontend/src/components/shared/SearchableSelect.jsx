@@ -2,14 +2,22 @@
 import React, { useState, useMemo, useEffect, useRef } from 'react';
 import { createPortal } from 'react-dom';
 import { ChevronDown } from 'lucide-react';
+import { useKeyboardNavigation } from '../../hooks/useKeyboardNavigation';
 
-export function SearchableSelect({ label, options, value, onChange, placeholder, disabled, className = "", style = {}, inputRef, onEnterNext, error }) {
+export function SearchableSelect({ label, options, value, onChange, placeholder, disabled, className = "", style = {}, inputRef, onEnterNext, error, navigationKey, navigationRow, navigationCol }) {
 	const [isOpen, setIsOpen] = useState(false);
 	const [searchTerm, setSearchTerm] = useState(value || "");
 	const [highlightedIndex, setHighlightedIndex] = useState(-1);
 	const [coords, setCoords] = useState({ top: 0, left: 0, width: 0 });
 	const containerRef = useRef(null);
 	const inputWrapperRef = useRef(null);
+	const inputRefInternal = useRef(null);
+	
+	// Keyboard navigation integration
+	const { registerElement, unregisterElement, setDropdownState, moveToNext } = useKeyboardNavigation();
+	
+	// Use provided ref or internal ref
+	const actualInputRef = inputRef || inputRefInternal;
 
 	useEffect(() => {
 		// Only update searchTerm from value prop if the value is different from current searchTerm
@@ -50,6 +58,23 @@ export function SearchableSelect({ label, options, value, onChange, placeholder,
 			return () => document.removeEventListener("mousedown", handleClickOutside);
 	}, []);
 
+	// Register element for keyboard navigation
+	useEffect(() => {
+		if (actualInputRef.current && navigationKey) {
+			registerElement(navigationKey, actualInputRef.current, { 
+				order: 0, 
+				row: navigationRow, 
+				col: navigationCol 
+			});
+			return () => unregisterElement(navigationKey);
+		}
+	}, [navigationKey, navigationRow, navigationCol, actualInputRef, registerElement, unregisterElement]);
+
+	// Track dropdown state for keyboard navigation
+	useEffect(() => {
+		setDropdownState(isOpen);
+	}, [isOpen, setDropdownState]);
+
 	// Close dropdown when window loses focus
 	useEffect(() => {
 		const handleWindowBlur = () => {
@@ -61,8 +86,9 @@ export function SearchableSelect({ label, options, value, onChange, placeholder,
 	}, []);
 
 	const filteredOptions = useMemo(() => {
-		return (options || []).filter(opt => (String(opt) || "").toLowerCase().includes((String(searchTerm) || "").toLowerCase()));
-	}, [options, searchTerm]);
+		// Show all options from database regardless of search term
+		return options || [];
+	}, [options]);
 
 	const handleSelect = (opt) => {
 		const stringOpt = String(opt);
@@ -70,7 +96,11 @@ export function SearchableSelect({ label, options, value, onChange, placeholder,
 		onChange(stringOpt);
 		setIsOpen(false); 
 		setHighlightedIndex(-1);
-		if (onEnterNext) onEnterNext();
+		if (onEnterNext) {
+			onEnterNext();
+		} else {
+			moveToNext();
+		}
 	};
 
 	const handleKeyDown = (e) => {
@@ -86,8 +116,13 @@ export function SearchableSelect({ label, options, value, onChange, placeholder,
 			e.preventDefault();
 			if (isOpen && highlightedIndex >= 0 && filteredOptions[highlightedIndex]) {
 				handleSelect(filteredOptions[highlightedIndex]);
-			} else if (onEnterNext) {
-				onEnterNext();
+			} else {
+				// Move to next field or trigger custom handler
+				if (onEnterNext) {
+					onEnterNext();
+				} else {
+					moveToNext();
+				}
 			}
 		} else if (e.key === "Escape") {
 			setIsOpen(false);
@@ -109,7 +144,7 @@ export function SearchableSelect({ label, options, value, onChange, placeholder,
 		<div className={`flex flex-col gap-0 w-full relative ${className}`} ref={containerRef} style={style} data-searchable-select>
 			{label && <label className="text-xs font-semibold text-slate-600 uppercase tracking-wide mb-1 ml-0.5 whitespace-nowrap">{String(label)}</label>}
 			<div className="relative group" ref={inputWrapperRef}>
-				<input ref={inputRef} type="text" disabled={disabled} placeholder={placeholder} className={`w-full bg-white border ${error ? 'border-red-400 ring-2 ring-red-50' : 'border-slate-300'} rounded-sm px-3 py-2 text-sm font-medium outline-none focus:border-primary-500 focus:ring-2 focus:ring-primary-50 transition-all`} style={{ height: '36px' }} value={searchTerm} onFocus={() => !disabled && setIsOpen(true)} onBlur={() => setTimeout(() => {!document.activeElement?.closest('[data-searchable-select]') && setIsOpen(false);}, 150)} onKeyDown={handleKeyDown} onChange={(e) => { setSearchTerm(e.target.value); onChange(e.target.value); setIsOpen(true); }} />
+				<input ref={actualInputRef} type="text" disabled={disabled} placeholder={placeholder} className={`w-full bg-white border ${error ? 'border-red-400 ring-2 ring-red-50' : 'border-slate-300'} rounded-sm px-3 py-2 text-sm font-medium outline-none focus:border-primary-500 focus:ring-2 focus:ring-primary-50 transition-all`} style={{ height: '36px' }} value={searchTerm} onFocus={() => !disabled && setIsOpen(true)} onBlur={() => setTimeout(() => {!document.activeElement?.closest('[data-searchable-select]') && setIsOpen(false);}, 150)} onKeyDown={handleKeyDown} onChange={(e) => { setSearchTerm(e.target.value); onChange(e.target.value); }} />
 				<button type="button" className="absolute right-1 top-1/2 -translate-y-1/2 p-1.5 text-slate-400 hover:text-slate-600 transition-colors" onClick={() => !disabled && setIsOpen(!isOpen)}><ChevronDown className="w-4 h-4" /></button>
 			</div>
 			{dropdownList}

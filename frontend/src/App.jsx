@@ -1,6 +1,7 @@
 import React, { useState, useMemo, useEffect, useRef } from 'react';
 import useAuth from './hooks/useAuth';
 import Login from './pages/Login';
+import { useKeyboardNavigation } from './hooks/useKeyboardNavigation';
 import { Flower2, Receipt, FolderPlus, PackagePlus, Users, Plus, Trash2, Save, UserPlus, Check, X, ChevronDown, Calculator, Sparkles, Monitor, Database, Activity, ArrowRight, Truck, Clock, List, ChevronLeft, ChevronRight, Info, AlertCircle, CheckCircle2, XCircle, Printer, Search, Edit2, MessageSquare, FileText, LayoutPanelTop, BarChart3, Settings2, Play, MoreHorizontal, WalletCards, UserCheck, History, Landmark, ArrowDownToLine, ArrowUpFromLine, Coins, ArrowDownRight, ArrowUpRight, FileBarChart, Layers, Send, Smartphone } from 'lucide-react';
 import SearchableSelect from './components/shared/SearchableSelect';
 import Toast from './components/shared/Toast';
@@ -456,7 +457,7 @@ function VehicleView({ vehicles, setVehicles, onCancel }) {
   );
 }
 
-function DailyTransactionsView({ customerInfo, setCustomerInfo, groups, customers, catalog, vehicles, onOpenQuickAdd, currentEntry, setCurrentEntry, items, onAddItem, onRemoveItem, onEditItem, summary, onSaveRecord, onViewReport, advanceStore, commissionPct, setCommissionPct, groupRef }) {
+function DailyTransactionsView({ customerInfo, setCustomerInfo, groups, customers, catalog, vehicles, onOpenQuickAdd, currentEntry, setCurrentEntry, items, onAddItem, onRemoveItem, onEditItem, summary, onSaveRecord, onViewReport, advanceStore, commissionPct, setCommissionPct, groupRef, totalPaidAmount }) {
   const vRef = useRef(null); const cRef = useRef(null); const nRef = useRef(null); const qRef = useRef(null); const rRef = useRef(null); const lRef = useRef(null); const coRef = useRef(null); const pRef = useRef(null); const remRef = useRef(null);
   const filteredCustomers = customers.filter(c => !customerInfo.groupName || c.group === customerInfo.groupName);
   const remAdvance = advanceStore[customerInfo.customerName]?.balance || 0;
@@ -469,8 +470,8 @@ function DailyTransactionsView({ customerInfo, setCustomerInfo, groups, customer
         <section className="bg-white border border-slate-200 p-4 shadow-card rounded-sm shrink-0">
           <div className="flex items-center gap-2 mb-3 text-primary-600 font-semibold text-xs uppercase border-b border-slate-100 pb-2"><Users className="w-4 h-4" /> Trading Client Data</div>
           <div className="grid grid-cols-5 gap-4">
-            <SearchableSelect inputRef={groupRef} label="Group Category" options={groups.map(g => g.name)} value={customerInfo.groupName} onChange={(val) => setCustomerInfo({...customerInfo, groupName: val, customerName: ''})} placeholder="Filter Group" />
-            <div className="flex gap-1.5 items-end overflow-visible"><SearchableSelect label="Party/Customer" options={filteredCustomers.map(c => c.name)} value={customerInfo.customerName} onChange={handleCustomerSelect} placeholder="Search Party" className="flex-1" /><button onClick={() => onOpenQuickAdd('customer')} className="p-2 bg-slate-100 border border-slate-300 rounded-sm hover:bg-primary-600 hover:text-white hover:border-primary-600 transition-all shadow-sm" style={{height: '36px'}}><UserPlus className="w-4 h-4" /></button></div>
+            <SearchableSelect inputRef={groupRef} label="Group Category" options={groups.map(g => g.name)} value={customerInfo.groupName} onChange={(val) => setCustomerInfo({...customerInfo, groupName: val, customerName: ''})} placeholder="Filter Group" navigationKey="group" navigationRow={0} navigationCol={0} />
+            <div className="flex gap-1.5 items-end overflow-visible"><SearchableSelect label="Party/Customer" options={filteredCustomers.map(c => c.name)} value={customerInfo.customerName} onChange={handleCustomerSelect} placeholder="Search Party" className="flex-1" navigationKey="customer" navigationRow={0} navigationCol={1} /><button onClick={() => onOpenQuickAdd('customer')} className="p-2 bg-slate-100 border border-slate-300 rounded-sm hover:bg-primary-600 hover:text-white hover:border-primary-600 transition-all shadow-sm" style={{height: '36px'}}><UserPlus className="w-4 h-4" /></button></div>
             <div><label className="text-xs font-semibold text-slate-600 uppercase tracking-wide block mb-1">Address</label><input type="text" readOnly className="w-full bg-slate-50 border border-slate-200 rounded-sm px-3 py-2 text-sm text-slate-600 cursor-not-allowed" style={{height: '36px'}} value={String(customerInfo.address || '--')} /></div>
             <div><label className="text-xs font-semibold text-slate-600 uppercase tracking-wide block mb-1">Phone</label><input type="text" readOnly className="w-full bg-slate-50 border border-slate-200 rounded-sm px-3 py-2 text-sm text-slate-600 cursor-not-allowed" style={{height: '36px'}} value={String(customerInfo.contactNo || '--')} /></div>
             <div><label className="text-xs font-semibold text-accent-600 uppercase tracking-wide block mb-1">Rem. Advance</label><input type="text" readOnly className="w-full bg-accent-50 border border-accent-200 rounded-sm text-accent-600 px-3 py-2 text-sm font-bold cursor-not-allowed" style={{height: '36px'}} value={`₹ ${remAdvance.toFixed(2)}`} /></div>
@@ -479,19 +480,21 @@ function DailyTransactionsView({ customerInfo, setCustomerInfo, groups, customer
         <section className="bg-white border border-slate-200 shadow-card rounded-sm flex flex-col relative z-30 shrink-0 overflow-visible">
           <div className="bg-slate-50 px-4 py-2.5 border-b border-slate-200 text-slate-700 font-semibold text-xs uppercase flex items-center gap-2 tracking-wide"><Database className="w-4 h-4 text-slate-400" /> Data Entry Row</div>
           <div className="p-3 border-b border-slate-100 bg-white overflow-x-auto">
-            <div className="flex items-end gap-2 min-w-[1100px]">
+            <form onSubmit={(e) => { e.preventDefault(); onAddItem(); }}>
+              <div className="flex items-end gap-2 min-w-[1100px]">
               <div className="w-[95px]"><label className="text-xs font-semibold text-slate-600 uppercase text-center block mb-1">Date</label><input type="date" className="w-full text-sm border border-slate-300 rounded-sm px-2 py-1.5 font-medium outline-none focus:border-primary-500 focus:ring-2 focus:ring-primary-50" style={{height: '36px'}} value={currentEntry.date} onChange={e => setCurrentEntry({...currentEntry, date: e.target.value})} /></div>
-              <div className="w-[120px]"><SearchableSelect inputRef={vRef} label="Vehicle" options={vehicles.map(v => v.name)} value={currentEntry.vehicle} onChange={(v) => setCurrentEntry({...currentEntry, vehicle: v})} onEnterNext={() => cRef.current?.focus()} /></div>
-              <div className="w-[110px] flex items-end gap-1"><SearchableSelect inputRef={cRef} label="Item Code" options={catalog.map(i => i.itemCode)} value={currentEntry.itemCode} onChange={(c) => { const item = catalog.find(x => x.itemCode === c); setCurrentEntry({...currentEntry, itemCode: c, itemName: item?.itemName || currentEntry.itemName}); }} onEnterNext={() => nRef.current?.focus()} /><button onClick={() => onOpenQuickAdd('item')} className="bg-slate-100 border border-slate-300 rounded-sm p-1.5 hover:bg-primary-600 hover:text-white hover:border-primary-600 transition-all" style={{height: '36px'}}><PackagePlus className="w-4 h-4" /></button></div>
-              <div className="w-[130px]"><SearchableSelect inputRef={nRef} label="Product" options={catalog.map(i => i.itemName)} value={currentEntry.itemName} onChange={(n) => { const item = catalog.find(x => x.itemName === n); setCurrentEntry({...currentEntry, itemName: n, itemCode: item?.itemCode || currentEntry.itemCode}); }} onEnterNext={() => qRef.current?.focus()} /></div>
+              <div className="w-[120px]"><SearchableSelect inputRef={vRef} label="Vehicle" options={vehicles.map(v => v.name)} value={currentEntry.vehicle} onChange={(v) => setCurrentEntry({...currentEntry, vehicle: v})} navigationKey="vehicle" navigationRow={1} navigationCol={0} /></div>
+              <div className="w-[110px] flex items-end gap-1"><SearchableSelect inputRef={cRef} label="Item Code" options={catalog.map(i => i.itemCode)} value={currentEntry.itemCode} onChange={(c) => { const item = catalog.find(x => x.itemCode === c); setCurrentEntry({...currentEntry, itemCode: c, itemName: item?.itemName || currentEntry.itemName}); }} navigationKey="itemCode" navigationRow={1} navigationCol={1} /><button onClick={() => onOpenQuickAdd('item')} className="bg-slate-100 border border-slate-300 rounded-sm p-1.5 hover:bg-primary-600 hover:text-white hover:border-primary-600 transition-all" style={{height: '36px'}}><PackagePlus className="w-4 h-4" /></button></div>
+              <div className="w-[130px]"><SearchableSelect inputRef={nRef} label="Product" options={catalog.map(i => i.itemName)} value={currentEntry.itemName} onChange={(n) => { const item = catalog.find(x => x.itemName === n); setCurrentEntry({...currentEntry, itemName: n, itemCode: item?.itemCode || currentEntry.itemCode}); }} navigationKey="productName" navigationRow={1} navigationCol={2} /></div>
               <div className="w-[70px]"><label className="text-xs font-semibold uppercase text-slate-600 block text-center mb-1">Qty</label><input ref={qRef} type="number" className="w-full border border-slate-300 rounded-sm px-2 text-right text-sm font-medium outline-none focus:border-primary-500 focus:ring-2 focus:ring-primary-50" style={{height: '36px'}} value={currentEntry.qty} onChange={e => setCurrentEntry({...currentEntry, qty: e.target.value})} onKeyDown={e => handleKey(e, rRef)} /></div>
               <div className="w-[80px]"><label className="text-xs font-semibold uppercase text-slate-600 block text-center mb-1">Rate</label><input ref={rRef} type="number" className="w-full border border-slate-300 rounded-sm px-2 text-right text-sm font-medium outline-none focus:border-primary-500 focus:ring-2 focus:ring-primary-50" style={{height: '36px'}} value={currentEntry.rate} onChange={e => setCurrentEntry({...currentEntry, rate: e.target.value})} onKeyDown={e => handleKey(e, lRef)} /></div>
               <div className="w-[70px]"><label className="text-xs font-semibold uppercase text-slate-600 block text-center mb-1">Lag.</label><input ref={lRef} type="number" className="w-full border border-slate-300 rounded-sm px-2 text-right text-sm font-medium outline-none focus:border-primary-500 focus:ring-2 focus:ring-primary-50" style={{height: '36px'}} value={currentEntry.laguage} onChange={e => setCurrentEntry({...currentEntry, laguage: e.target.value})} onKeyDown={e => handleKey(e, coRef)} /></div>
               <div className="w-[70px]"><label className="text-xs font-semibold uppercase text-slate-600 block text-center mb-1">Coolie</label><input ref={coRef} type="number" className="w-full border border-slate-300 rounded-sm px-2 text-right text-sm font-medium outline-none focus:border-primary-500 focus:ring-2 focus:ring-primary-50" style={{height: '36px'}} value={currentEntry.coolie} onChange={e => setCurrentEntry({...currentEntry, coolie: e.target.value})} onKeyDown={e => handleKey(e, pRef)} /></div>
               <div className="w-[90px]"><label className="text-xs font-semibold uppercase text-slate-600 block text-center mb-1">Paid</label><input ref={pRef} type="number" className="w-full border border-slate-300 rounded-sm px-2 text-right text-sm font-medium outline-none focus:border-primary-500 focus:ring-2 focus:ring-primary-50" style={{height: '36px'}} value={currentEntry.paidAmt} onChange={e => setCurrentEntry({...currentEntry, paidAmt: e.target.value})} onKeyDown={e => handleKey(e, remRef)} /></div>
-              <div className="w-[130px]"><SearchableSelect inputRef={remRef} label="Remarks" options={['Regular', 'Urgent', 'Special']} value={currentEntry.remarks} onChange={(rem) => setCurrentEntry({...currentEntry, remarks: rem})} onEnterNext={() => onAddItem()} /></div>
-              <div className="ml-auto pr-1"><button onClick={onAddItem} className="bg-slate-800 text-white px-6 text-sm font-semibold uppercase hover:bg-primary-600 shadow-md rounded-sm transition-all active:translate-y-px" style={{height: '36px'}}>{currentEntry.id ? 'UPDATE' : 'ADD'}</button></div>
+              <div className="w-[130px]"><SearchableSelect inputRef={remRef} label="Remarks" options={['Regular', 'Urgent', 'Special']} value={currentEntry.remarks} onChange={(rem) => setCurrentEntry({...currentEntry, remarks: rem})} navigationKey="remarks" navigationRow={1} navigationCol={8} /></div>
+              <div className="ml-auto pr-1"><button type="submit" onClick={onAddItem} className="bg-slate-800 text-white px-6 text-sm font-semibold uppercase hover:bg-primary-600 shadow-md rounded-sm transition-all active:translate-y-px submit-button" style={{height: '36px'}}>{currentEntry.id ? 'UPDATE' : 'ADD'}</button></div>
             </div>
+            </form>
           </div>
           <div className="flex-1 overflow-auto bg-white custom-table-scroll" style={{ maxHeight: '400px' }}>
             <table className="w-full text-left text-sm border-collapse relative">
@@ -551,7 +554,13 @@ function DailyTransactionsView({ customerInfo, setCustomerInfo, groups, customer
           <div className="flex flex-col gap-1.5"><label className="text-xs font-medium text-slate-400">Luggage Aggregate</label><input type="text" readOnly className="bg-slate-700/50 px-3 py-2.5 text-lg font-bold text-right rounded-sm border border-slate-600 outline-none" value={`₹ ${summary.laguageTotal.toFixed(2)}`} /></div>
           <div className="pt-5 border-t border-white/10 text-center"><p className="text-xs text-primary-400 font-semibold tracking-wider mb-2">Net Final Amount</p><p className="text-3xl font-bold text-primary-500 tabular-nums drop-shadow-xl">₹ {summary.netTotal.toFixed(2)}</p></div>
         </div>
-        <div className="mt-5 space-y-3"><button onClick={onSaveRecord} className="w-full bg-primary-600 py-3 font-semibold text-sm text-white flex items-center justify-center gap-2 hover:bg-primary-700 rounded-sm shadow-lg transition-all"><Save className="w-4 h-4" /> Save Master Journal</button><button onClick={onViewReport} disabled={!customerInfo.customerName} className="w-full bg-slate-700 py-3 font-semibold text-sm text-white border border-slate-600 rounded-sm disabled:opacity-30 hover:bg-slate-600 transition-all">Client Account Statement</button></div>
+        <div className="mt-5 space-y-3">
+          <div className="bg-slate-700 p-4 rounded-sm border border-slate-600">
+            <label className="block text-xs font-medium text-primary-400 uppercase tracking-wider mb-1">Total Paid Amount</label>
+            <div className="text-2xl font-bold text-center text-white tabular-nums">₹ {totalPaidAmount.toFixed(2)}</div>
+          </div>
+          <button onClick={onViewReport} disabled={!customerInfo.customerName} className="w-full bg-slate-700 py-3 font-semibold text-sm text-white border border-slate-600 rounded-sm disabled:opacity-30 hover:bg-slate-600 transition-all">Client Account Statement</button>
+        </div>
       </aside>
     </div>
   );
@@ -561,6 +570,8 @@ function DailyTransactionsView({ customerInfo, setCustomerInfo, groups, customer
 
 export default function App() {
   const auth = useAuth();
+  const { registerElement, unregisterElement } = useKeyboardNavigation();
+  
   if (!auth.authenticated) {
     return <Login onLogin={auth.login} loading={auth.loading} error={auth.error} />;
   }
@@ -680,6 +691,24 @@ export default function App() {
   useEffect(() => {
     prevActiveSectionRef.current = activeSection;
   }, [activeSection]);
+  
+  // Register navigation elements for keyboard navigation
+  useEffect(() => {
+    // Register main navigation buttons
+    if (navRefs.logo.current) registerElement('nav-logo', navRefs.logo.current, { order: 0 });
+    if (navRefs.transactionMenu.current) registerElement('nav-transaction', navRefs.transactionMenu.current, { order: 1 });
+    if (navRefs.reportsButton.current) registerElement('nav-reports', navRefs.reportsButton.current, { order: 2 });
+    if (navRefs.utilityMenu.current) registerElement('nav-utility', navRefs.utilityMenu.current, { order: 3 });
+    if (navRefs.moreMenu.current) registerElement('nav-more', navRefs.moreMenu.current, { order: 4 });
+    
+    return () => {
+      unregisterElement('nav-logo');
+      unregisterElement('nav-transaction');
+      unregisterElement('nav-reports');
+      unregisterElement('nav-utility');
+      unregisterElement('nav-more');
+    };
+  }, [registerElement, unregisterElement]);
   
   // Reset component states when navigating to a new section
   useEffect(() => {
@@ -1035,25 +1064,95 @@ export default function App() {
     return { ...totals, totalCommission, netTotal };
   }, [items, commissionPct]);
 
-  const handleAddItem = () => {
+  // Calculate total paid amount separately
+  const totalPaidAmount = useMemo(() => {
+    return items.reduce((total, item) => total + Number(item.paidAmt || 0), 0);
+  }, [items]);
+
+  const handleAddItem = async () => {
     if (!currentEntry.itemName || !currentEntry.qty || currentEntry.rate === '' || currentEntry.rate === null || currentEntry.rate === undefined) {
       return showNotify("Entry incomplete: Enter item, qty and rate", "error");
     }
-    const id = currentEntry.id || Date.now();
-    if (currentEntry.id) setItems(items.map(i => i.id === id ? { ...currentEntry } : i));
-    else setItems([...items, { ...currentEntry, id }]);
-    setCurrentEntry({ ...currentEntry, id: null, vehicle: '', itemCode: '', itemName: '', qty: '', rate: '', laguage: '', coolie: '', paidAmt: '', remarks: '' });
-    showNotify("Transaction Row Saved", "success");
     
-    // Return focus to group selection field
-    setTimeout(() => {
-      groupRef.current?.focus();
-    }, 100);
-    
-    return true;
+    try {
+      // Check if we're updating an existing item (has an id from the backend)
+      let result;
+      if (currentEntry.id && typeof currentEntry.id === 'number') {
+        // Update existing transaction
+        result = await api.updateCollectionItem(currentEntry.id, {
+          date: currentEntry.date,
+          vehicle: currentEntry.vehicle || '',
+          itemCode: currentEntry.itemCode || '',
+          itemName: currentEntry.itemName,
+          qty: currentEntry.qty,
+          rate: currentEntry.rate,
+          labour_per_kg: currentEntry.laguage,
+          coolie_cost: currentEntry.coolie,
+          paid_amount: currentEntry.paidAmt,
+          remarks: currentEntry.remarks || '',
+        });
+        setItems(items.map(i => i.id === currentEntry.id ? { ...result } : i));
+        showNotify("Transaction Updated Successfully", "success");
+      } else {
+        // Create new transaction - need customer/farmer id
+        const customerId = customers.find(c => c.name === customerInfo.customerName)?.id;
+        if (!customerId) {
+          return showNotify("Please select a customer first", "error");
+        }
+        
+        // Create new transaction
+        result = await api.createFarmerTransaction(customerId, {
+          date: currentEntry.date,
+          vehicle: currentEntry.vehicle || '',
+          itemCode: currentEntry.itemCode || '',
+          itemName: currentEntry.itemName,
+          qty: currentEntry.qty,
+          rate: currentEntry.rate,
+          laguage: currentEntry.laguage,
+          coolie: currentEntry.coolie,
+          paidAmt: currentEntry.paidAmt,
+          remarks: currentEntry.remarks || '',
+        });
+        setItems([...items, { ...result }]);
+        showNotify("Transaction Added Successfully", "success");
+      }
+      
+      // Reset form
+      setCurrentEntry({ 
+        date: new Date().toISOString().split('T')[0], 
+        vehicle: '', 
+        itemCode: '', 
+        itemName: '', 
+        qty: '', 
+        rate: '', 
+        laguage: '', 
+        coolie: '', 
+        paidAmt: '', 
+        remarks: '' 
+      });
+      
+      // Return focus to group selection field
+      setTimeout(() => {
+        groupRef.current?.focus();
+      }, 100);
+      
+      return true;
+    } catch (error) {
+      showNotify(`Transaction save failed: ${error.message}`, "error");
+      return false;
+    }
   };
 
   const [showTMenu, setShowTMenu] = useState(false); const [showUMenu, setShowUMenu] = useState(false); const [showMMenu, setShowMMenu] = useState(false);
+  
+  // Navigation refs for keyboard navigation
+  const navRefs = {
+    logo: useRef(null),
+    transactionMenu: useRef(null),
+    reportsButton: useRef(null),
+    utilityMenu: useRef(null),
+    moreMenu: useRef(null)
+  };
 
   const GroupPattiPrintingPage = () => (
     <div className="flex-1 flex flex-col h-full bg-slate-50 overflow-hidden">
@@ -1135,9 +1234,9 @@ export default function App() {
       <Toast message={notification.message} type={notification.type} onClose={() => setNotification({ message: '', type: 'info' })} />
       <nav className="h-12 bg-slate-900 flex items-center px-5 shrink-0 z-[4000] border-b border-black/50 shadow-2xl">
         <div className="flex items-center gap-6 h-full">
-          <div className="flex items-center gap-2 pr-6 border-r border-slate-700 cursor-pointer h-full" onClick={() => setActiveSection('daily')}><Flower2 className="w-5 h-5 text-primary-400" /><span className="text-sm font-bold text-white tracking-wide">SKFS ERP</span><span className="text-xs text-slate-400 font-medium">v5.0.4</span></div>
+          <div ref={navRefs.logo} className="flex items-center gap-2 pr-6 border-r border-slate-700 cursor-pointer h-full" onClick={() => setActiveSection('daily')} tabIndex="0"><Flower2 className="w-5 h-5 text-primary-400" /><span className="text-sm font-bold text-white tracking-wide">SKFS ERP</span><span className="text-xs text-slate-400 font-medium">v5.0.4</span></div>
           
-          <div className="relative h-full flex items-center"><button onClick={() => setShowTMenu(!showTMenu)} className={`flex items-center gap-2 px-4 h-full text-xs font-semibold transition-all ${showTMenu ? 'bg-white text-slate-900 shadow-xl' : 'text-slate-300 hover:text-white'}`}>Transaction <ChevronDown className="w-3.5 h-3.5" /></button>
+          <div className="relative h-full flex items-center"><button ref={navRefs.transactionMenu} onClick={() => setShowTMenu(!showTMenu)} className={`flex items-center gap-2 px-4 h-full text-xs font-semibold transition-all ${showTMenu ? 'bg-white text-slate-900 shadow-xl' : 'text-slate-300 hover:text-white'}`} tabIndex="0">Transaction <ChevronDown className="w-3.5 h-3.5" /></button>
             {showTMenu && <div className="absolute top-12 left-0 w-56 bg-white border border-slate-200 shadow-dropdown py-1 animate-in slide-in-from-top-2 duration-150 rounded-sm overflow-hidden z-[5000]">
               {[ 
                 { id: 'daily', l: 'Daily Transaction', i: Receipt }, 
@@ -1151,9 +1250,9 @@ export default function App() {
             </div>}
           </div>
 
-          <button onClick={() => { setShowTMenu(false); setShowUMenu(false); setShowMMenu(false); setActiveSection('reports'); }} className={`flex items-center gap-2 px-4 h-full text-xs font-semibold transition-all ${activeSection === 'reports' ? 'bg-white text-slate-900' : 'text-slate-300 hover:text-white'}`}>Reports</button>
+          <button ref={navRefs.reportsButton} onClick={() => { setShowTMenu(false); setShowUMenu(false); setShowMMenu(false); setActiveSection('reports'); }} className={`flex items-center gap-2 px-4 h-full text-xs font-semibold transition-all ${activeSection === 'reports' ? 'bg-white text-slate-900' : 'text-slate-300 hover:text-white'}`} tabIndex="0">Reports</button>
 
-          <div className="relative h-full flex items-center"><button onClick={() => setShowUMenu(!showUMenu)} className={`flex items-center gap-2 px-4 h-full text-xs font-semibold transition-all ${showUMenu ? 'bg-white text-slate-900 shadow-xl' : 'text-slate-300 hover:text-white'}`}>Utility <ChevronDown className="w-3.5 h-3.5" /></button>
+          <div className="relative h-full flex items-center"><button ref={navRefs.utilityMenu} onClick={() => setShowUMenu(!showUMenu)} className={`flex items-center gap-2 px-4 h-full text-xs font-semibold transition-all ${showUMenu ? 'bg-white text-slate-900 shadow-xl' : 'text-slate-300 hover:text-white'}`} tabIndex="0">Utility <ChevronDown className="w-3.5 h-3.5" /></button>
             {showUMenu && <div className="absolute top-12 left-0 w-64 bg-white border border-slate-200 shadow-dropdown py-1 animate-in slide-in-from-top-2 duration-150 rounded-sm overflow-hidden z-[5000]">
               {[ 
                 { id: 'group-print', l: 'Group Printing', i: Printer },
@@ -1205,7 +1304,7 @@ export default function App() {
             </div>}
           </div>
 
-          <div className="relative h-full flex items-center"><button onClick={() => setShowMMenu(!showMMenu)} className={`flex items-center gap-2 px-4 h-full text-xs font-semibold transition-all ${showMMenu ? 'bg-white text-slate-900 shadow-xl' : 'text-slate-300 hover:text-white'}`}>More <ChevronDown className="w-3.5 h-3.5" /></button>
+          <div className="relative h-full flex items-center"><button ref={navRefs.moreMenu} onClick={() => setShowMMenu(!showMMenu)} className={`flex items-center gap-2 px-4 h-full text-xs font-semibold transition-all ${showMMenu ? 'bg-white text-slate-900 shadow-xl' : 'text-slate-300 hover:text-white'}`} tabIndex="0">More <ChevronDown className="w-3.5 h-3.5" /></button>
             {showMMenu && <div className="absolute top-12 left-0 w-52 bg-white border border-slate-200 shadow-dropdown py-1 animate-in slide-in-from-top-2 duration-150 rounded-sm overflow-hidden z-[5000]">
               {[ { id: 'advance', l: 'Advance', i: WalletCards }, { id: 'saala', l: 'Saala (Credit)', i: Landmark }, { id: 'silk', l: 'Silk', i: Layers } ].map(item => (
                 <button key={item.id} onClick={() => { setShowMMenu(false); setActiveSection(item.id); }} className={`w-full text-left px-4 py-2.5 text-sm font-medium flex items-center gap-3 transition-colors ${activeSection === item.id ? 'bg-primary-50 text-primary-700' : 'text-slate-700 hover:bg-slate-50'}`}><item.i className="w-4 h-4" /> {item.l}</button>
@@ -1216,7 +1315,15 @@ export default function App() {
       </nav>
 
       <div className="flex-1 overflow-hidden flex flex-col bg-slate-100 relative">
-        {activeSection === 'daily' && <DailyTransactionsView groupRef={groupRef} customerInfo={customerInfo} setCustomerInfo={setCustomerInfo} groups={groups} customers={customers} catalog={catalog} vehicles={vehicles} onOpenQuickAdd={(m) => { if (m === 'item') setActiveSection('item-reg'); else setActiveSection('party'); }} currentEntry={currentEntry} setCurrentEntry={setCurrentEntry} items={items} onAddItem={handleAddItem} onRemoveItem={(id) => setItems(items.filter(i => i.id !== id))} onEditItem={(item) => setCurrentEntry(item)} summary={summary} onSaveRecord={async () => {
+        {activeSection === 'daily' && <DailyTransactionsView groupRef={groupRef} customerInfo={customerInfo} setCustomerInfo={setCustomerInfo} groups={groups} customers={customers} catalog={catalog} vehicles={vehicles} onOpenQuickAdd={(m) => { if (m === 'item') setActiveSection('item-reg'); else setActiveSection('party'); }} currentEntry={currentEntry} setCurrentEntry={setCurrentEntry} items={items} onAddItem={handleAddItem} onRemoveItem={async (id) => {
+            try {
+              await api.deleteCollectionItem(id);
+              setItems(items.filter(i => i.id !== id));
+              showNotify("Transaction deleted successfully", "success");
+            } catch (error) {
+              showNotify(`Delete failed: ${error.message}`, "error");
+            }
+          }} onEditItem={(item) => setCurrentEntry(item)} summary={summary} onSaveRecord={async () => {
           if(!customerInfo.customerName) return showNotify("Transaction save failed: Select client", "error");
           const selected = customers.find(c => c.name === customerInfo.customerName);
           if (!selected?.id) return showNotify("Transaction save failed: Unknown customer", "error");
@@ -1267,7 +1374,7 @@ export default function App() {
           } catch (e) {
             showNotify(`Save failed: ${e.message}`, 'error');
           }
-        }} advanceStore={advanceStore} commissionPct={commissionPct} setCommissionPct={setCommissionPct} onViewReport={() => setActiveSection('reports')} />}
+        }} advanceStore={advanceStore} commissionPct={commissionPct} setCommissionPct={setCommissionPct} onViewReport={() => setActiveSection('reports')} totalPaidAmount={totalPaidAmount} />}
         {activeSection === 'group-reg' && <GroupCustomerRegistryForm title="NEW GROUP" initialTab="group" groups={groups} setGroups={setGroups} customers={customers} setCustomers={setCustomers} showNotify={showNotify} onCancel={() => setActiveSection('daily')} />}
         {activeSection === 'party' && <PartyDetailsView customers={customers} showNotify={showNotify} onCancel={() => setActiveSection('daily')} />}
         {activeSection === 'item-reg' && <ItemRegistryForm form={itemForm} setForm={setItemForm} onSave={async () => {

@@ -510,6 +510,107 @@ def list_transactions(
     return [map_row(r) for r in rows]
 
 
+@router.post("/{farmer_id}/transactions/", status_code=201)
+def create_transaction(
+    farmer_id: int,
+    item: dict,
+    db: Session = Depends(get_db),
+    user = Depends(get_current_user)
+):
+    """
+    Create a single collection item for a farmer.
+    """
+    from logging import getLogger
+    from datetime import datetime
+    from app.models.vehicle import Vehicle
+
+    logger = getLogger(__name__)
+
+    # Validate farmer ownership
+    farmer = db.query(Farmer).filter(
+        Farmer.id == farmer_id,
+        Farmer.vendor_id == user.vendor_id
+    ).first()
+    if not farmer:
+        raise HTTPException(404, "Farmer not found")
+
+    # Parse date
+    date_str = item.get("date") or datetime.now().date().isoformat()
+    try:
+        item_date = datetime.fromisoformat(date_str).date()
+    except:
+        item_date = datetime.now().date()
+
+    # Resolve vehicle by name (or create a placeholder if not found)
+    vehicle_name = str(item.get("vehicle") or "").strip()
+    vehicle = None
+    if vehicle_name:
+        vehicle = db.query(Vehicle).filter(
+            Vehicle.vendor_id == user.vendor_id,
+            Vehicle.vehicle_name == vehicle_name
+        ).first()
+        if not vehicle:
+            # Try by vehicle_number as fallback
+            vehicle = db.query(Vehicle).filter(
+                Vehicle.vendor_id == user.vendor_id,
+                Vehicle.vehicle_number == vehicle_name
+            ).first()
+
+    qty = float(item.get("qty") or 0)
+    rate = float(item.get("rate") or 0)
+    laguage = float(item.get("laguage") or 0)
+    coolie = float(item.get("coolie") or 0)
+    paid_amt = float(item.get("paidAmt") or 0)
+
+    total_labour = qty * laguage
+    line_total = (qty * rate) - total_labour - coolie
+
+    collection_item = CollectionItem(
+        vendor_id=user.vendor_id,
+        collection_id=None,  # not using collection parent for now
+        farmer_id=farmer_id,
+        group_id=farmer.group_id,
+        date=item_date,
+        vehicle_number=vehicle.vehicle_number if vehicle else vehicle_name,
+        vehicle_name=vehicle.vehicle_name if vehicle else vehicle_name,
+        item_code=str(item.get("itemCode") or ""),
+        item_name=str(item.get("itemName") or ""),
+        qty_kg=qty,
+        rate_per_kg=rate,
+        labour_per_kg=laguage,
+        coolie_cost=coolie,
+        transport_cost=0,
+        total_labour=total_labour,
+        line_total=line_total,
+        paid_amount=paid_amt,
+        remarks=str(item.get("remarks") or ""),
+    )
+    db.add(collection_item)
+    db.commit()
+    db.refresh(collection_item)
+
+    logger.info(
+        "Transaction created: farmer_id=%s, vendor_id=%s",
+        farmer_id,
+        user.vendor_id,
+    )
+
+    # Return the same shape the frontend expects (so UI remains consistent)
+    return {
+        "id": collection_item.id,
+        "date": collection_item.date.isoformat() if collection_item.date else None,
+        "vehicle": collection_item.vehicle_name or collection_item.vehicle_number or "",
+        "itemCode": collection_item.item_code or "",
+        "itemName": collection_item.item_name or "",
+        "qty": float(collection_item.qty_kg or 0),
+        "rate": float(collection_item.rate_per_kg or 0),
+        "laguage": float(collection_item.labour_per_kg or 0),
+        "coolie": float(collection_item.coolie_cost or 0),
+        "paidAmt": float(collection_item.paid_amount or 0),
+        "remarks": collection_item.remarks or "",
+    }
+
+
 @router.put("/{farmer_id}/transactions/")
 def replace_transactions(
     farmer_id: int,

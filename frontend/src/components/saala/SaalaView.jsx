@@ -118,7 +118,7 @@ function CustomerAdditionTab({ customers, setCustomers, showNotify }) {
         <div className="bg-slate-100 px-4 py-2.5 border-b font-semibold text-xs text-slate-600 flex items-center gap-2">
           <Users className="w-4 h-4" /> SAALA Customer Registry ({customers.length})
         </div>
-        <div className="flex-1 overflow-auto">
+        <div className="flex-1 overflow-auto custom-table-scroll" style={{ maxHeight: '400px' }}>
           <table className="w-full text-left text-sm">
             <thead className="bg-slate-50 sticky top-0 text-xs font-semibold border-b">
               <tr>
@@ -841,6 +841,12 @@ export default function SaalaView({ catalog, onCancel, showNotify }) {
   const setIsLoading = useCallback((value) => {
     setState(prev => ({ ...prev, isLoading: value }));
   }, []);
+
+  // Calculate total credit amount for all customers
+  const totalCreditAmount = useMemo(() => {
+    // This will be calculated in the individual tabs
+    return 0;
+  }, [customers, tab]);
 
   // Load SAALA customers on mount
   useEffect(() => {

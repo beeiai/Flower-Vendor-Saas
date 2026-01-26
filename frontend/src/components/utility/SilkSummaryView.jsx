@@ -268,7 +268,7 @@ export function SilkSummaryView({ ledgerStore = {}, customers = [], onCancel }) 
             <span className="flex items-center gap-2"><List className="w-3.5 h-3.5" /> Aggregated Summary for {selectedDate}</span>
             <span className="bg-white px-2 py-0.5 border text-slate-800">Groups Found: {groupAggregation.length}</span>
           </div>
-          <div className="flex-1 overflow-auto custom-table-scroll">
+          <div className="flex-1 overflow-auto custom-table-scroll" style={{ maxHeight: '400px' }}>
             <table className="w-full text-left text-[11px] border-collapse">
               <thead className="sticky top-0 bg-slate-800 text-white z-20 font-black uppercase text-[9px] shadow-md">
                 <tr>
