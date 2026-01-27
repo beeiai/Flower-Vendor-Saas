@@ -97,6 +97,10 @@ export function SilkSummaryView({ ledgerStore = {}, customers = [], onCancel }) 
           phonePe: ''
         });
       }
+      
+      // Calculate the auto credit amount after loading saved data
+      await calculateCreditAmount();
+      
     } catch (error) {
       console.error('Failed to fetch saved collection:', error);
       // Reset on error
@@ -115,9 +119,12 @@ export function SilkSummaryView({ ledgerStore = {}, customers = [], onCancel }) 
     setSaving(true);
     setMessage({ text: '', type: '' });
     try {
+      // Calculate the credit amount before saving to ensure we have the latest value
+      const calculatedCreditValue = await calculateCreditAmount();
+      
       const result = await api.saveSilkCollection({
         date: selectedDate,
-        credit: Number(silkPayments.credit || 0),
+        credit: Number(calculatedCreditValue || 0),
         cash: Number(silkPayments.cash || 0),
         upi: Number(silkPayments.phonePe || 0)
       });
@@ -130,6 +137,46 @@ export function SilkSummaryView({ ledgerStore = {}, customers = [], onCancel }) 
   };
   
 
+
+  // Calculate auto-calculated credit amount based on all customers' total amounts
+  const [calculatedCredit, setCalculatedCredit] = useState(0);
+  const [creditCalculationLoading, setCreditCalculationLoading] = useState(false);
+  
+  // Function to calculate credit amount
+  const calculateCreditAmount = async () => {
+    setCreditCalculationLoading(true);
+    try {
+      // Get all customers
+      const customers = await api.listSaalaCustomers();
+      
+      // Get each customer's summary and sum up their total amounts
+      const customerPromises = customers.map(customer => 
+        api.getSaalaCustomerSummary(customer.id)
+      );
+      
+      const summaries = await Promise.all(customerPromises);
+      
+      // Sum all total_amount values
+      const totalCredit = summaries.reduce((sum, summary) => {
+        return sum + (summary.total_amount || 0);
+      }, 0);
+      
+      setCalculatedCredit(totalCredit);
+      
+      // Update the silkPayments to use the calculated credit
+      setSilkPayments(prev => ({
+        ...prev,
+        credit: String(totalCredit)
+      }));
+      
+      return totalCredit;
+    } catch (error) {
+      console.error('Error calculating auto credit:', error);
+      return 0;
+    } finally {
+      setCreditCalculationLoading(false);
+    }
+  };
 
   // Grand Totals across all groups
   const grandTotals = useMemo(() => {
@@ -151,8 +198,10 @@ export function SilkSummaryView({ ledgerStore = {}, customers = [], onCancel }) 
   // Calculate saved total amount (if available from fetched collection)
   const savedTotalAmount = totalPaymentEntered > 0 ? totalPaymentEntered : null;
 
-  // Reset state when component unmounts or is cancelled
+  // Calculate credit amount when component mounts
   useEffect(() => {
+    calculateCreditAmount();
+    
     return () => {
       // Reset to default state when component unmounts
       setState(DEFAULT_STATES.silkSummary);
@@ -231,7 +280,7 @@ export function SilkSummaryView({ ledgerStore = {}, customers = [], onCancel }) 
               <label className="text-[9px] font-black uppercase text-slate-400">Credit Amount</label>
               <div className="relative">
                 <History className="absolute left-2 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-300" />
-                <input type="number" placeholder="0.00" className="w-full pl-8 pr-3 py-2 border-2 border-slate-100 font-black text-lg outline-none focus:border-rose-500 transition-all shadow-inner" value={silkPayments.credit} onChange={e => setSilkPayments({...silkPayments, credit: e.target.value})} />
+                <input type="number" placeholder="0.00" className="w-full pl-8 pr-3 py-2 border-2 border-slate-100 font-black text-lg outline-none focus:border-rose-500 transition-all shadow-inner" value={silkPayments.credit} readOnly />
               </div>
             </div>
             <div className="space-y-1">

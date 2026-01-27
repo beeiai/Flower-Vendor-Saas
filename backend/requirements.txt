@@ -4,10 +4,15 @@ psycopg2-binary
 SQLAlchemy
 alembic
 pydantic
+email-validator
 python-dotenv
 passlib
+python-multipart
+bcrypt
 jinja2
 pandas
 pyjwt
+python-jose[cryptography]
 requests
 reportlab
+bcrypt
