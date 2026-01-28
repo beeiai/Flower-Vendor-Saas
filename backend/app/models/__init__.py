@@ -12,4 +12,5 @@ from app.models.audit import Audit
 from app.models.catalog import Catalog
 from app.models.item import Item
 from app.models.silk_physical_digital_entry import SilkPhysicalDigitalEntry
+from app.models.silk_daily_collection import SilkDailyCollection
 from app.models.saala_customer import SaalaCustomer, SaalaTransaction

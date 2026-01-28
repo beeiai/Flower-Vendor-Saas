@@ -65,7 +65,7 @@ export const DEFAULT_STATES = {
 
   // Silk summary state
   silkSummary: {
-    silkPayments: { credit: '', cash: '', phonePe: '' },
+    silkPayments: { credit: 0, cash: 0, phonePe: 0 },
     selectedDate: new Date().toISOString().split('T')[0],
     groupAggregation: [],
     loading: false,

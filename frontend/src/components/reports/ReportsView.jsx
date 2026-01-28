@@ -191,6 +191,37 @@ export default function ReportsView({ groups, customers, vehicles, advanceStore 
 		onCancel && onCancel();
 	};
 
+	const handlePrint = async () => {
+		if (!selectedCustomer?.id) {
+			alert('Please select a customer first');
+			return;
+		}
+		
+		try {
+			// Generate the ledger report from backend
+			const response = await api.getLedgerReport(
+				selectedCustomer.id,
+				fromDate || todayISO(),
+				toDate || todayISO(),
+				commissionPct
+			);
+			
+			// Create a new window/tab for printing
+			const printWindow = window.open('', '_blank');
+			printWindow.document.write(response);
+			printWindow.document.close();
+			
+			// Trigger print after content loads
+			printWindow.onload = () => {
+				printWindow.print();
+			};
+			
+		} catch (error) {
+			console.error('Print error:', error);
+			alert(`Print failed: ${error.message}`);
+		}
+	};
+
 	return (
 		<div className="flex-1 flex flex-col h-full overflow-hidden bg-white">
 			<div className="bg-slate-800 px-5 py-3 text-white shrink-0">
@@ -395,7 +426,7 @@ export default function ReportsView({ groups, customers, vehicles, advanceStore 
 					type="button"
 					className="px-6 bg-slate-800 text-white text-sm font-semibold rounded-sm hover:bg-slate-700 transition-colors"
 					style={{ height: '40px' }}
-					onClick={() => window.print()}
+					onClick={handlePrint}
 				>
 					Print
 				</button>

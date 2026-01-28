@@ -329,13 +329,38 @@ function GroupPrintingView({ groups, customers, ledgerStore, onCancel }) {
   };
 
   const handlePrint = async () => {
+    if (!selGroup) return;
+    
     setIsPrinting(true);
     try {
-      const data = await buildReport();
-      setPrintData(data);
-      // allow React to flush render before printing
-      setTimeout(() => window.print(), 50);
-    } catch {
+      // Get the selected group ID
+      const selectedGroup = groups.find(g => g.name === selGroup);
+      if (!selectedGroup) {
+        throw new Error('Group not found');
+      }
+      
+      // Generate the print report from backend
+      const response = await api.getGroupPattiReport(
+        selectedGroup.id,
+        fromDate,
+        toDate,
+        commissionPct
+      );
+      
+      // Create a new window/tab for printing
+      const printWindow = window.open('', '_blank');
+      printWindow.document.write(response);
+      printWindow.document.close();
+      
+      // Trigger print after content loads
+      printWindow.onload = () => {
+        printWindow.print();
+      };
+      
+    } catch (error) {
+      console.error('Print error:', error);
+      alert(`Print failed: ${error.message}`);
+    } finally {
       setIsPrinting(false);
     }
   };
@@ -589,7 +614,6 @@ export default function App() {
     commissionPct: 12,
   });
   const [isGroupPattiPrinting, setIsGroupPattiPrinting] = useState(false);
-  const [groupPattiPrintData, setGroupPattiPrintData] = useState(null);
 
   const [groupTotalForm, setGroupTotalForm] = useState({
     fromDate: new Date().toISOString().split('T')[0],
@@ -597,7 +621,6 @@ export default function App() {
     groupName: '',
   });
   const [isGroupTotalPrinting, setIsGroupTotalPrinting] = useState(false);
-  const [groupTotalPrintData, setGroupTotalPrintData] = useState(null);
 
   const [isItemsDailySaleRateOpen, setIsItemsDailySaleRateOpen] = useState(false);
   const [itemsDailySaleRateForm, setItemsDailySaleRateForm] = useState({
@@ -640,8 +663,6 @@ export default function App() {
 
   useEffect(() => {
     const handleAfter = () => {
-      setIsGroupPattiPrinting(false);
-      setIsGroupTotalPrinting(false);
       setIsItemsDailySaleRatePrinting(false);
     };
     window.addEventListener('afterprint', handleAfter);
@@ -841,9 +862,6 @@ export default function App() {
   const handleItemsDailySaleRatePrint = async () => {
     setIsItemsDailySaleRatePrinting(true);
     try {
-      setGroupPattiPrintData(null);
-      setGroupTotalPrintData(null);
-
       const item = String(itemsDailySaleRateForm.itemName || '').trim();
       const from = String(itemsDailySaleRateForm.fromDate || '');
       const to = String(itemsDailySaleRateForm.toDate || '');
@@ -854,45 +872,8 @@ export default function App() {
       });
       setTimeout(() => window.print(), 50);
     } catch {
-      setIsItemsDailySaleRatePrinting(false);
+      // Handle error silently
     }
-  };
-
-  const buildGroupPattiReport = async ({ fromDate, toDate, groupName, commissionPct }) => {
-    const from = String(fromDate || '');
-    const to = String(toDate || '');
-    const group = String(groupName || '').trim();
-    const pct = Number(commissionPct || 0);
-
-    const groupCustomers = customers.filter(c => c.group === group);
-    const rows = await Promise.all(groupCustomers.map(async (cust) => {
-      if (!cust?.id) {
-        return { customer: cust?.name || '', gross: 0, commission: 0, net: 0, paid: 0, balance: 0 };
-      }
-      const txns = await api.listTransactions(cust.id);
-      const filtered = txns.filter(t => {
-        const d = String(t.date || '');
-        if (!d) return false;
-        if (from && d < from) return false;
-        if (to && d > to) return false;
-        return true;
-      });
-      const gross = filtered.reduce((acc, t) => acc + (Number(t.qty || 0) * Number(t.rate || 0)), 0);
-      const paid = filtered.reduce((acc, t) => acc + Number(t.paidAmt || 0), 0);
-      const commission = (gross * pct) / 100;
-      const net = gross - commission;
-      return { customer: cust.name, gross, commission, net, paid, balance: net - paid };
-    }));
-
-    const totals = rows.reduce((acc, r) => ({
-      gross: acc.gross + Number(r.gross || 0),
-      commission: acc.commission + Number(r.commission || 0),
-      net: acc.net + Number(r.net || 0),
-      paid: acc.paid + Number(r.paid || 0),
-      balance: acc.balance + Number(r.balance || 0),
-    }), { gross: 0, commission: 0, net: 0, paid: 0, balance: 0 });
-
-    return { meta: { from, to, group, pct }, rows, totals };
   };
 
   const handleGroupPattiPrint = async () => {
@@ -901,47 +882,33 @@ export default function App() {
 
     setIsGroupPattiPrinting(true);
     try {
-      setGroupTotalPrintData(null);
-      const data = await buildGroupPattiReport(groupPattiForm);
-      setGroupPattiPrintData(data);
-      setTimeout(() => window.print(), 50);
-    } catch {
-      setIsGroupPattiPrinting(false);
-    }
-  };
-
-  const buildGroupTotalReport = async ({ fromDate, toDate, groupName }) => {
-    const from = String(fromDate || '');
-    const to = String(toDate || '');
-    const group = String(groupName || '').trim();
-    const groupCustomers = customers.filter(c => c.group === group);
-
-    const rows = await Promise.all(groupCustomers.map(async (cust) => {
-      if (!cust?.id) {
-        return { customer: cust?.name || '', qty: 0, gross: 0, paid: 0, balance: 0 };
+      // Get the selected group ID
+      const selectedGroup = groups.find(g => g.name === group);
+      if (!selectedGroup) {
+        throw new Error('Group not found');
       }
-      const txns = await api.listTransactions(cust.id);
-      const filtered = txns.filter(t => {
-        const d = String(t.date || '');
-        if (!d) return false;
-        if (from && d < from) return false;
-        if (to && d > to) return false;
-        return true;
-      });
-      const qty = filtered.reduce((acc, t) => acc + Number(t.qty || 0), 0);
-      const gross = filtered.reduce((acc, t) => acc + (Number(t.qty || 0) * Number(t.rate || 0)), 0);
-      const paid = filtered.reduce((acc, t) => acc + Number(t.paidAmt || 0), 0);
-      return { customer: cust.name, qty, gross, paid, balance: gross - paid };
-    }));
-
-    const totals = rows.reduce((acc, r) => ({
-      qty: acc.qty + Number(r.qty || 0),
-      gross: acc.gross + Number(r.gross || 0),
-      paid: acc.paid + Number(r.paid || 0),
-      balance: acc.balance + Number(r.balance || 0),
-    }), { qty: 0, gross: 0, paid: 0, balance: 0 });
-
-    return { meta: { from, to, group }, rows, totals };
+      
+      // Generate the print report from backend
+      const response = await api.getGroupPattiReport(
+        selectedGroup.id,
+        groupPattiForm.fromDate,
+        groupPattiForm.toDate,
+        groupPattiForm.commissionPct
+      );
+      
+      // Create a new window/tab for printing
+      const printWindow = window.open('', '_blank');
+      printWindow.document.write(response);
+      printWindow.document.close();
+      
+      // Trigger print after content loads
+      printWindow.onload = () => {
+        printWindow.print();
+      };
+    } catch (error) {
+      console.error('Print error:', error);
+      alert(`Print failed: ${error.message}`);
+    }
   };
 
   const handleGroupTotalPrint = async () => {
@@ -950,12 +917,31 @@ export default function App() {
 
     setIsGroupTotalPrinting(true);
     try {
-      setGroupPattiPrintData(null);
-      const data = await buildGroupTotalReport(groupTotalForm);
-      setGroupTotalPrintData(data);
-      setTimeout(() => window.print(), 50);
-    } catch {
-      setIsGroupTotalPrinting(false);
+      // Get the selected group ID
+      const selectedGroup = groups.find(g => g.name === group);
+      if (!selectedGroup) {
+        throw new Error('Group not found');
+      }
+      
+      // Generate the print report from backend
+      const response = await api.getGroupTotalReport(
+        selectedGroup.id,
+        groupTotalForm.fromDate,
+        groupTotalForm.toDate
+      );
+      
+      // Create a new window/tab for printing
+      const printWindow = window.open('', '_blank');
+      printWindow.document.write(response);
+      printWindow.document.close();
+      
+      // Trigger print after content loads
+      printWindow.onload = () => {
+        printWindow.print();
+      };
+    } catch (error) {
+      console.error('Print error:', error);
+      alert(`Print failed: ${error.message}`);
     }
   };
 
@@ -1522,103 +1508,9 @@ export default function App() {
         </div>
       )}
 
-      <div id="group-patti-print-area" className="hidden">
-        {groupPattiPrintData && (
-          <div className="p-8 font-sans">
-            <div className="flex justify-between items-start mb-6">
-              <div>
-                <div className="text-[16px] font-black uppercase">Group Patti Report</div>
-                <div className="text-[12px] font-bold">Group: {String(groupPattiPrintData.meta.group)}</div>
-                <div className="text-[12px] font-bold">From: {String(groupPattiPrintData.meta.from)}  To: {String(groupPattiPrintData.meta.to)}</div>
-              </div>
-              <div className="text-right">
-                <div className="text-[12px] font-bold">Commission: {String(groupPattiPrintData.meta.pct)}%</div>
-                <div className="text-[11px]">{new Date().toLocaleDateString()}</div>
-              </div>
-            </div>
 
-            <table className="w-full border-collapse text-[12px]">
-              <thead>
-                <tr>
-                  <th className="border border-black p-2 text-left">Customer</th>
-                  <th className="border border-black p-2 text-right">Gross</th>
-                  <th className="border border-black p-2 text-right">Commission</th>
-                  <th className="border border-black p-2 text-right">Net</th>
-                  <th className="border border-black p-2 text-right">Paid</th>
-                  <th className="border border-black p-2 text-right">Balance</th>
-                </tr>
-              </thead>
-              <tbody>
-                {groupPattiPrintData.rows.map((r, idx) => (
-                  <tr key={idx}>
-                    <td className="border border-black p-2">{String(r.customer)}</td>
-                    <td className="border border-black p-2 text-right">₹{Number(r.gross || 0).toFixed(2)}</td>
-                    <td className="border border-black p-2 text-right">₹{Number(r.commission || 0).toFixed(2)}</td>
-                    <td className="border border-black p-2 text-right">₹{Number(r.net || 0).toFixed(2)}</td>
-                    <td className="border border-black p-2 text-right">₹{Number(r.paid || 0).toFixed(2)}</td>
-                    <td className="border border-black p-2 text-right">₹{Number(r.balance || 0).toFixed(2)}</td>
-                  </tr>
-                ))}
-                <tr>
-                  <td className="border border-black p-2 font-black text-right">TOTAL</td>
-                  <td className="border border-black p-2 text-right font-black">₹{Number(groupPattiPrintData.totals.gross || 0).toFixed(2)}</td>
-                  <td className="border border-black p-2 text-right font-black">₹{Number(groupPattiPrintData.totals.commission || 0).toFixed(2)}</td>
-                  <td className="border border-black p-2 text-right font-black">₹{Number(groupPattiPrintData.totals.net || 0).toFixed(2)}</td>
-                  <td className="border border-black p-2 text-right font-black">₹{Number(groupPattiPrintData.totals.paid || 0).toFixed(2)}</td>
-                  <td className="border border-black p-2 text-right font-black">₹{Number(groupPattiPrintData.totals.balance || 0).toFixed(2)}</td>
-                </tr>
-              </tbody>
-            </table>
-          </div>
-        )}
-      </div>
 
-      <div id="group-total-print-area" className="hidden">
-        {groupTotalPrintData && (
-          <div className="p-8 font-sans">
-            <div className="flex justify-between items-start mb-6">
-              <div>
-                <div className="text-[16px] font-black uppercase">Group Total Report</div>
-                <div className="text-[12px] font-bold">Group: {String(groupTotalPrintData.meta.group)}</div>
-                <div className="text-[12px] font-bold">From: {String(groupTotalPrintData.meta.from)}  To: {String(groupTotalPrintData.meta.to)}</div>
-              </div>
-              <div className="text-right">
-                <div className="text-[11px]">{new Date().toLocaleDateString()}</div>
-              </div>
-            </div>
 
-            <table className="w-full border-collapse text-[12px]">
-              <thead>
-                <tr>
-                  <th className="border border-black p-2 text-left">Customer</th>
-                  <th className="border border-black p-2 text-right">Qty</th>
-                  <th className="border border-black p-2 text-right">Gross</th>
-                  <th className="border border-black p-2 text-right">Paid</th>
-                  <th className="border border-black p-2 text-right">Balance</th>
-                </tr>
-              </thead>
-              <tbody>
-                {groupTotalPrintData.rows.map((r, idx) => (
-                  <tr key={idx}>
-                    <td className="border border-black p-2">{String(r.customer)}</td>
-                    <td className="border border-black p-2 text-right">{Number(r.qty || 0).toFixed(2)}</td>
-                    <td className="border border-black p-2 text-right">₹{Number(r.gross || 0).toFixed(2)}</td>
-                    <td className="border border-black p-2 text-right">₹{Number(r.paid || 0).toFixed(2)}</td>
-                    <td className="border border-black p-2 text-right">₹{Number(r.balance || 0).toFixed(2)}</td>
-                  </tr>
-                ))}
-                <tr>
-                  <td className="border border-black p-2 font-black text-right">TOTAL</td>
-                  <td className="border border-black p-2 text-right font-black">{Number(groupTotalPrintData.totals.qty || 0).toFixed(2)}</td>
-                  <td className="border border-black p-2 text-right font-black">₹{Number(groupTotalPrintData.totals.gross || 0).toFixed(2)}</td>
-                  <td className="border border-black p-2 text-right font-black">₹{Number(groupTotalPrintData.totals.paid || 0).toFixed(2)}</td>
-                  <td className="border border-black p-2 text-right font-black">₹{Number(groupTotalPrintData.totals.balance || 0).toFixed(2)}</td>
-                </tr>
-              </tbody>
-            </table>
-          </div>
-        )}
-      </div>
 
       <div id="items-daily-sale-rate-print-area" className="hidden">
         {itemsDailySaleRatePrintData && (
@@ -1671,7 +1563,7 @@ export default function App() {
       </div>
 
       <footer className="h-7 bg-slate-900 border-t border-black/50 text-slate-500 font-mono text-[9px] px-4 flex items-center justify-between uppercase tracking-tighter shrink-0 shadow-2xl"><span>SECURE ERP CLOUD — <span className="text-emerald-500 font-black">CORE_SERVICE_OK</span> — v5.0.4</span><span>{new Date().toLocaleTimeString()}</span></footer>
-      <style dangerouslySetInnerHTML={{ __html: `input::-webkit-outer-spin-button, input::-webkit-inner-spin-button { -webkit-appearance: none; margin: 0; } ::-webkit-scrollbar { width: 4px; height: 4px; } ::-webkit-scrollbar-thumb { background: #334155; } ::-webkit-scrollbar-thumb:hover { background: #e11d48; } .custom-table-scroll:focus { outline: none; } @media print { body * { visibility: hidden !important; } #group-patti-print-area, #group-patti-print-area * { visibility: visible !important; } #group-total-print-area, #group-total-print-area * { visibility: visible !important; } #items-daily-sale-rate-print-area, #items-daily-sale-rate-print-area * { visibility: visible !important; } #group-patti-print-area, #group-total-print-area, #items-daily-sale-rate-print-area { display: block !important; position: absolute; left: 0; top: 0; width: 100%; } }` }} />
+      <style dangerouslySetInnerHTML={{ __html: `input::-webkit-outer-spin-button, input::-webkit-inner-spin-button { -webkit-appearance: none; margin: 0; } ::-webkit-scrollbar { width: 4px; height: 4px; } ::-webkit-scrollbar-thumb { background: #334155; } ::-webkit-scrollbar-thumb:hover { background: #e11d48; } .custom-table-scroll:focus { outline: none; } @media print { body * { visibility: hidden !important; } #items-daily-sale-rate-print-area, #items-daily-sale-rate-print-area * { visibility: visible !important; } #items-daily-sale-rate-print-area { display: block !important; position: absolute; left: 0; top: 0; width: 100%; } }` }} />
     </div>
   );
 }

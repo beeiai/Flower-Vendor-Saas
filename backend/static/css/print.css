@@ -1,0 +1,152 @@
+@page {
+    size: A4;
+    margin: 15mm;
+}
+
+body {
+    font-family: Arial, Helvetica, sans-serif;
+    font-size: 12px;
+    color: #000;
+    margin: 0;
+    padding: 0;
+}
+
+.page {
+    width: 100%;
+    max-width: 210mm;
+    margin: 0 auto;
+}
+
+.header {
+    text-align: center;
+    margin-bottom: 15px;
+    border-bottom: 2px solid #000;
+    padding-bottom: 10px;
+}
+
+.header h2 {
+    margin: 0 0 8px 0;
+    font-size: 18px;
+    letter-spacing: 1px;
+    font-weight: bold;
+}
+
+.header .sub {
+    font-size: 11px;
+    line-height: 1.4;
+    margin: 0;
+}
+
+.info-grid {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 8px;
+    margin: 15px 0;
+    font-size: 12px;
+    padding: 10px;
+    border: 1px solid #000;
+}
+
+.info-grid div {
+    padding: 3px 5px;
+}
+
+.report-table {
+    width: 100%;
+    border-collapse: collapse;
+    margin: 15px 0;
+    font-size: 11px;
+}
+
+.report-table th,
+.report-table td {
+    border: 1px solid #000;
+    padding: 6px 4px;
+    text-align: center;
+}
+
+.report-table th {
+    font-weight: bold;
+    background-color: #f0f0f0;
+}
+
+.report-table tbody tr:nth-child(even) {
+    background-color: #f9f9f9;
+}
+
+.totals {
+    display: grid;
+    grid-template-columns: 2fr 1fr 1fr 1fr;
+    margin: 10px 0;
+    font-weight: bold;
+    border-top: 2px solid #000;
+    padding-top: 8px;
+    font-size: 12px;
+}
+
+.summary {
+    display: flex;
+    justify-content: space-between;
+    margin: 20px 0;
+    font-size: 12px;
+    padding: 15px;
+    border: 1px solid #000;
+}
+
+.summary > div {
+    flex: 1;
+}
+
+.summary p {
+    margin: 4px 0;
+}
+
+.totals-section {
+    display: grid;
+    grid-template-columns: 1fr 1fr 1fr 1fr 1fr;
+    gap: 10px;
+    text-align: center;
+    font-weight: bold;
+    padding: 15px;
+    border: 2px solid #000;
+    background-color: #f5f5f5;
+}
+
+/* Print-specific optimizations */
+@media print {
+    body {
+        -webkit-print-color-adjust: exact;
+        color-adjust: exact;
+    }
+    
+    .page {
+        page-break-inside: avoid;
+    }
+    
+    .report-table {
+        page-break-inside: auto;
+    }
+    
+    .report-table tr {
+        page-break-inside: avoid;
+        page-break-after: auto;
+    }
+    
+    .header {
+        page-break-after: avoid;
+    }
+}
+
+/* Screen display optimizations */
+@media screen {
+    body {
+        background-color: #f5f5f5;
+        padding: 20px;
+    }
+    
+    .page {
+        background: white;
+        box-shadow: 0 0 10px rgba(0,0,0,0.1);
+        padding: 20px;
+    }
+}

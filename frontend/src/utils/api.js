@@ -52,7 +52,8 @@ function normalizePath(path) {
   while (p.startsWith('/')) p = p.slice(1);
   // ensure trailing slash to avoid FastAPI redirect on collection endpoints
   // but exclude silk ledger endpoint which expects no trailing slash
-  if (p && !p.endsWith('/') && p !== 'silk/ledger') p = `${p}/`;
+  // and exclude paths ending with a date (YYYY-MM-DD)
+  if (p && !p.endsWith('/') && p !== 'silk/ledger' && !p.match(/\/\d{4}-\d{2}-\d{2}$/)) p = `${p}/`;
   return p || '/';
 }
 
@@ -60,6 +61,8 @@ async function request(path, options = {}) {
   const method = (options.method || 'GET').toLowerCase();
   const url = normalizePath(path);
 
+  console.log('[API CALL] Making request:', { method, url, options });
+  
   try {
     const axiosOptions = { url, method };
     if (options.body) {
@@ -69,9 +72,11 @@ async function request(path, options = {}) {
     if (options.params) axiosOptions.params = options.params;
 
     const res = await axiosInstance.request(axiosOptions);
+    console.log('[API CALL] Response received:', { status: res.status, data: res.data });
     if (res.status === 204) return null;
     return res.data;
   } catch (err) {
+    console.error('[API CALL] Request error:', err);
     if (err?.response) {
       const e = new Error(err.response.data?.error || `Request failed: ${err.response.status}`);
       e.status = err.response.status;
@@ -209,7 +214,10 @@ export const api = {
   addCustomerAdvance: (customerId, payload) => request(`/customers/${customerId}/advances/`, { method: 'POST', body: JSON.stringify(payload) }),
 
   // SAALA Module APIs (moved to FastAPI backend)
-  listSaalaCustomers: () => request('/saala/customers/'),
+  listSaalaCustomers: () => {
+    console.log('[API CALL] listSaalaCustomers - Fetching all customers');
+    return request('/saala/customers/');
+  },
   createSaalaCustomer: (payload) => request('/saala/customers/', { method: 'POST', body: JSON.stringify(payload) }),
   updateSaalaCustomer: (id, payload) => request(`/saala/customers/${id}/`, { method: 'PUT', body: JSON.stringify(payload) }),
   deleteSaalaCustomer: (id) => request(`/saala/customers/${id}/`, { method: 'DELETE' }),
@@ -219,7 +227,10 @@ export const api = {
   updateSaalaTransaction: (id, payload) => request(`/saala/transactions/${id}`, { method: 'PUT', body: JSON.stringify(payload) }),
   deleteSaalaTransaction: (id) => request(`/saala/transactions/${id}`, { method: 'DELETE' }),
 
-  getSaalaCustomerSummary: (customerId) => request(`/saala/customers/${customerId}/summary/`),
+  getSaalaCustomerSummary: (customerId, options = {}) => {
+    console.log('[API CALL] getSaalaCustomerSummary - Customer ID:', customerId);
+    return request(`/saala/customers/${customerId}/summary/`, options);
+  },
   addSaalaPayment: (customerId, payload) => request(`/saala/customers/${customerId}/payments/`, { method: 'POST', body: JSON.stringify(payload) }),
 
   // Silk Module APIs
@@ -241,6 +252,37 @@ export const api = {
   getSilkCollectionByDate: async (date) => {
     const collections = await request('/silk/collections/', { params: { from_date: date, to_date: date } });
     return collections && collections.length > 0 ? collections[0] : null;
+  },
+  
+  // Daily Cash & UPI Collection APIs (new)
+  saveSilkDailyCollection: async (payload) => {
+    console.log('[API CALL] saveSilkDailyCollection - Input data:', payload);
+    const result = await request('/silk/daily-collections', { method: 'POST', body: payload });
+    console.log('[API CALL] saveSilkDailyCollection response:', result);
+    return result;
+  },
+  getSilkDailyCollections: async (fromDate, toDate) => {
+    const params = { from_date: fromDate, to_date: toDate };
+    console.log('[API CALL] getSilkDailyCollections - Params:', params);
+    const response = await request('/silk/daily-collections', { params });
+    console.log('[API CALL] getSilkDailyCollections response:', response);
+    return response.collections || [];
+  },
+  getSilkDailyCollectionByDate: async (date) => {
+    console.log('[API CALL] getSilkDailyCollectionByDate - Input date:', date);
+    try {
+      const response = await request(`/silk/daily-collections/${date}`);
+      console.log('[API CALL] getSilkDailyCollectionByDate response:', response);
+      return response;
+    } catch (error) {
+      console.log('[API CALL] getSilkDailyCollectionByDate error:', error);
+      // Return null if not found (404)
+      if (error.message && error.message.includes('404')) {
+        console.log('[API CALL] No collection found for date:', date);
+        return null;
+      }
+      throw error;
+    }
   },
     
   
@@ -270,4 +312,44 @@ export const api = {
     });
     return result;
   },
+  
+  // Additional APIs
+  getSaalaCustomerTotalOutstanding: (customerId) => request(`/saala/customers/${customerId}/total-outstanding/`),
+  getSilkDailyCredit: async (date) => {
+    console.log('[API CALL] getSilkDailyCredit - Input date:', date);
+    const response = await request(`/silk/credit`, { params: { date } });
+    console.log('[API CALL] getSilkDailyCredit response:', response);
+    return response;
+  },
+  
+  // Print Template APIs
+  getLedgerReport: async (farmerId, fromDate, toDate) => {
+    const params = { farmer_id: farmerId, from_date: fromDate, to_date: toDate };
+    return request('/print/ledger-report', { params });
+  },
+  
+  getGroupPattiReport: async (groupId, fromDate, toDate, commissionPct = 12.0) => {
+    const params = { 
+      group_id: groupId, 
+      from_date: fromDate, 
+      to_date: toDate, 
+      commission_pct: commissionPct 
+    };
+    return request('/print/group-patti-report', { params });
+  },
+  
+  getGroupTotalReport: async (groupId, fromDate, toDate) => {
+    const params = { 
+      group_id: groupId, 
+      from_date: fromDate, 
+      to_date: toDate 
+    };
+    return request('/print/group-total-report', { params });
+  },
+  
+  getDailySalesReport: async (fromDate, toDate, itemName = null) => {
+    const params = { from_date: fromDate, to_date: toDate };
+    if (itemName) params.item_name = itemName;
+    return request('/print/daily-sales-report', { params });
+  }
 };

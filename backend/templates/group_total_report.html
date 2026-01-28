@@ -1,0 +1,66 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>Group Total Report</title>
+    <link rel="stylesheet" href="/static/css/print.css">
+</head>
+<body>
+
+<div class="page">
+
+    <!-- HEADER -->
+    <div class="header">
+        <h2>SREE KRISHNA FLOWER STALL</h2>
+        <p class="sub">
+            PH: 8147848760 <br>
+            Proprietor: K.C.N & SONS | Mob: 9972878307 <br>
+            FLOWER MERCHANTS – 7795018307 <br>
+            Shop No: B-32, S.K.R Market, Bangalore - 560002 <br>
+            Trade Mark: <b>S.K.F.S</b>
+        </p>
+    </div>
+
+    <!-- REPORT INFO -->
+    <div class="info-grid">
+        <div><b>Report Type:</b> Group Total Summary</div>
+        <div><b>Date:</b> {{ current_date }}</div>
+    </div>
+
+    <!-- TABLE -->
+    <table class="report-table">
+        <thead>
+            <tr>
+                <th>Group Name</th>
+                <th>Customers</th>
+                <th>Total Qty</th>
+                <th>Total Amount</th>
+                <th>Avg Rate</th>
+            </tr>
+        </thead>
+        <tbody>
+            {% for row in rows %}
+            <tr>
+                <td>{{ row.group_name }}</td>
+                <td>{{ row.customer_count }}</td>
+                <td>{{ row.total_qty }}</td>
+                <td>₹ {{ row.total_amount }}</td>
+                <td>₹ {{ row.avg_rate }}</td>
+            </tr>
+            {% endfor %}
+        </tbody>
+    </table>
+
+    <!-- OVERALL TOTALS -->
+    <div class="summary totals-section">
+        <div><b>Overall Totals</b></div>
+        <div>Groups: {{ totals.group_count }}</div>
+        <div>Customers: {{ totals.total_customers }}</div>
+        <div>Total Qty: {{ totals.overall_qty }}</div>
+        <div><b>Total Amount: ₹ {{ totals.overall_amount }}</b></div>
+    </div>
+
+</div>
+
+</body>
+</html>

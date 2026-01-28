@@ -12,6 +12,7 @@ from app.models.silk_collection import SilkCollection, CollectionStatus
 from app.models.silk_physical_digital_entry import SilkPhysicalDigitalEntry
 from app.models.farmer import Farmer
 from app.models.collection_item import CollectionItem
+from app.models.saala_customer import SaalaCustomer, SaalaTransaction
 from pydantic import BaseModel, Field
 
 
@@ -80,6 +81,12 @@ class SilkPhysicalDigitalResponse(BaseModel):
     total_kg: float
     total_amount: float
     message: str
+
+
+class DailyCreditResponse(BaseModel):
+    """Response model for daily credit calculation"""
+    date: str
+    total_credit: float
 
 
 # ========== ENDPOINTS ==========
@@ -489,3 +496,179 @@ def sync_silk_ledger_from_transactions(
     except Exception as e:
         db.rollback()
         raise HTTPException(status_code=500, detail=f"Sync failed: {str(e)}")
+
+
+@router.get("/credit", response_model=DailyCreditResponse)
+def get_silk_daily_credit(
+    date: str = Query(..., description="Date in YYYY-MM-DD format"),
+    db: Session = Depends(get_db),
+    user = Depends(get_current_user)
+):
+    """
+    Get the total daily credit for all customers on a specific date.
+    Daily credit = sum of (total_amount - paid_amount) for all transactions on that day.
+    """
+    try:
+        target_date = datetime.strptime(date, "%Y-%m-%d").date()
+        # Create datetime range for the entire day to handle timezone issues
+        from datetime import time
+        start_of_day = datetime.combine(target_date, time.min)
+        end_of_day = datetime.combine(target_date, time.max)
+    except ValueError:
+        raise HTTPException(status_code=400, detail="Invalid date format. Use YYYY-MM-DD")
+    
+    # Get all customers for the vendor
+    customers = db.query(SaalaCustomer).filter(
+        SaalaCustomer.vendor_id == user.vendor_id
+    ).all()
+    
+    total_daily_credit = 0
+    
+    # For each customer, get the sum of (total_amount - paid_amount) for transactions on that date
+    for customer in customers:
+        # Calculate daily credit correctly: sum(total_amount - paid_amount) for the day
+        daily_credit = (
+            db.query(func.sum(SaalaTransaction.total_amount - SaalaTransaction.paid_amount))
+            .filter(
+                SaalaTransaction.customer_id == customer.id,
+                SaalaTransaction.date >= start_of_day,
+                SaalaTransaction.date <= end_of_day
+            )
+            .scalar()
+        ) or 0
+        
+        # Ensure we don't include negative values (overpayments)
+        daily_credit = max(float(daily_credit), 0)
+        total_daily_credit += daily_credit
+        
+        print(f"[DAILY CREDIT] date={date} customer={customer.id} credit={daily_credit}")
+    
+    print(f"[SILK DAILY CREDIT] date={date} total={total_daily_credit}")
+    
+    return {
+        "date": date,
+        "total_credit": total_daily_credit
+    }
+
+
+# ========== DAILY CASH & UPI COLLECTIONS ========== #
+
+from app.models.silk_daily_collection import SilkDailyCollection
+from app.schemas.silk_collection import SilkDailyCollectionCreate, SilkDailyCollectionResponse, SilkDailyCollectionListResponse
+from datetime import datetime
+
+
+@router.post("/daily-collections", response_model=SilkDailyCollectionResponse)
+def save_daily_collection(
+    data: SilkDailyCollectionCreate,
+    db: Session = Depends(get_db),
+    user = Depends(get_current_user)
+):
+    """
+    Save or update daily Cash & UPI collection for a specific date.
+    
+    Business Rules:
+    - One record per date (UNIQUE constraint)
+    - If record exists for date → UPDATE
+    - Else → INSERT
+    - Cash and UPI are authoritative from this table
+    """
+    try:
+        target_date = datetime.strptime(str(data.date), "%Y-%m-%d").date()
+    except ValueError:
+        raise HTTPException(status_code=400, detail="Invalid date format. Use YYYY-MM-DD")
+
+    # Validate amounts
+    if data.cash < 0 or data.upi < 0:
+        raise HTTPException(status_code=400, detail="Payment amounts cannot be negative")
+
+    # Check if record exists for the date
+    existing = db.query(SilkDailyCollection).filter_by(date=target_date).first()
+
+    print(f"[SILK COLLECTION SAVE] date={target_date} cash={data.cash} upi={data.upi}")
+
+    if existing:
+        # Update existing record
+        existing.cash = data.cash
+        existing.upi = data.upi
+        db.commit()
+        db.refresh(existing)
+        return existing
+    else:
+        # Create new record
+        new_collection = SilkDailyCollection(
+            date=target_date,
+            cash=data.cash,
+            upi=data.upi
+        )
+        db.add(new_collection)
+        db.commit()
+        db.refresh(new_collection)
+        return new_collection
+
+
+@router.get("/daily-collections", response_model=SilkDailyCollectionListResponse)
+def get_daily_collections(
+    from_date: str = Query(..., description="Start date in YYYY-MM-DD format"),
+    to_date: str = Query(..., description="End date in YYYY-MM-DD format"),
+    db: Session = Depends(get_db),
+    user = Depends(get_current_user)
+):
+    """
+    Fetch daily Cash & UPI collections for a date range.
+    
+    Returns:
+    - List of collections for the given date range
+    - Empty array if no records found
+    """
+    try:
+        start_date = datetime.strptime(from_date, "%Y-%m-%d").date()
+        end_date = datetime.strptime(to_date, "%Y-%m-%d").date()
+    except ValueError:
+        raise HTTPException(status_code=400, detail="Invalid date format. Use YYYY-MM-DD")
+
+    # Query collections in the date range
+    collections = (
+        db.query(SilkDailyCollection)
+        .filter(
+            SilkDailyCollection.date >= start_date,
+            SilkDailyCollection.date <= end_date
+        )
+        .order_by(SilkDailyCollection.date)
+        .all()
+    )
+
+    # Print debug logs
+    for collection in collections:
+        print(f"[SILK COLLECTION FETCH] date={collection.date} cash={collection.cash} upi={collection.upi}")
+
+    return {"collections": collections}
+
+
+@router.get("/daily-collections/{date_str}", response_model=SilkDailyCollectionResponse)
+def get_daily_collection_by_date(
+    date_str: str,
+    db: Session = Depends(get_db),
+    user = Depends(get_current_user)
+):
+    """
+    Fetch daily Cash & UPI collection for a specific date.
+    
+    Returns:
+    - Collection record for the date
+    - 404 if no record found
+    """
+    try:
+        target_date = datetime.strptime(date_str, "%Y-%m-%d").date()
+    except ValueError:
+        raise HTTPException(status_code=400, detail="Invalid date format. Use YYYY-MM-DD")
+
+    # Query collection for the date
+    collection = db.query(SilkDailyCollection).filter_by(date=target_date).first()
+    
+    if not collection:
+        raise HTTPException(status_code=404, detail="No collection found for the specified date")
+
+    print(f"[SILK COLLECTION FETCH] date={collection.date} cash={collection.cash} upi={collection.upi}")
+    
+    return collection

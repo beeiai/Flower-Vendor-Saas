@@ -15,6 +15,7 @@ from app.routes import silk
 from app.routes import reports
 from app.routes import sms
 from app.routes import saala
+from app.routes import print_templates
 from fastapi.middleware.cors import CORSMiddleware
 from app.core.config import settings
 from app.core.rate_limiter import rate_limit_middleware
@@ -55,6 +56,7 @@ app.include_router(silk.router, prefix="/api")
 app.include_router(reports.router, prefix="/api")
 app.include_router(sms.router, prefix="/api")
 app.include_router(saala.router, prefix="/api")
+app.include_router(print_templates.router, prefix="/api")
 
 
 @app.get("/api/health")

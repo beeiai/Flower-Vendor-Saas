@@ -58,8 +58,10 @@ export function SilkSummaryView({ ledgerStore = {}, customers = [], onCancel }) 
   const fetchLedgerData = async (date) => {
     setLoading(true);
     setMessage({ text: '', type: '' });
+    console.log('[FETCHING LEDGER DATA]', date);
     try {
       const response = await api.getSilkLedger(date);
+      console.log('[LEDGER RESPONSE]', response);
       setGroupAggregation(response.groups || []);
     } catch (error) {
       setMessage({ text: `Failed to load ledger: ${error.message}`, type: 'error' });
@@ -72,109 +74,208 @@ export function SilkSummaryView({ ledgerStore = {}, customers = [], onCancel }) 
   // Removed automatic fetching on date change - now requires manual fetch
 
   // Manual fetch for selected date
-  const handleFetch = () => {
-    if (selectedDate) {
-      fetchLedgerData(selectedDate);
-      fetchSavedCollection(selectedDate);
-    }
+  const handleFetch = async () => {
+    if (!selectedDate) return;
+    
+    console.log('[HANDLE FETCH START] Starting fetch for date:', selectedDate);
+    console.log('[HANDLE FETCH] Current state before fetch:', {
+      cash: silkPayments.cash,
+      upi: silkPayments.phonePe,
+      credit: dailyCredit
+    });
+    
+    fetchLedgerData(selectedDate);
+    await fetchSavedCollection(selectedDate);
+    // Calculate credit AFTER fetching ledger and saved collection data
+    await calculateCreditAmount();
+    
+    console.log('[HANDLE FETCH END] Fetch completed for date:', selectedDate);
+    console.log('[HANDLE FETCH] State after fetch:', {
+      cash: silkPayments.cash,
+      upi: silkPayments.phonePe,
+      credit: dailyCredit
+    });
   };
   
   // Fetch saved collection data for selected date
   const fetchSavedCollection = async (date) => {
+    console.log('[FETCH SAVED COLLECTION START] Fetching data for date:', date);
     try {
-      const savedCollection = await api.getSilkCollectionByDate(date);
+      // Fetch daily cash and upi from the new silk_daily_collections table
+      console.log('[FETCH SAVED COLLECTION] Calling API to get daily collection');
+      const savedCollection = await api.getSilkDailyCollectionByDate(date);
+      
       if (savedCollection) {
-        setSilkPayments({
-          credit: String(savedCollection.credit_amount || ''),
-          cash: String(savedCollection.cash_amount || ''),
-          phonePe: String(savedCollection.upi_amount || '')
+        console.log('[FETCHED DAILY COLLECTION] SUCCESS - Data found:', {
+          date: savedCollection.date,
+          cash: savedCollection.cash,
+          upi: savedCollection.upi,
+          id: savedCollection.id
         });
+        
+        // Sync fetched values into silkPayments state
+        setSilkPayments(prev => {
+          const newCash = Number(savedCollection.cash) || 0;
+          const newUpi = Number(savedCollection.upi) || 0;
+          console.log('[UPDATING SILK PAYMENTS] Updating state with fetched values:', { 
+            prevCash: prev.cash, 
+            prevUpi: prev.phonePe,
+            newCash,
+            newUpi,
+            prevState: prev
+          });
+          
+          return {
+            ...prev,
+            cash: newCash,
+            phonePe: newUpi
+            // credit comes from dailyCredit state, not saved collection
+          };
+        });
+        
+        // Update cashAmount and upiAmount states for UI and total calculation
+        const { cash, upi } = savedCollection;
+        
+        setCashAmount(Number(cash) || 0);
+        setUpiAmount(Number(upi) || 0);
       } else {
-        // Reset to empty if no saved collection found
-        setSilkPayments({
-          credit: '',
-          cash: '',
-          phonePe: ''
+        console.log('[NO SAVED COLLECTION FOUND] No data for date:', date);
+        // Reset to 0 if no saved collection found
+        setSilkPayments(prev => {
+          console.log('[RESET SILK PAYMENTS] Resetting to 0 because no data found:', { 
+            prevCash: prev.cash, 
+            prevUpi: prev.phonePe,
+            prevState: prev
+          });
+          return {
+            ...prev,
+            cash: 0,
+            phonePe: 0
+          };
         });
       }
       
-      // Calculate the auto credit amount after loading saved data
-      await calculateCreditAmount();
+      // Log the updated state for verification
+      console.log('[SYNCED PAYMENTS STATE] After fetch operation:', silkPayments);
       
     } catch (error) {
-      console.error('Failed to fetch saved collection:', error);
+      console.error('[FETCH SAVED COLLECTION ERROR] Failed to fetch saved collection:', error);
       // Reset on error
-      setSilkPayments({
-        credit: '',
-        cash: '',
-        phonePe: ''
+      setSilkPayments(prev => {
+        console.log('[RESET SILK PAYMENTS ON ERROR] Resetting to 0 due to error:', { 
+          prevCash: prev.cash, 
+          prevUpi: prev.phonePe,
+          error: error.message,
+          prevState: prev
+        });
+        return {
+          ...prev,
+          cash: 0,
+          phonePe: 0
+        };
       });
     }
+    console.log('[FETCH SAVED COLLECTION END] Completed fetch for date:', date);
   };
   
 
 
   // Save collection entry
   const handleSaveCollection = async () => {
+    console.log('[SAVE COLLECTION START] Saving data for date:', selectedDate);
+    console.log('[SAVE COLLECTION] Current state values:', {
+      cash: silkPayments.cash,
+      upi: silkPayments.phonePe,
+      credit: dailyCredit
+    });
+    
     setSaving(true);
     setMessage({ text: '', type: '' });
     try {
-      // Calculate the credit amount before saving to ensure we have the latest value
-      const calculatedCreditValue = await calculateCreditAmount();
+      // Calculate the total manually for the message
+      const totalToSave = dailyCredit + 
+                          (Number(silkPayments.cash) || 0) + 
+                          (Number(silkPayments.phonePe) || 0);
       
-      const result = await api.saveSilkCollection({
+      console.log('[SAVE COLLECTION] Preparing to save:', {
         date: selectedDate,
-        credit: Number(calculatedCreditValue || 0),
-        cash: Number(silkPayments.cash || 0),
-        upi: Number(silkPayments.phonePe || 0)
+        cash: Number(silkPayments.cash) || 0,
+        upi: Number(silkPayments.phonePe) || 0,
+        totalToSave
       });
-      setMessage({ text: result.message || 'Collection saved successfully', type: 'success' });
+      
+      // Save only cash and upi to the new silk_daily_collections table
+      const result = await api.saveSilkDailyCollection({
+        date: selectedDate,
+        cash: cashAmount,
+        upi: upiAmount
+      });
+      
+      console.log('[SAVE COLLECTION] API response:', result);
+      
+      // After successful save, re-fetch to sync backend data
+      console.log('[SAVE COLLECTION] Re-fetching data to sync with backend');
+      await fetchSavedCollection(selectedDate);
+      
+      setMessage({ text: `Successfully saved! Total: ₹${totalToSave.toLocaleString(undefined, {minimumFractionDigits: 2})}`, type: 'success' });
+      console.log('[SAVE COLLECTION SUCCESS] Total saved:', totalToSave);
     } catch (error) {
+      console.error('[SAVE COLLECTION ERROR] Failed to save:', error);
       setMessage({ text: `Save failed: ${error.message}`, type: 'error' });
     } finally {
       setSaving(false);
+      console.log('[SAVE COLLECTION END] Save operation completed');
     }
   };
   
 
 
-  // Calculate auto-calculated credit amount based on all customers' total amounts
-  const [calculatedCredit, setCalculatedCredit] = useState(0);
+  // Dedicated state for Silk daily credit (separate from input state)
+  const [dailyCredit, setDailyCredit] = useState(0);
   const [creditCalculationLoading, setCreditCalculationLoading] = useState(false);
+  
+  // Explicit state variables for credit, cash, and UPI
+  const [creditAmount, setCreditAmount] = useState(0);
+  const [cashAmount, setCashAmount] = useState(0);
+  const [upiAmount, setUpiAmount] = useState(0);
+  
+  // Debug effect to log dailyCredit changes
+  useEffect(() => {
+    console.log('[DAILY CREDIT STATE CHANGED]', dailyCredit);
+  }, [dailyCredit]);
   
   // Function to calculate credit amount
   const calculateCreditAmount = async () => {
+    console.log('[CALCULATE CREDIT AMOUNT START] Calculating credit for date:', selectedDate);
     setCreditCalculationLoading(true);
     try {
-      // Get all customers
-      const customers = await api.listSaalaCustomers();
+      // Get the daily credit from the new Silk endpoint
+      console.log('[CALCULATE CREDIT AMOUNT] Calling API to get daily credit');
+      const response = await api.getSilkDailyCredit(selectedDate);
+      console.log('[CREDIT RESPONSE] API response:', response);
+      const totalCredit = response.total_credit || 0;
       
-      // Get each customer's summary and sum up their total amounts
-      const customerPromises = customers.map(customer => 
-        api.getSaalaCustomerSummary(customer.id)
-      );
+      // Store backend credit in dedicated state - DO NOT touch silkPayments
+      console.log('[SETTING DAILY CREDIT] Setting credit value:', totalCredit);
+      setDailyCredit(prev => {
+        console.log('[DAILY CREDIT SET] Updating credit state:', { prev, new: Number(totalCredit) || 0 });
+        return Number(totalCredit) || 0;
+      });
       
-      const summaries = await Promise.all(customerPromises);
-      
-      // Sum all total_amount values
-      const totalCredit = summaries.reduce((sum, summary) => {
-        return sum + (summary.total_amount || 0);
-      }, 0);
-      
-      setCalculatedCredit(totalCredit);
-      
-      // Update the silkPayments to use the calculated credit
-      setSilkPayments(prev => ({
-        ...prev,
-        credit: String(totalCredit)
-      }));
+      // Update creditAmount state for total calculation
+      setCreditAmount(response.total_credit || 0);
       
       return totalCredit;
     } catch (error) {
-      console.error('Error calculating auto credit:', error);
+      console.error('[CALCULATE CREDIT AMOUNT ERROR] Error calculating auto credit:', error);
+      setDailyCredit(prev => {
+        console.log('[DAILY CREDIT SET TO 0 ON ERROR] Resetting credit to 0 due to error:', { prev });
+        return 0;
+      });
       return 0;
     } finally {
       setCreditCalculationLoading(false);
+      console.log('[CALCULATE CREDIT AMOUNT END] Credit calculation completed');
     }
   };
 
@@ -186,27 +287,81 @@ export function SilkSummaryView({ ledgerStore = {}, customers = [], onCancel }) 
     }), { kg: 0, amount: 0 });
   }, [groupAggregation]);
 
-  // Payment balancing validation
-  const totalPaymentEntered = Number(silkPayments.credit || 0) + Number(silkPayments.cash || 0) + Number(silkPayments.phonePe || 0);
+  // Calculate total collected using useMemo
+  const totalCollected = useMemo(() => {
+    const credit = Number(creditAmount) || 0;
+    const cash = Number(cashAmount) || 0;
+    const upi = Number(upiAmount) || 0;
+
+    return credit + cash + upi;
+  }, [creditAmount, cashAmount, upiAmount]);
+  
+  // Temporary console log for debugging
+  console.log('[TOTAL]', {
+    creditAmount,
+    cashAmount,
+    upiAmount,
+    totalCollected
+  });
+      
+  // Verification log for daily collection UI
+  console.log('[DAILY COLLECTION UI]', {
+    cashAmount,
+    upiAmount
+  });
+  
   const totalLedgerAmount = Number(grandTotals.amount || 0);
   
   // Calculate profit or loss
-  const profitLoss = totalPaymentEntered - totalLedgerAmount;
+  const profitLoss = useMemo(() => {
+    const result = totalCollected - totalLedgerAmount;
+    
+    // Debug logging
+    console.log('=== Profit/Loss Calculation Debug ===');
+    console.log('totalCollected:', totalCollected);
+    console.log('grandTotalLedgerValue:', totalLedgerAmount);
+    console.log('profitOrLoss:', result);
+    console.log('====================================');
+    
+    return result;
+  }, [totalCollected, totalLedgerAmount]);
+  
   const isProfit = profitLoss > 0.01;
   const isLoss = profitLoss < -0.01;
   
   // Calculate saved total amount (if available from fetched collection)
-  const savedTotalAmount = totalPaymentEntered > 0 ? totalPaymentEntered : null;
+  const savedTotalAmount = totalCollected > 0 ? totalCollected : null;
 
-  // Calculate credit amount when component mounts
+// Credit calculation is now triggered only in handleFetch, not on date change
+
+  // Debug effect to log key values for verification
   useEffect(() => {
-    calculateCreditAmount();
-    
-    return () => {
-      // Reset to default state when component unmounts
-      setState(DEFAULT_STATES.silkSummary);
-    };
-  }, []);
+    console.log('=== Data Integrity Verification ===');
+    console.log('dailyCredit (backend):', dailyCredit);
+    console.log('cashCollection (from state):', silkPayments.cash);
+    console.log('upiCollection (from state):', silkPayments.phonePe);
+    console.log('totalCollected (computed):', totalCollected);
+    console.log('grandTotalLedgerValue:', grandTotals.amount);
+    console.log('profitOrLoss:', profitLoss);
+    console.log('isProfit:', isProfit);
+    console.log('isLoss:', isLoss);
+    console.log('=================================');
+  }, [dailyCredit, silkPayments, totalCollected, grandTotals, profitLoss, isProfit, isLoss]);
+
+  // Log state changes for debugging
+  useEffect(() => {
+    console.log('[STATE CHANGE] silkPayments updated:', silkPayments);
+  }, [silkPayments]);
+
+  useEffect(() => {
+    console.log('[STATE CHANGE] dailyCredit updated:', dailyCredit);
+  }, [dailyCredit]);
+
+  useEffect(() => {
+    console.log('[STATE CHANGE] totalCollected updated:', totalCollected);
+  }, [totalCollected]);
+
+
 
   const handleCancel = () => {
     // Reset state before cancelling
@@ -280,21 +435,33 @@ export function SilkSummaryView({ ledgerStore = {}, customers = [], onCancel }) 
               <label className="text-[9px] font-black uppercase text-slate-400">Credit Amount</label>
               <div className="relative">
                 <History className="absolute left-2 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-300" />
-                <input type="number" placeholder="0.00" className="w-full pl-8 pr-3 py-2 border-2 border-slate-100 font-black text-lg outline-none focus:border-rose-500 transition-all shadow-inner" value={silkPayments.credit} readOnly />
+                <input type="number" placeholder="0.00" className="w-full pl-8 pr-3 py-2 border-2 border-slate-100 font-black text-lg outline-none focus:border-rose-500 transition-all shadow-inner bg-slate-50 cursor-not-allowed" value={dailyCredit} readOnly />
               </div>
             </div>
             <div className="space-y-1">
               <label className="text-[9px] font-black uppercase text-slate-400">Cash Collection</label>
               <div className="relative">
                 <Landmark className="absolute left-2 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-300" />
-                <input type="number" placeholder="0.00" className="w-full pl-8 pr-3 py-2 border-2 border-slate-100 font-black text-lg outline-none focus:border-emerald-500 transition-all shadow-inner" value={silkPayments.cash} onChange={e => setSilkPayments({...silkPayments, cash: e.target.value})} />
+                <input
+                  type="number"
+                  placeholder="0.00"
+                  className="w-full pl-8 pr-3 py-2 border-2 border-slate-100 font-black text-lg outline-none focus:border-emerald-500 transition-all shadow-inner"
+                  value={cashAmount}
+                  onChange={(e) => setCashAmount(Number(e.target.value) || 0)}
+                />
               </div>
             </div>
             <div className="space-y-1">
               <label className="text-[9px] font-black uppercase text-slate-400">PhonePe / UPI</label>
               <div className="relative">
                 <Smartphone className="absolute left-2 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-300" />
-                <input type="number" placeholder="0.00" className="w-full pl-8 pr-3 py-2 border-2 border-slate-100 font-black text-lg outline-none focus:border-blue-500 transition-all shadow-inner" value={silkPayments.phonePe} onChange={e => setSilkPayments({...silkPayments, phonePe: e.target.value})} />
+                <input
+                  type="number"
+                  placeholder="0.00"
+                  className="w-full pl-8 pr-3 py-2 border-2 border-slate-100 font-black text-lg outline-none focus:border-blue-500 transition-all shadow-inner"
+                  value={upiAmount}
+                  onChange={(e) => setUpiAmount(Number(e.target.value) || 0)}
+                />
               </div>
             </div>
           </div>
@@ -343,35 +510,24 @@ export function SilkSummaryView({ ledgerStore = {}, customers = [], onCancel }) 
           </div>
           
           {/* Footer Grand Totals */}
-          <div className="bg-slate-900 p-4 flex justify-between text-white border-t-4 border-rose-600 shadow-inner shrink-0">
+          <div className="bg-slate-900 p-4 flex justify-between items-center text-white border-t-4 border-rose-600 shadow-inner shrink-0">
             <div className="text-center">
               <p className="text-[8px] text-slate-400 font-black uppercase tracking-widest">Total Weight</p>
               <p className="text-2xl font-black text-blue-400 tabular-nums">{Number(grandTotals.kg || 0).toFixed(2)} KG</p>
             </div>
-            <div className="text-center">
-              <p className="text-[8px] text-slate-400 font-black uppercase tracking-widest">COLLECTION SUMMARY</p>
-              <div className="flex gap-8">
-                <div className="text-center">
-                  <p className="text-[10px] text-rose-400 font-black">Credit</p>
-                  <p className="text-xl font-black text-white tabular-nums">₹{Number(silkPayments.credit || 0).toLocaleString(undefined, {minimumFractionDigits: 2})}</p>
-                </div>
-                <div className="text-center">
-                  <p className="text-[10px] text-rose-400 font-black">Cash</p>
-                  <p className="text-xl font-black text-white tabular-nums">₹{Number(silkPayments.cash || 0).toLocaleString(undefined, {minimumFractionDigits: 2})}</p>
-                </div>
-                <div className="text-center">
-                  <p className="text-[10px] text-rose-400 font-black">UPI</p>
-                  <p className="text-xl font-black text-white tabular-nums">₹{Number(silkPayments.phonePe || 0).toLocaleString(undefined, {minimumFractionDigits: 2})}</p>
-                </div>
-                <div className="text-center border-l border-white/30 pl-8">
-                  <p className="text-[10px] text-rose-400 font-black">Total Collected</p>
-                  <p className="text-xl font-black text-emerald-400 tabular-nums">₹{Number(totalPaymentEntered).toLocaleString(undefined, {minimumFractionDigits: 2})}</p>
-                </div>
-              </div>
+            <div className="text-center flex-1">
+              <p className="text-[8px] text-slate-400 font-black uppercase tracking-widest">Total Collected</p>
+              <p className="text-4xl font-black text-emerald-400 tabular-nums drop-shadow-lg">₹{totalCollected.toLocaleString('en-IN', {
+                minimumFractionDigits: 2,
+                maximumFractionDigits: 2
+              })}</p>
             </div>
             <div className="text-right">
               <p className="text-[8px] text-rose-400 font-black uppercase tracking-widest">Grand Total Ledger Value</p>
               <p className="text-4xl font-black text-rose-500 tabular-nums drop-shadow-lg">₹{Number(grandTotals.amount || 0).toLocaleString(undefined, {minimumFractionDigits: 2})}</p>
+              <div className={`mt-2 text-sm font-bold ${isProfit ? 'text-emerald-400' : isLoss ? 'text-rose-400' : 'text-slate-400'}`}>
+                {isProfit ? 'PROFIT' : isLoss ? 'LOSS' : 'BREAK EVEN'}: ₹{Math.abs(profitLoss).toFixed(2)}
+              </div>
             </div>
           </div>
         </section>

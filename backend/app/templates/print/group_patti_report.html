@@ -1,0 +1,164 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <meta charset="UTF-8">
+    <title>Group Patti Report</title>
+    <link rel="stylesheet" href="/static/print/ledger_print.css">
+</head>
+<body>
+
+<div class="page">
+
+    <!-- TOP META -->
+    <!-- META (only on first page) -->
+    <div class="page">
+        <div class="header">
+            <h1>SREE KRISHNA FLOWER STALL</h1>
+            <p>
+                PH: 8147848760<br>
+                Proprietor: K.C.N & SONS | Mob: 9972878307<br>
+                FLOWER MERCHANTS – 7795018307<br>
+                Shop No: B-32, S.K.R Market, Bangalore - 560002<br>
+                Trade Mark: <b>S.K.F.S</b>
+            </p>
+        </div>
+        
+        <div class="info">
+            <div><b>GROUP PATTI REPORT</b></div>
+            <div><b>Group:</b> {{ group_name }}</div>
+            <div><b>Period:</b> {{ from_date }} to {{ to_date }}</div>
+            <div><b>Commission:</b> {{ commission_pct }}%</div>
+            <div><b>Reported On:</b> {{ report_datetime }}</div>
+            <div><b>Printed On:</b> {{ report_date }}</div>
+        </div>
+
+        <div style="text-align: center; margin-top: 20px;">
+            <h3>LIST OF CUSTOMERS</h3>
+        </div>
+        
+        <!-- List all customers with totals -->
+        <table class="ledger-table">
+            <thead>
+                <tr>
+                    <th class="c">Customer Name</th>
+                    <th class="c">Qty</th>
+                    <th class="c">Gross Total</th>
+                    <th class="c">Net Amount</th>
+                    <th class="c">Paid</th>
+                    <th class="c">Balance</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for customer_report in customer_reports %}
+                <tr>
+                    <td>{{ customer_report.customer_name }}</td>
+                    <td class="r">{{ customer_report.total_qty }}</td>
+                    <td class="r">₹{{ customer_report.gross_total }}</td>
+                    <td class="r">₹{{ customer_report.net_amount }}</td>
+                    <td class="r">₹{{ customer_report.paid_total }}</td>
+                    <td class="r">₹{{ customer_report.final_total }}</td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+
+        <!-- Group Summary -->
+        <div class="summary" style="margin-top: 20px;">
+            <div class="left">
+                <p>Total Customers: {{ customer_reports | length }}</p>
+            </div>
+            <div class="right">
+                <p class="final" style="font-size: 16px;"><b>GROUP TOTAL: ₹{{ group_total }}</b></p>
+            </div>
+        </div>
+    </div>
+    
+    {% if customer_reports %}
+    <div class="page-break"></div>
+    {% endif %}
+    
+    <!-- Individual Customer Reports (1 per page) -->
+    <!-- CUSTOMER REPORTS -->
+    {% for customer_report in customer_reports %}
+    <div class="page">
+        <!-- HEADER (Repeated for each page) -->
+        <div class="header">
+            <h1>SREE KRISHNA FLOWER STALL</h1>
+            <p>
+                PH: 8147848760<br>
+                Proprietor: K.C.N & SONS | Mob: 9972878307<br>
+                FLOWER MERCHANTS – 7795018307<br>
+                Shop No: B-32, S.K.R Market, Bangalore - 560002<br>
+                Trade Mark: <b>S.K.F.S</b>
+            </p>
+        </div>
+
+        <!-- CUSTOMER INFO -->
+        <div class="info">
+            <div><b>Customer:</b> {{ customer_report.customer_name }}</div>
+            <div><b>Address:</b> {{ customer_report.address }}</div>
+            <div><b>Group:</b> {{ group_name }}</div>
+            <div><b>Period:</b> {{ from_date }} to {{ to_date }}</div>
+            <div><b>Commission:</b> {{ commission_pct }}%</div>
+            <div><b>Printed:</b> {{ report_date }}</div>
+        </div>
+
+        <!-- TABLE -->
+        <table class="ledger-table">
+            <thead>
+                <tr>
+                    <th class="c">Date</th>
+                    <th class="c">Qty</th>
+                    <th class="c">Price</th>
+                    <th class="c">Total</th>
+                    <th class="c">Luggage</th>
+                    <th class="c">Paid</th>
+                    <th class="c">Amount</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for row in customer_report.rows %}
+                <tr>
+                    <td class="l">{{ row.date }}</td>
+                    <td class="r">{{ row.qty }}</td>
+                    <td class="r">{{ row.price }}</td>
+                    <td class="r">{{ row.total }}</td>
+                    <td class="r">{{ row.luggage }}</td>
+                    <td class="r">{{ row.paid }}</td>
+                    <td class="r">{{ row.amount }}</td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+
+        <!-- TOTALS -->
+        <div class="totals-line">
+            <span class="l"><b>TOTAL</b></span>
+            <span class="r">{{ customer_report.total_qty }}</span>
+            <span></span>
+            <span class="r">₹{{ customer_report.gross_total }}</span>
+        </div>
+
+        <!-- SUMMARY -->
+        <div class="summary">
+            <div class="left">
+                <p>Commission: ₹{{ customer_report.commission_amount }}</p>
+                <p>Luggage: ₹{{ customer_report.luggage_total }}</p>
+                <p>Coolie: ₹{{ customer_report.coolie }}</p>
+            </div>
+            <div class="right">
+                <p><b>Net Amount: ₹{{ customer_report.net_amount }}</b></p>
+                <p>Paid: ₹{{ customer_report.paid_total }}</p>
+                <p class="final"><b>Balance: ₹{{ customer_report.final_total }}</b></p>
+            </div>
+        </div>
+    </div>
+    {% if not loop.last %}
+    <div class="page-break"></div>
+    {% endif %}
+    {% endfor %}
+
+</div>
+
+</body>
+</html>

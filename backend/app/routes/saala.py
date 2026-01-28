@@ -457,11 +457,13 @@ def delete_saala_transaction(
 @router.get("/customers/{customer_id}/summary/")
 def get_saala_customer_summary(
     customer_id: int,
+    date: Optional[str] = Query(None, description="Date in YYYY-MM-DD format (optional)"),
     db: Session = Depends(get_db),
     user: User = Depends(get_current_user)
 ):
     """
     Get summary information for a SAALA customer including total transactions and balance.
+    If date is provided, only transactions for that day are included (no historical).
     """
     customer = db.query(SaalaCustomer).filter(
         SaalaCustomer.id == customer_id,
@@ -471,17 +473,30 @@ def get_saala_customer_summary(
     if not customer:
         raise HTTPException(status_code=404, detail="SAALA customer not found")
     
-    print(f"Getting summary for customer {customer_id}")
+    print(f"Getting summary for customer {customer_id}, date: {date}")
     
     # Calculate summary statistics
-    transactions = db.query(SaalaTransaction).filter(
+    query = db.query(SaalaTransaction).filter(
         SaalaTransaction.customer_id == customer_id
-    ).all()
+    )
+    
+    # Filter by exact date if provided
+    if date:
+        # Parse the date to ensure it's valid
+        try:
+            date_obj = datetime.strptime(date, "%Y-%m-%d").date()
+            query = query.filter(SaalaTransaction.date == date_obj)
+        except ValueError:
+            raise HTTPException(status_code=400, detail="Invalid date format. Use YYYY-MM-DD")
+    
+    transactions = query.all()
     
     print(f"Found {len(transactions)} transactions for customer {customer_id}")
     
     total_transactions = len(transactions)
-    total_amount = sum(t.total_amount or 0 for t in transactions)
+    
+    # Sum all total_amount values (only positive amounts)
+    total_amount = sum(t.total_amount or 0 for t in transactions if (t.total_amount or 0) > 0)
     total_paid = sum(t.paid_amount or 0 for t in transactions)
     
     # Sort transactions by ID to get the final balance (last transaction after chronological sort)
@@ -489,16 +504,62 @@ def get_saala_customer_summary(
     # The current balance should be the final running balance, which is the balance of the last transaction
     current_balance = sorted_transactions[-1].balance if sorted_transactions else 0
     
+    # Calculate daily credit when date is provided (sum of total_amount - paid_amount for that day)
+    daily_credit = 0
+    if date:
+        daily_credit = sum(
+            max((t.total_amount or 0) - (t.paid_amount or 0), 0) 
+            for t in transactions
+        )
+    
+    print(f"FINAL CREDIT: {current_balance}")
+    print(f"Daily credit for {date}: {daily_credit}")
     print(f"Summary calculation - total_amount: {total_amount}, total_paid: {total_paid}, current_balance: {current_balance}")
     
     for i, t in enumerate(transactions):
-        print(f"  Transaction {i+1}: id={t.id}, total={t.total_amount}, paid={t.paid_amount}, balance={t.balance}")
+        print(f"  Transaction {i+1}: id={t.id}, date={t.date}, total={t.total_amount}, paid={t.paid_amount}, balance={t.balance}")
     
-    return {
+    response = {
         "customer_id": customer_id,
         "customer_name": customer.name,
         "total_transactions": total_transactions,
         "total_amount": float(total_amount),
         "total_paid": float(total_paid),
         "current_balance": float(current_balance)
+    }
+    
+    # Include daily credit in response when date is provided
+    if date:
+        response["daily_credit"] = float(daily_credit)
+    
+    return response
+
+
+@router.get("/customers/{customer_id}/total-outstanding/")
+def get_saala_customer_total_outstanding(
+    customer_id: int,
+    db: Session = Depends(get_db),
+    user: User = Depends(get_current_user)
+):
+    """
+    Get the total outstanding credit for a SAALA customer (all-time, regardless of date).
+    """
+    customer = db.query(SaalaCustomer).filter(
+        SaalaCustomer.id == customer_id,
+        SaalaCustomer.vendor_id == user.vendor_id
+    ).first()
+    
+    if not customer:
+        raise HTTPException(status_code=404, detail="SAALA customer not found")
+    
+    # Calculate total outstanding credit (sum of all balances)
+    total_outstanding = (
+        db.query(func.sum(SaalaTransaction.balance))
+        .filter(SaalaTransaction.customer_id == customer_id)
+        .scalar()
+    ) or 0
+    
+    return {
+        "customer_id": customer_id,
+        "total_outstanding": float(total_outstanding)
     }

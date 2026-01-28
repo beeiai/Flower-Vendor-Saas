@@ -1,0 +1,73 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>Group Patti Report</title>
+    <link rel="stylesheet" href="/static/css/print.css">
+</head>
+<body>
+
+<div class="page">
+
+    <!-- HEADER -->
+    <div class="header">
+        <h2>SREE KRISHNA FLOWER STALL</h2>
+        <p class="sub">
+            PH: 8147848760 <br>
+            Proprietor: K.C.N & SONS | Mob: 9972878307 <br>
+            FLOWER MERCHANTS – 7795018307 <br>
+            Shop No: B-32, S.K.R Market, Bangalore - 560002 <br>
+            Trade Mark: <b>S.K.F.S</b>
+        </p>
+    </div>
+
+    <!-- REPORT INFO -->
+    <div class="info-grid">
+        <div><b>Group:</b> {{ group_name }}</div>
+        <div><b>Period:</b> {{ from_date }} to {{ to_date }}</div>
+        <div><b>Commission:</b> {{ commission_pct }}%</div>
+        <div><b>Date:</b> {{ current_date }}</div>
+    </div>
+
+    <!-- TABLE -->
+    <table class="report-table">
+        <thead>
+            <tr>
+                <th>Customer</th>
+                <th>Address</th>
+                <th>Gross</th>
+                <th>Commission</th>
+                <th>Net</th>
+                <th>Paid</th>
+                <th>Balance</th>
+            </tr>
+        </thead>
+        <tbody>
+            {% for row in rows %}
+            <tr>
+                <td>{{ row.customer }}</td>
+                <td>{{ row.address }}</td>
+                <td>₹ {{ row.gross }}</td>
+                <td>₹ {{ row.commission }}</td>
+                <td>₹ {{ row.net }}</td>
+                <td>₹ {{ row.paid }}</td>
+                <td>₹ {{ row.balance }}</td>
+            </tr>
+            {% endfor %}
+        </tbody>
+    </table>
+
+    <!-- TOTALS -->
+    <div class="summary totals-section">
+        <div><b>Group Total Summary</b></div>
+        <div>Gross: ₹ {{ totals.gross_total }}</div>
+        <div>Commission: ₹ {{ totals.commission_total }}</div>
+        <div>Net: ₹ {{ totals.net_total }}</div>
+        <div>Paid: ₹ {{ totals.paid_total }}</div>
+        <div><b>Balance: ₹ {{ totals.balance_total }}</b></div>
+    </div>
+
+</div>
+
+</body>
+</html>

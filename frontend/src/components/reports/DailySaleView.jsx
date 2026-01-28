@@ -136,8 +136,25 @@ const DailySaleReport = ({ onCancel }) => {
     }), { qty: 0, amount: 0 });
   }, [filteredData]);
 
-  const handlePrint = () => {
-    window.print();
+  const handlePrint = async () => {
+    try {
+      // Generate the print report from backend
+      const response = await api.getDailySalesReport(fromDate, toDate);
+      
+      // Create a new window/tab for printing
+      const printWindow = window.open('', '_blank');
+      printWindow.document.write(response);
+      printWindow.document.close();
+      
+      // Trigger print after content loads
+      printWindow.onload = () => {
+        printWindow.print();
+      };
+      
+    } catch (error) {
+      console.error('Print error:', error);
+      alert(`Print failed: ${error.message}`);
+    }
   };
 
   const handleSendSMS = () => {
