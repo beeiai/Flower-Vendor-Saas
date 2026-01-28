@@ -7,71 +7,68 @@
 </head>
 <body>
 
+<!-- COVER PAGE -->
 <div class="page">
+    <div class="header">
+        <h1>SREE KRISHNA FLOWER STALL</h1>
+        <p>
+            PH: 8147848760<br>
+            Proprietor: K.C.N & SONS | Mob: 9972878307<br>
+            FLOWER MERCHANTS – 7795018307<br>
+            Shop No: B-32, S.K.R Market, Bangalore - 560002<br>
+            Trade Mark: <b>S.K.F.S</b>
+        </p>
+    </div>
+    
+    <div class="info">
+        <div><b>GROUP PATTI REPORT</b></div>
+        <div><b>Group:</b> {{ group_name }}</div>
+        <div><b>Period:</b> {{ from_date }} to {{ to_date }}</div>
+        <div><b>Commission:</b> {{ commission_pct }}%</div>
+        <div><b>Reported On:</b> {{ report_datetime }}</div>
+        <div><b>Printed On:</b> {{ report_date }}</div>
+    </div>
 
-    <!-- TOP META -->
-    <!-- META (only on first page) -->
-    <div class="page">
-        <div class="header">
-            <h1>SREE KRISHNA FLOWER STALL</h1>
-            <p>
-                PH: 8147848760<br>
-                Proprietor: K.C.N & SONS | Mob: 9972878307<br>
-                FLOWER MERCHANTS – 7795018307<br>
-                Shop No: B-32, S.K.R Market, Bangalore - 560002<br>
-                Trade Mark: <b>S.K.F.S</b>
-            </p>
-        </div>
-        
-        <div class="info">
-            <div><b>GROUP PATTI REPORT</b></div>
-            <div><b>Group:</b> {{ group_name }}</div>
-            <div><b>Period:</b> {{ from_date }} to {{ to_date }}</div>
-            <div><b>Commission:</b> {{ commission_pct }}%</div>
-            <div><b>Reported On:</b> {{ report_datetime }}</div>
-            <div><b>Printed On:</b> {{ report_date }}</div>
-        </div>
+    <div style="text-align: center; margin-top: 20px;">
+        <h3>LIST OF CUSTOMERS</h3>
+    </div>
+    
+    <!-- List all customers with totals -->
+    <table class="ledger-table">
+        <thead>
+            <tr>
+                <th class="c">Customer Name</th>
+                <th class="c">Qty</th>
+                <th class="c">Gross Total</th>
+                <th class="c">Net Amount</th>
+                <th class="c">Paid</th>
+                <th class="c">Balance</th>
+            </tr>
+        </thead>
+        <tbody>
+            {% for customer_report in customer_reports %}
+            <tr>
+                <td>{{ customer_report.customer_name }}</td>
+                <td class="r">{{ customer_report.total_qty }}</td>
+                <td class="r">₹{{ customer_report.gross_total }}</td>
+                <td class="r">₹{{ customer_report.net_amount }}</td>
+                <td class="r">₹{{ customer_report.paid_total }}</td>
+                <td class="r">₹{{ customer_report.final_total }}</td>
+            </tr>
+            {% endfor %}
+        </tbody>
+    </table>
 
-        <div style="text-align: center; margin-top: 20px;">
-            <h3>LIST OF CUSTOMERS</h3>
+    <!-- Group Summary -->
+    <div class="summary" style="margin-top: 20px;">
+        <div class="left">
+            <p>Total Customers: {{ customer_reports | length }}</p>
         </div>
-        
-        <!-- List all customers with totals -->
-        <table class="ledger-table">
-            <thead>
-                <tr>
-                    <th class="c">Customer Name</th>
-                    <th class="c">Qty</th>
-                    <th class="c">Gross Total</th>
-                    <th class="c">Net Amount</th>
-                    <th class="c">Paid</th>
-                    <th class="c">Balance</th>
-                </tr>
-            </thead>
-            <tbody>
-                {% for customer_report in customer_reports %}
-                <tr>
-                    <td>{{ customer_report.customer_name }}</td>
-                    <td class="r">{{ customer_report.total_qty }}</td>
-                    <td class="r">₹{{ customer_report.gross_total }}</td>
-                    <td class="r">₹{{ customer_report.net_amount }}</td>
-                    <td class="r">₹{{ customer_report.paid_total }}</td>
-                    <td class="r">₹{{ customer_report.final_total }}</td>
-                </tr>
-                {% endfor %}
-            </tbody>
-        </table>
-
-        <!-- Group Summary -->
-        <div class="summary" style="margin-top: 20px;">
-            <div class="left">
-                <p>Total Customers: {{ customer_reports | length }}</p>
-            </div>
-            <div class="right">
-                <p class="final" style="font-size: 16px;"><b>GROUP TOTAL: ₹{{ group_total }}</b></p>
-            </div>
+        <div class="right">
+            <p class="final" style="font-size: 16px;"><b>GROUP TOTAL: ₹{{ group_total }}</b></p>
         </div>
     </div>
+</div>
     
     {% if customer_reports %}
     <div class="page-break"></div>
@@ -157,8 +154,6 @@
     <div class="page-break"></div>
     {% endif %}
     {% endfor %}
-
-</div>
 
 </body>
 </html>
