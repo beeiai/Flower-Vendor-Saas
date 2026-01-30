@@ -1,46 +1,135 @@
 const express = require('express');
 const cors = require('cors');
+const rateLimit = require('express-rate-limit');
+const helmet = require('helmet');
+const compression = require('compression');
 const { z } = require('zod');
 const { db } = require('./db');
 
 const app = express();
 
-app.use(cors());
-app.use(express.json());
+// Security Middleware
+// 1. Helmet for security headers
+app.use(helmet({
+  contentSecurityPolicy: {
+    directives: {
+      defaultSrc: ["'self'"],
+      scriptSrc: ["'self'"],
+      styleSrc: ["'self'", "'unsafe-inline'"],
+      imgSrc: ["'self'", "data:", "https:"],
+    },
+  },
+  hsts: {
+    maxAge: 31536000, // 1 year
+    includeSubDomains: true,
+    preload: true
+  }
+}));
+
+// 2. Rate limiting
+const limiter = rateLimit({
+  windowMs: 15 * 60 * 1000, // 15 minutes
+  max: 100, // limit each IP to 100 requests per windowMs
+  message: {
+    error: 'Too many requests from this IP, please try again later.'
+  },
+  standardHeaders: true, // Return rate limit info in the `RateLimit-*` headers
+  legacyHeaders: false, // Disable the `X-RateLimit-*` headers
+});
+
+app.use(limiter);
+
+// 3. Compression
+app.use(compression());
+
+// 4. CORS with security restrictions
+app.use(cors({
+  origin: process.env.NODE_ENV === 'production' 
+    ? ['https://yourdomain.com'] // Restrict in production
+    : ['http://localhost:5173', 'http://127.0.0.1:5173'],
+  credentials: true,
+  optionsSuccessStatus: 200
+}));
+
+// 5. Body parser with limits
+app.use(express.json({ limit: '10mb' }));
+app.use(express.urlencoded({ extended: true, limit: '10mb' }));
 
 app.get('/api/health', (req, res) => {
   res.json({ ok: true, time: new Date().toISOString() });
 });
 
+// --- Security Validation Helper ---
+const validateId = (id) => {
+  const numId = Number(id);
+  if (!Number.isFinite(numId) || numId <= 0) {
+    throw new Error('Invalid ID');
+  }
+  return numId;
+};
+
+const sanitizeString = (str, maxLength = 255) => {
+  if (typeof str !== 'string') return '';
+  return str.trim().substring(0, maxLength).replace(/[<>]/g, '');
+};
+
 // --- Groups ---
 app.get('/api/groups', (req, res) => {
-  const rows = db.prepare('SELECT id, name FROM groups ORDER BY name').all();
-  res.json(rows);
+  try {
+    const rows = db.prepare('SELECT id, name FROM groups ORDER BY name').all();
+    res.json(rows);
+  } catch (error) {
+    console.error('Error fetching groups:', error);
+    res.status(500).json({ error: 'Failed to fetch groups' });
+  }
 });
 
 app.post('/api/groups', (req, res) => {
-  const schema = z.object({ name: z.string().trim().min(1) });
+  const schema = z.object({ 
+    name: z.string().trim().min(1).max(100) 
+  });
+  
   const parsed = schema.safeParse(req.body);
-  if (!parsed.success) return res.status(400).json({ error: 'Invalid body', details: parsed.error.flatten() });
+  if (!parsed.success) {
+    return res.status(400).json({ 
+      error: 'Invalid input', 
+      details: parsed.error.flatten() 
+    });
+  }
 
   try {
-    const info = db.prepare('INSERT INTO groups (name) VALUES (?)').run(parsed.data.name);
-    res.status(201).json({ id: info.lastInsertRowid, name: parsed.data.name });
+    // Sanitize input
+    const sanitizedName = sanitizeString(parsed.data.name, 100);
+    
+    const info = db.prepare('INSERT INTO groups (name) VALUES (?)').run(sanitizedName);
+    res.status(201).json({ id: info.lastInsertRowid, name: sanitizedName });
   } catch (e) {
-    if (String(e).includes('UNIQUE')) return res.status(409).json({ error: 'Group already exists' });
+    if (String(e).includes('UNIQUE')) {
+      return res.status(409).json({ error: 'Group already exists' });
+    }
+    console.error('Error creating group:', e);
     return res.status(500).json({ error: 'Failed to create group' });
   }
 });
 
 app.delete('/api/groups/:id', (req, res) => {
-  const id = Number(req.params.id);
-  if (!Number.isFinite(id)) return res.status(400).json({ error: 'Invalid id' });
+  try {
+    const id = validateId(req.params.id);
 
-  const inUse = db.prepare('SELECT COUNT(1) AS cnt FROM customers WHERE group_id = ?').get(id);
-  if (inUse?.cnt > 0) return res.status(409).json({ error: 'Group has customers; remove them first' });
+    const inUse = db.prepare('SELECT COUNT(1) AS cnt FROM customers WHERE group_id = ?').get(id);
+    if (inUse?.cnt > 0) {
+      return res.status(409).json({ error: 'Group has customers; remove them first' });
+    }
 
-  const info = db.prepare('DELETE FROM groups WHERE id = ?').run(id);
-  res.json({ deleted: info.changes });
+    const info = db.prepare('DELETE FROM groups WHERE id = ?').run(id);
+    res.json({ deleted: info.changes });
+  } catch (error) {
+    if (error.message === 'Invalid ID') {
+      return res.status(400).json({ error: 'Invalid ID format' });
+    }
+    console.error('Error deleting group:', error);
+    return res.status(500).json({ error: 'Failed to delete group' });
+  }
 });
 
 // --- Customers ---

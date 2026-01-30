@@ -1,8 +1,12 @@
 import axios from 'axios';
 
-const API_URL = import.meta.env.VITE_BACKEND_URL || 'http://localhost:8000';
+const API_URL = import.meta.env.VITE_API_BASE_URL;
+if (!API_URL) {
+  throw new Error("VITE_API_BASE_URL is not defined");
+}
 // Optional legacy Node API (used for SAALA module)
-const LEGACY_API_URL = import.meta.env.VITE_LEGACY_API_URL || 'http://localhost:3001/api';
+const LEGACY_API_URL = import.meta.env.VITE_LEGACY_API_URL;
+// LEGACY_API_URL is optional - only used for SAALA module compatibility
 
 // Compute backend API base with /api prefix (no trailing slash)
 const API_BASE = (function () {

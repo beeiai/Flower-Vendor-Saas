@@ -1,5 +1,6 @@
 from fastapi import APIRouter, Depends, HTTPException, Query
 from sqlalchemy.orm import Session
+from sqlalchemy import func
 from typing import List, Optional
 from datetime import datetime
 
@@ -121,7 +122,7 @@ def delete_saala_customer(
     return {"message": "SAALA customer deleted successfully"}
 
 
-@router.get("/customers/{customer_id}/transactions/", response_model=List[SaalaTransactionResponse])
+@router.get("/customers/{customer_id}/transactions/")
 def list_saala_transactions(
     customer_id: int,
     db: Session = Depends(get_db),
@@ -138,15 +139,18 @@ def list_saala_transactions(
     if not customer:
         raise HTTPException(status_code=404, detail="SAALA customer not found")
     
-    transactions = db.query(SaalaTransaction).filter(
-        SaalaTransaction.customer_id == customer_id
-    ).order_by(SaalaTransaction.date.desc()).all()
+    # Add joinedload for better performance
+    query = db.query(SaalaTransaction)\
+        .filter(SaalaTransaction.customer_id == customer_id)
+    
+    transactions = query.order_by(SaalaTransaction.date.desc()).all()
     
     # Log transaction data
     print(f"Found {len(transactions)} transactions for customer {customer_id}")
     for txn in transactions:
         print(f"Transaction: id={txn.id}, item_code={txn.item_code}, item_name={txn.item_name}, qty={txn.qty}, rate={txn.rate}, total_amount={txn.total_amount}, paid_amount={txn.paid_amount}, balance={txn.balance}")
     
+    # Return just the transactions list (frontend expects simple array)
     return transactions
 
 

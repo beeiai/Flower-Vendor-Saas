@@ -198,6 +198,7 @@ const SmsView = ({ customers, ledgerStore, onCancel, showNotify }) => {
                 value={fromDate}
                 onChange={(e) => setFromDate(e.target.value)}
                 className="w-full border p-2 text-[11px] font-bold outline-none" 
+                data-enter-index="1"
               />
             </div>
 
@@ -208,6 +209,7 @@ const SmsView = ({ customers, ledgerStore, onCancel, showNotify }) => {
                 value={toDate}
                 onChange={(e) => setToDate(e.target.value)}
                 className="w-full border p-2 text-[11px] font-bold outline-none" 
+                data-enter-index="2"
               />
             </div>
 
@@ -218,6 +220,7 @@ const SmsView = ({ customers, ledgerStore, onCancel, showNotify }) => {
                 value={selectedGroup}
                 onChange={(e) => setSelectedGroup(e.target.value)}
                 className="w-full border p-2 text-[11px] font-bold outline-none bg-white"
+                data-enter-index="3"
               >
                 <option value="">All Groups</option>
                 {groups.map(group => (
@@ -233,6 +236,7 @@ const SmsView = ({ customers, ledgerStore, onCancel, showNotify }) => {
                 value={selectedCustomer}
                 onChange={(e) => handleCustomerSelect(e.target.value)}
                 className="w-full border p-2 text-[11px] font-bold outline-none bg-white"
+                data-enter-index="4"
               >
                 <option value="">-- Select Customer --</option>
                 {filteredCustomers.map(customer => (
@@ -252,6 +256,7 @@ const SmsView = ({ customers, ledgerStore, onCancel, showNotify }) => {
                 onChange={(e) => setPhoneNumber(e.target.value)}
                 className="w-full border p-2 text-[11px] font-bold outline-none" 
                 placeholder="Enter phone number"
+                data-enter-index="5"
               />
             </div>
 
@@ -281,6 +286,7 @@ const SmsView = ({ customers, ledgerStore, onCancel, showNotify }) => {
                       ? 'bg-slate-800 text-white border-slate-800' 
                       : 'bg-white text-slate-600 border-slate-300 hover:bg-slate-100'
                   }`}
+                  data-enter-index="6"
                 >
                   {template.name}
                 </button>
@@ -307,6 +313,7 @@ const SmsView = ({ customers, ledgerStore, onCancel, showNotify }) => {
               onClick={handleSend}
               disabled={sending}
               className="bg-emerald-600 text-white px-4 h-8 font-black uppercase text-[10px] hover:bg-emerald-700 shadow-lg flex items-center gap-2 disabled:opacity-50"
+              data-enter-index="7"
             >
               <Send size={12} /> {sending ? 'SENDING...' : 'SEND SMS'}
             </button>
@@ -371,6 +378,7 @@ const SmsView = ({ customers, ledgerStore, onCancel, showNotify }) => {
             <button 
               onClick={onCancel}
               className="bg-slate-300 text-slate-800 px-6 h-9 font-black uppercase text-[10px] hover:bg-slate-400"
+              data-enter-index="8"
             >
               CANCEL
             </button>

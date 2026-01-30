@@ -1,9 +1,13 @@
 import React, { useState, useMemo, useEffect, useRef } from 'react';
 import useAuth from './hooks/useAuth';
-import Login from './pages/Login';
+import AuthTabs from './components/shared/AuthTabs';
 import { useKeyboardNavigation } from './hooks/useKeyboardNavigation';
+import { useEnterController } from './hooks/useEnterController';
+import { useERPEnterNavigation } from './hooks/useERPEnterNavigation';
+import MasterAdminDashboard from './components/admin/MasterAdminDashboard';
 import { Flower2, Receipt, FolderPlus, PackagePlus, Users, Plus, Trash2, Save, UserPlus, Check, X, ChevronDown, Calculator, Sparkles, Monitor, Database, Activity, ArrowRight, Truck, Clock, List, ChevronLeft, ChevronRight, Info, AlertCircle, CheckCircle2, XCircle, Printer, Search, Edit2, MessageSquare, FileText, LayoutPanelTop, BarChart3, Settings2, Play, MoreHorizontal, WalletCards, UserCheck, History, Landmark, ArrowDownToLine, ArrowUpFromLine, Coins, ArrowDownRight, ArrowUpRight, FileBarChart, Layers, Send, Smartphone } from 'lucide-react';
 import SearchableSelect from './components/shared/SearchableSelect';
+import DailyTransactionsView from './components/transactions/DailyTransactionsView';
 import Toast from './components/shared/Toast';
 import { api } from './utils/api';
 import ReportsWindow from './components/reports/ReportsView';
@@ -77,14 +81,14 @@ function GroupCustomerRegistryForm({ title = 'ADD GROUP', initialTab = 'group', 
     <div className="flex-1 flex flex-col h-full bg-slate-100 overflow-hidden">
       <div className="bg-slate-800 px-5 py-3 flex justify-between items-center text-white shrink-0 shadow-lg">
         <h1 className="text-base font-bold uppercase flex items-center gap-2.5 tracking-wide"><FolderPlus className="w-5 h-5 text-primary-400" /> {String(title)}</h1>
-        <button onClick={onCancel} className="p-1.5 rounded hover:bg-white/10 transition-colors"><X className="w-5 h-5" /></button>
+        <button data-action="secondary" onClick={onCancel} className="p-1.5 rounded hover:bg-white/10 transition-colors"><X className="w-5 h-5" /></button>
       </div>
 
       <div className="p-6 flex-1 overflow-auto">
         <div className="max-w-[760px] mx-auto bg-white border border-slate-200 shadow-card rounded-sm overflow-hidden">
           <div className="bg-slate-50 border-b border-slate-200 px-5 py-3 flex gap-3">
-            <button type="button" onClick={() => setTab('group')} className={`px-5 h-10 text-sm font-semibold uppercase border rounded-sm transition-all ${tab === 'group' ? 'bg-slate-800 text-white border-slate-800 shadow-sm' : 'bg-white text-slate-600 border-slate-300 hover:bg-slate-100 hover:border-slate-400'}`}>Group Addition</button>
-            <button type="button" onClick={() => setTab('customer')} className={`px-5 h-10 text-sm font-semibold uppercase border rounded-sm transition-all ${tab === 'customer' ? 'bg-slate-800 text-white border-slate-800 shadow-sm' : 'bg-white text-slate-600 border-slate-300 hover:bg-slate-100 hover:border-slate-400'}`}>Customer Addition</button>
+            <button type="button" onClick={() => setTab('group')} className={`px-5 h-10 text-sm font-semibold uppercase border rounded-sm transition-all ${tab === 'group' ? 'bg-slate-800 text-white border-slate-800 shadow-sm' : 'bg-white text-slate-600 border-slate-300 hover:bg-slate-100 hover:border-slate-400'}`} data-enter-index="0">Group Addition</button>
+            <button type="button" onClick={() => setTab('customer')} className={`px-5 h-10 text-sm font-semibold uppercase border rounded-sm transition-all ${tab === 'customer' ? 'bg-slate-800 text-white border-slate-800 shadow-sm' : 'bg-white text-slate-600 border-slate-300 hover:bg-slate-100 hover:border-slate-400'}`} data-enter-index="0">Customer Addition</button>
           </div>
 
           <div className="p-5">
@@ -92,30 +96,30 @@ function GroupCustomerRegistryForm({ title = 'ADD GROUP', initialTab = 'group', 
           <div className="space-y-5">
             <div>
               <label className="text-xs font-semibold uppercase text-slate-600 tracking-wide block mb-1.5">Group Name</label>
-              <input type="text" className="w-full border border-slate-300 rounded-sm px-3 py-2.5 text-sm font-medium outline-none focus:border-primary-500 focus:ring-2 focus:ring-primary-50 transition-all" style={{height: '42px'}} value={groupName} onChange={e => setGroupName(e.target.value)} placeholder="Enter group name" />
+              <input type="text" className="w-full border border-slate-300 rounded-sm px-3 py-2.5 text-sm font-medium outline-none focus:border-primary-500 focus:ring-2 focus:ring-primary-50 transition-all" style={{height: '42px'}} value={groupName} onChange={e => setGroupName(e.target.value)} placeholder="Enter group name" data-enter-index="1" />
             </div>
-            <button onClick={addGroup} className="w-full bg-primary-600 text-white py-3 font-semibold uppercase text-sm shadow-md hover:bg-primary-700 rounded-sm transition-all" style={{height: '44px'}}>Add Group</button>
+            <button data-action="primary" onClick={addGroup} className="w-full bg-primary-600 text-white py-3 font-semibold uppercase text-sm shadow-md hover:bg-primary-700 rounded-sm transition-all" style={{height: '44px'}} data-enter-index="2">Add Group</button>
           </div>
         )}
 
         {tab === 'customer' && (
           <div className="space-y-5">
-            <SearchableSelect label="Target Group" options={groups.map(g => g.name)} value={custForm.groupName} onChange={(val) => setCustForm({ ...custForm, groupName: val })} placeholder="Select group" />
+            <SearchableSelect label="Target Group" options={groups.map(g => g.name)} value={custForm.groupName} onChange={(val) => setCustForm({ ...custForm, groupName: val })} placeholder="Select group" data-enter-index="1" />
             <div>
               <label className="text-xs font-semibold uppercase text-slate-600 tracking-wide block mb-1.5">Customer Name</label>
-              <input type="text" className="w-full border border-slate-300 rounded-sm px-3 py-2.5 text-sm font-medium outline-none focus:border-primary-500 focus:ring-2 focus:ring-primary-50 transition-all" style={{height: '42px'}} value={custForm.name} onChange={e => setCustForm({ ...custForm, name: e.target.value })} placeholder="Enter customer name" />
+              <input type="text" className="w-full border border-slate-300 rounded-sm px-3 py-2.5 text-sm font-medium outline-none focus:border-primary-500 focus:ring-2 focus:ring-primary-50 transition-all" style={{height: '42px'}} value={custForm.name} onChange={e => setCustForm({ ...custForm, name: e.target.value })} placeholder="Enter customer name" data-enter-index="2" />
             </div>
             <div className="grid grid-cols-2 gap-4">
               <div>
                 <label className="text-xs font-semibold uppercase text-slate-600 tracking-wide block mb-1.5">Phone</label>
-                <input type="text" className="w-full border border-slate-300 rounded-sm px-3 py-2.5 text-sm font-medium outline-none focus:border-primary-500 focus:ring-2 focus:ring-primary-50 transition-all" style={{height: '42px'}} value={custForm.contact} onChange={e => setCustForm({ ...custForm, contact: e.target.value })} placeholder="Phone number" />
+                <input type="text" className="w-full border border-slate-300 rounded-sm px-3 py-2.5 text-sm font-medium outline-none focus:border-primary-500 focus:ring-2 focus:ring-primary-50 transition-all" style={{height: '42px'}} value={custForm.contact} onChange={e => setCustForm({ ...custForm, contact: e.target.value })} placeholder="Phone number" data-enter-index="3" />
               </div>
               <div>
                 <label className="text-xs font-semibold uppercase text-slate-600 tracking-wide block mb-1.5">Address</label>
-                <input type="text" className="w-full border border-slate-300 rounded-sm px-3 py-2.5 text-sm font-medium outline-none focus:border-primary-500 focus:ring-2 focus:ring-primary-50 transition-all" style={{height: '42px'}} value={custForm.address} onChange={e => setCustForm({ ...custForm, address: e.target.value })} placeholder="Address" />
+                <input type="text" className="w-full border border-slate-300 rounded-sm px-3 py-2.5 text-sm font-medium outline-none focus:border-primary-500 focus:ring-2 focus:ring-primary-50 transition-all" style={{height: '42px'}} value={custForm.address} onChange={e => setCustForm({ ...custForm, address: e.target.value })} placeholder="Address" data-enter-index="4" />
               </div>
             </div>
-            <button onClick={addCustomer} className="w-full bg-primary-600 text-white py-3 font-semibold uppercase text-sm shadow-md hover:bg-primary-700 rounded-sm transition-all" style={{height: '44px'}}>Add Customer</button>
+            <button data-action="primary" onClick={addCustomer} className="w-full bg-primary-600 text-white py-3 font-semibold uppercase text-sm shadow-md hover:bg-primary-700 rounded-sm transition-all" style={{height: '44px'}} data-enter-index="5">Add Customer</button>
           </div>
         )}
           </div>
@@ -130,16 +134,16 @@ function ItemRegistryForm({ form, setForm, onSave, onCancel }) {
     <div className="flex-1 flex flex-col h-full bg-slate-100 overflow-hidden">
       <div className="bg-slate-800 px-5 py-3 flex justify-between items-center text-white shrink-0 shadow-lg">
         <h1 className="text-base font-bold uppercase flex items-center gap-2.5 tracking-wide"><PackagePlus className="w-5 h-5 text-primary-400" /> NEW ITEM</h1>
-        <button onClick={onCancel} className="p-1.5 rounded hover:bg-white/10 transition-colors"><X className="w-5 h-5" /></button>
+        <button data-action="secondary" onClick={onCancel} className="p-1.5 rounded hover:bg-white/10 transition-colors"><X className="w-5 h-5" /></button>
       </div>
       <div className="p-6 flex-1 overflow-auto">
         <div className="max-w-[560px] mx-auto bg-white border border-slate-200 shadow-card rounded-sm p-6 space-y-5">
           <div>
             <label className="text-xs font-semibold uppercase text-slate-600 tracking-wide block mb-1.5">Code</label>
-            <input type="text" className="w-full border border-slate-300 rounded-sm px-3 py-2.5 text-sm font-medium outline-none focus:border-primary-500 focus:ring-2 focus:ring-primary-50 transition-all" style={{height: '42px'}} value={form.itemCode} onChange={e => setForm({ ...form, itemCode: e.target.value })} placeholder="Enter item code" />
+            <input type="text" className="w-full border border-slate-300 rounded-sm px-3 py-2.5 text-sm font-medium outline-none focus:border-primary-500 focus:ring-2 focus:ring-primary-50 transition-all" style={{height: '42px'}} value={form.itemCode} onChange={e => setForm({ ...form, itemCode: e.target.value })} placeholder="Enter item code" data-enter-index="1" />
           </div>
-          <div><label className="text-xs font-semibold uppercase text-slate-600 tracking-wide block mb-1.5">Product Name</label><input type="text" className="w-full border border-slate-300 rounded-sm px-3 py-2.5 text-sm font-medium outline-none focus:border-primary-500 focus:ring-2 focus:ring-primary-50 transition-all" style={{height: '42px'}} value={form.itemName} onChange={e => setForm({...form, itemName: e.target.value})} placeholder="Enter product name" /></div>
-          <button onClick={onSave} className="w-full bg-emerald-600 text-white py-3 font-semibold uppercase text-sm shadow-md hover:bg-emerald-700 rounded-sm transition-all" style={{height: '44px'}}>Add to Inventory</button>
+          <div><label className="text-xs font-semibold uppercase text-slate-600 tracking-wide block mb-1.5">Product Name</label><input type="text" className="w-full border border-slate-300 rounded-sm px-3 py-2.5 text-sm font-medium outline-none focus:border-primary-500 focus:ring-2 focus:ring-primary-50 transition-all" style={{height: '42px'}} value={form.itemName} onChange={e => setForm({...form, itemName: e.target.value})} placeholder="Enter product name" data-enter-index="2" /></div>
+          <button data-action="primary" onClick={onSave} className="w-full bg-emerald-600 text-white py-3 font-semibold uppercase text-sm shadow-md hover:bg-emerald-700 rounded-sm transition-all" style={{height: '44px'}} data-enter-index="3">Add to Inventory</button>
         </div>
       </div>
     </div>
@@ -159,7 +163,7 @@ function GroupAdvanceView({ groups, customers, advanceStore, onCancel }) {
     <div className="flex-1 flex flex-col h-full bg-slate-100 overflow-hidden">
       <div className="bg-slate-800 px-5 py-3 flex justify-between items-center text-white shrink-0 shadow-lg">
         <h1 className="text-base font-bold uppercase flex items-center gap-2.5 tracking-wide"><WalletCards className="w-5 h-5 text-primary-400" /> GROUP WISE ADVANCE</h1>
-        <button onClick={onCancel} className="p-1.5 rounded hover:bg-white/10 transition-colors"><X className="w-5 h-5" /></button>
+        <button data-action="secondary" onClick={onCancel} className="p-1.5 rounded hover:bg-white/10 transition-colors"><X className="w-5 h-5" /></button>
       </div>
       <div className="p-5 flex-1 overflow-auto">
         <table className="w-full bg-white border border-slate-200 shadow-card text-sm text-left rounded-sm overflow-hidden">
@@ -197,7 +201,7 @@ function GroupPaymentView({ groups, customers, ledgerStore, onCancel }) {
     <div className="flex-1 flex flex-col h-full bg-slate-100 overflow-hidden">
       <div className="bg-slate-800 px-5 py-3 flex justify-between items-center text-white shrink-0 shadow-lg">
         <h1 className="text-base font-bold uppercase flex items-center gap-2.5 tracking-wide"><Coins className="w-5 h-5 text-primary-400" /> GROUP WISE PAYMENT</h1>
-        <button onClick={onCancel} className="p-1.5 rounded hover:bg-white/10 transition-colors"><X className="w-5 h-5" /></button>
+        <button data-action="secondary" onClick={onCancel} className="p-1.5 rounded hover:bg-white/10 transition-colors"><X className="w-5 h-5" /></button>
       </div>
       <div className="p-5 flex-1 overflow-auto">
         <table className="w-full bg-white border border-slate-200 shadow-card text-sm text-left rounded-sm overflow-hidden">
@@ -226,7 +230,7 @@ function UtilityPlaceholderView({ title, onCancel }) {
     <div className="flex-1 flex flex-col h-full bg-slate-100 overflow-hidden">
       <div className="bg-slate-800 px-5 py-3 flex justify-between items-center text-white shrink-0 shadow-lg">
         <h1 className="text-base font-bold uppercase flex items-center gap-2.5 tracking-wide"><Settings2 className="w-5 h-5 text-primary-400" /> {String(title)}</h1>
-        <button onClick={onCancel} className="p-1.5 rounded hover:bg-white/10 transition-colors"><X className="w-5 h-5" /></button>
+        <button data-action="secondary" onClick={onCancel} className="p-1.5 rounded hover:bg-white/10 transition-colors"><X className="w-5 h-5" /></button>
       </div>
       <div className="p-6 flex-1 overflow-auto">
         <div className="max-w-[720px] mx-auto bg-white border border-slate-200 shadow-card rounded-sm p-8">
@@ -258,7 +262,7 @@ function GroupTotalView({ groups, customers, ledgerStore, onCancel }) {
     <div className="flex-1 flex flex-col h-full bg-slate-100 overflow-hidden">
       <div className="bg-slate-800 px-5 py-3 flex justify-between items-center text-white shrink-0 shadow-lg">
         <h1 className="text-base font-bold uppercase flex items-center gap-2.5 tracking-wide"><Activity className="w-5 h-5 text-primary-400" /> GROUP TOTAL REPORT</h1>
-        <button onClick={onCancel} className="p-1.5 rounded hover:bg-white/10 transition-colors"><X className="w-5 h-5" /></button>
+        <button data-action="secondary" onClick={onCancel} className="p-1.5 rounded hover:bg-white/10 transition-colors"><X className="w-5 h-5" /></button>
       </div>
       <div className="p-5 flex-1 overflow-auto">
         <table className="w-full bg-white border border-slate-200 shadow-card text-sm text-left rounded-sm overflow-hidden">
@@ -369,7 +373,7 @@ function GroupPrintingView({ groups, customers, ledgerStore, onCancel }) {
     <div className="flex-1 flex flex-col h-full bg-slate-100 overflow-hidden">
       <div className="bg-slate-800 px-5 py-3 flex justify-between items-center text-white shadow-lg shrink-0">
         <h1 className="text-base font-bold uppercase flex items-center gap-2.5 tracking-wide"><Printer className="w-5 h-5 text-primary-400" /> GROUP PRINTING</h1>
-        <button onClick={onCancel} className="p-1.5 rounded hover:bg-white/10 transition-colors"><X className="w-5 h-5" /></button>
+        <button data-action="secondary" onClick={onCancel} className="p-1.5 rounded hover:bg-white/10 transition-colors"><X className="w-5 h-5" /></button>
       </div>
 
       <div className="p-5 flex-1 flex flex-col gap-5 overflow-hidden">
@@ -393,8 +397,8 @@ function GroupPrintingView({ groups, customers, ledgerStore, onCancel }) {
             </div>
 
             <div className="col-span-8 flex items-end gap-3">
-              <button onClick={handlePrint} disabled={!selGroup || isPrinting} className="bg-slate-800 text-white px-8 font-semibold uppercase text-sm flex items-center gap-2 shadow-md disabled:opacity-40 rounded-sm transition-all hover:bg-slate-700" style={{height: '40px'}}><Printer className="w-4 h-4" /> Print</button>
-              <button onClick={onCancel} className="bg-white text-slate-700 px-8 font-semibold uppercase text-sm border border-slate-300 shadow-sm rounded-sm transition-all hover:bg-slate-50" style={{height: '40px'}}>Cancel</button>
+              <button data-action="secondary" onClick={handlePrint} disabled={!selGroup || isPrinting} className="bg-slate-800 text-white px-8 font-semibold uppercase text-sm flex items-center gap-2 shadow-md disabled:opacity-40 rounded-sm transition-all hover:bg-slate-700" style={{height: '40px'}}><Printer className="w-4 h-4" /> Print</button>
+              <button data-action="secondary" onClick={onCancel} className="bg-white text-slate-700 px-8 font-semibold uppercase text-sm border border-slate-300 shadow-sm rounded-sm transition-all hover:bg-slate-50" style={{height: '40px'}}>Cancel</button>
             </div>
           </div>
 
@@ -454,13 +458,13 @@ function VehicleView({ vehicles, setVehicles, onCancel }) {
   };
   return (
     <div className="flex-1 flex flex-col h-full bg-slate-100 overflow-hidden">
-      <div className="bg-slate-800 px-5 py-3 flex justify-between items-center text-white shrink-0 shadow-lg"><h1 className="text-base font-bold uppercase flex items-center gap-2.5 tracking-wide"><Truck className="w-5 h-5 text-primary-400" /> EXTRA VEHICLE MANAGEMENT</h1><button onClick={onCancel} className="p-1.5 rounded hover:bg-white/10 transition-colors"><X className="w-5 h-5" /></button></div>
+      <div className="bg-slate-800 px-5 py-3 flex justify-between items-center text-white shrink-0 shadow-lg"><h1 className="text-base font-bold uppercase flex items-center gap-2.5 tracking-wide"><Truck className="w-5 h-5 text-primary-400" /> EXTRA VEHICLE MANAGEMENT</h1><button data-action="secondary" onClick={onCancel} className="p-1.5 rounded hover:bg-white/10 transition-colors"><X className="w-5 h-5" /></button></div>
       <div className="flex-1 flex p-5 gap-5 overflow-hidden">
         <div className="w-80 bg-white border border-slate-200 p-5 shadow-card rounded-sm h-fit">
           <h3 className="text-sm font-semibold uppercase text-slate-600 mb-5 tracking-wide flex items-center gap-2"><Truck className="w-4 h-4 text-slate-400" /> Add Vehicle</h3>
           <div className="space-y-5">
-            <div><label className="text-xs font-semibold uppercase text-slate-500 tracking-wide block mb-1.5">Vehicle Name / Plate</label><input type="text" className="w-full border border-slate-300 rounded-sm px-3 py-2.5 text-sm font-medium outline-none focus:border-primary-500 focus:ring-2 focus:ring-primary-50 transition-all" style={{height: '42px'}} value={newVehicle} onChange={e => setNewVehicle(e.target.value)} placeholder="Enter vehicle name or plate" /></div>
-            <button onClick={handleAdd} className="w-full bg-slate-800 text-white py-3 font-semibold uppercase text-sm hover:bg-primary-600 transition-all rounded-sm shadow-sm" style={{height: '44px'}}>Register</button>
+            <div><label className="text-xs font-semibold uppercase text-slate-500 tracking-wide block mb-1.5">Vehicle Name / Plate</label><input type="text" className="w-full border border-slate-300 rounded-sm px-3 py-2.5 text-sm font-medium outline-none focus:border-primary-500 focus:ring-2 focus:ring-primary-50 transition-all" style={{height: '42px'}} value={newVehicle} onChange={e => setNewVehicle(e.target.value)} placeholder="Enter vehicle name or plate" data-enter-index="1" /></div>
+            <button data-action="primary" onClick={handleAdd} className="w-full bg-slate-800 text-white py-3 font-semibold uppercase text-sm hover:bg-primary-600 transition-all rounded-sm shadow-sm" style={{height: '44px'}} data-enter-index="2">Register</button>
           </div>
         </div>
         <div className="flex-1 bg-white border border-slate-200 shadow-card rounded-sm overflow-hidden flex flex-col">
@@ -471,7 +475,7 @@ function VehicleView({ vehicles, setVehicles, onCancel }) {
                 <tr key={v.id} className="border-b border-slate-100 hover:bg-slate-50 transition-colors group">
                   <td className="px-4 py-3.5 font-semibold text-slate-800">{String(v.name)}</td>
                   <td className="px-4 py-3.5 text-right">
-                    <button onClick={async () => { await api.deleteVehicle(v.id); setVehicles(vehicles.filter(x => x.id !== v.id)); }} className="text-slate-300 hover:text-red-500 opacity-0 group-hover:opacity-100 transition-all p-1"><Trash2 className="w-4 h-4"/></button>
+                    <button onClick={async () => { await api.deleteVehicle(v.id); setVehicles(vehicles.filter(x => x.id !== v.id)); }} className="text-slate-300 hover:text-red-500 opacity-0 group-hover:opacity-100 transition-all p-1" data-enter-index={3 + v.id}><Trash2 className="w-4 h-4"/></button>
                   </td>
                 </tr>
               ))}</tbody>
@@ -482,114 +486,7 @@ function VehicleView({ vehicles, setVehicles, onCancel }) {
   );
 }
 
-function DailyTransactionsView({ customerInfo, setCustomerInfo, groups, customers, catalog, vehicles, onOpenQuickAdd, currentEntry, setCurrentEntry, items, onAddItem, onRemoveItem, onEditItem, summary, onSaveRecord, onViewReport, advanceStore, commissionPct, setCommissionPct, groupRef, totalPaidAmount }) {
-  const vRef = useRef(null); const cRef = useRef(null); const nRef = useRef(null); const qRef = useRef(null); const rRef = useRef(null); const lRef = useRef(null); const coRef = useRef(null); const pRef = useRef(null); const remRef = useRef(null);
-  const filteredCustomers = customers.filter(c => !customerInfo.groupName || c.group === customerInfo.groupName);
-  const remAdvance = advanceStore[customerInfo.customerName]?.balance || 0;
-  const handleCustomerSelect = (name) => { const c = customers.find(x => x.name === name); if (c) setCustomerInfo({ customerName: name, groupName: c.group, contactNo: c.contact, address: c.address }); else setCustomerInfo({ ...customerInfo, customerName: name }); };
-  const handleKey = (e, next) => { if (e.key === 'Enter') { e.preventDefault(); next?.current?.focus(); } };
 
-  return (
-    <div className="flex-1 flex flex-row gap-3 h-full p-3 bg-slate-100 overflow-hidden">
-      <div className="flex-1 flex flex-col gap-3 overflow-hidden">
-        <section className="bg-white border border-slate-200 p-4 shadow-card rounded-sm shrink-0">
-          <div className="flex items-center gap-2 mb-3 text-primary-600 font-semibold text-xs uppercase border-b border-slate-100 pb-2"><Users className="w-4 h-4" /> Trading Client Data</div>
-          <div className="grid grid-cols-5 gap-4">
-            <SearchableSelect inputRef={groupRef} label="Group Category" options={groups.map(g => g.name)} value={customerInfo.groupName} onChange={(val) => setCustomerInfo({...customerInfo, groupName: val, customerName: ''})} placeholder="Filter Group" navigationKey="group" navigationRow={0} navigationCol={0} />
-            <div className="flex gap-1.5 items-end overflow-visible"><SearchableSelect label="Party/Customer" options={filteredCustomers.map(c => c.name)} value={customerInfo.customerName} onChange={handleCustomerSelect} placeholder="Search Party" className="flex-1" navigationKey="customer" navigationRow={0} navigationCol={1} /><button onClick={() => onOpenQuickAdd('customer')} className="p-2 bg-slate-100 border border-slate-300 rounded-sm hover:bg-primary-600 hover:text-white hover:border-primary-600 transition-all shadow-sm" style={{height: '36px'}}><UserPlus className="w-4 h-4" /></button></div>
-            <div><label className="text-xs font-semibold text-slate-600 uppercase tracking-wide block mb-1">Address</label><input type="text" readOnly className="w-full bg-slate-50 border border-slate-200 rounded-sm px-3 py-2 text-sm text-slate-600 cursor-not-allowed" style={{height: '36px'}} value={String(customerInfo.address || '--')} /></div>
-            <div><label className="text-xs font-semibold text-slate-600 uppercase tracking-wide block mb-1">Phone</label><input type="text" readOnly className="w-full bg-slate-50 border border-slate-200 rounded-sm px-3 py-2 text-sm text-slate-600 cursor-not-allowed" style={{height: '36px'}} value={String(customerInfo.contactNo || '--')} /></div>
-            <div><label className="text-xs font-semibold text-accent-600 uppercase tracking-wide block mb-1">Rem. Advance</label><input type="text" readOnly className="w-full bg-accent-50 border border-accent-200 rounded-sm text-accent-600 px-3 py-2 text-sm font-bold cursor-not-allowed" style={{height: '36px'}} value={`₹ ${remAdvance.toFixed(2)}`} /></div>
-          </div>
-        </section>
-        <section className="bg-white border border-slate-200 shadow-card rounded-sm flex flex-col relative z-30 shrink-0 overflow-visible">
-          <div className="bg-slate-50 px-4 py-2.5 border-b border-slate-200 text-slate-700 font-semibold text-xs uppercase flex items-center gap-2 tracking-wide"><Database className="w-4 h-4 text-slate-400" /> Data Entry Row</div>
-          <div className="p-3 border-b border-slate-100 bg-white overflow-x-auto">
-            <form onSubmit={(e) => { e.preventDefault(); onAddItem(); }}>
-              <div className="flex items-end gap-2 min-w-[1100px]">
-              <div className="w-[95px]"><label className="text-xs font-semibold text-slate-600 uppercase text-center block mb-1">Date</label><input type="date" className="w-full text-sm border border-slate-300 rounded-sm px-2 py-1.5 font-medium outline-none focus:border-primary-500 focus:ring-2 focus:ring-primary-50" style={{height: '36px'}} value={currentEntry.date} onChange={e => setCurrentEntry({...currentEntry, date: e.target.value})} /></div>
-              <div className="w-[120px]"><SearchableSelect inputRef={vRef} label="Vehicle" options={vehicles.map(v => v.name)} value={currentEntry.vehicle} onChange={(v) => setCurrentEntry({...currentEntry, vehicle: v})} navigationKey="vehicle" navigationRow={1} navigationCol={0} /></div>
-              <div className="w-[110px] flex items-end gap-1"><SearchableSelect inputRef={cRef} label="Item Code" options={catalog.map(i => i.itemCode)} value={currentEntry.itemCode} onChange={(c) => { const item = catalog.find(x => x.itemCode === c); setCurrentEntry({...currentEntry, itemCode: c, itemName: item?.itemName || currentEntry.itemName}); }} navigationKey="itemCode" navigationRow={1} navigationCol={1} /><button onClick={() => onOpenQuickAdd('item')} className="bg-slate-100 border border-slate-300 rounded-sm p-1.5 hover:bg-primary-600 hover:text-white hover:border-primary-600 transition-all" style={{height: '36px'}}><PackagePlus className="w-4 h-4" /></button></div>
-              <div className="w-[130px]"><SearchableSelect inputRef={nRef} label="Product" options={catalog.map(i => i.itemName)} value={currentEntry.itemName} onChange={(n) => { const item = catalog.find(x => x.itemName === n); setCurrentEntry({...currentEntry, itemName: n, itemCode: item?.itemCode || currentEntry.itemCode}); }} navigationKey="productName" navigationRow={1} navigationCol={2} /></div>
-              <div className="w-[70px]"><label className="text-xs font-semibold uppercase text-slate-600 block text-center mb-1">Qty</label><input ref={qRef} type="number" className="w-full border border-slate-300 rounded-sm px-2 text-right text-sm font-medium outline-none focus:border-primary-500 focus:ring-2 focus:ring-primary-50" style={{height: '36px'}} value={currentEntry.qty} onChange={e => setCurrentEntry({...currentEntry, qty: e.target.value})} onKeyDown={e => handleKey(e, rRef)} /></div>
-              <div className="w-[80px]"><label className="text-xs font-semibold uppercase text-slate-600 block text-center mb-1">Rate</label><input ref={rRef} type="number" className="w-full border border-slate-300 rounded-sm px-2 text-right text-sm font-medium outline-none focus:border-primary-500 focus:ring-2 focus:ring-primary-50" style={{height: '36px'}} value={currentEntry.rate} onChange={e => setCurrentEntry({...currentEntry, rate: e.target.value})} onKeyDown={e => handleKey(e, lRef)} /></div>
-              <div className="w-[70px]"><label className="text-xs font-semibold uppercase text-slate-600 block text-center mb-1">Lag.</label><input ref={lRef} type="number" className="w-full border border-slate-300 rounded-sm px-2 text-right text-sm font-medium outline-none focus:border-primary-500 focus:ring-2 focus:ring-primary-50" style={{height: '36px'}} value={currentEntry.laguage} onChange={e => setCurrentEntry({...currentEntry, laguage: e.target.value})} onKeyDown={e => handleKey(e, coRef)} /></div>
-              <div className="w-[70px]"><label className="text-xs font-semibold uppercase text-slate-600 block text-center mb-1">Coolie</label><input ref={coRef} type="number" className="w-full border border-slate-300 rounded-sm px-2 text-right text-sm font-medium outline-none focus:border-primary-500 focus:ring-2 focus:ring-primary-50" style={{height: '36px'}} value={currentEntry.coolie} onChange={e => setCurrentEntry({...currentEntry, coolie: e.target.value})} onKeyDown={e => handleKey(e, pRef)} /></div>
-              <div className="w-[90px]"><label className="text-xs font-semibold uppercase text-slate-600 block text-center mb-1">Paid</label><input ref={pRef} type="number" className="w-full border border-slate-300 rounded-sm px-2 text-right text-sm font-medium outline-none focus:border-primary-500 focus:ring-2 focus:ring-primary-50" style={{height: '36px'}} value={currentEntry.paidAmt} onChange={e => setCurrentEntry({...currentEntry, paidAmt: e.target.value})} onKeyDown={e => handleKey(e, remRef)} /></div>
-              <div className="w-[130px]"><SearchableSelect inputRef={remRef} label="Remarks" options={['Regular', 'Urgent', 'Special']} value={currentEntry.remarks} onChange={(rem) => setCurrentEntry({...currentEntry, remarks: rem})} navigationKey="remarks" navigationRow={1} navigationCol={8} /></div>
-              <div className="ml-auto pr-1"><button type="submit" onClick={onAddItem} className="bg-slate-800 text-white px-6 text-sm font-semibold uppercase hover:bg-primary-600 shadow-md rounded-sm transition-all active:translate-y-px submit-button" style={{height: '36px'}}>{currentEntry.id ? 'UPDATE' : 'ADD'}</button></div>
-            </div>
-            </form>
-          </div>
-          <div className="flex-1 overflow-auto bg-white custom-table-scroll" style={{ maxHeight: '400px' }}>
-            <table className="w-full text-left text-sm border-collapse relative">
-              <thead className="sticky top-0 bg-emerald-700 text-white z-20 border-b-2 font-semibold uppercase text-xs shadow-md">
-                <tr>
-                  <th className="px-3 py-3 border border-emerald-800 w-14 text-center">Sl.No.</th>
-                  <th className="px-3 py-3 border border-emerald-800 w-24">Vehicle</th>
-                  <th className="px-3 py-3 border border-emerald-800 w-24">Date</th>
-                  <th className="px-3 py-3 border border-emerald-800 w-24">Item Code</th>
-                  <th className="px-3 py-3 border border-emerald-800">Item Name</th>
-                  <th className="px-3 py-3 border border-emerald-800 w-16 text-right">Qty</th>
-                  <th className="px-3 py-3 border border-emerald-800 w-16 text-right">Rate</th>
-                  <th className="px-3 py-3 border border-emerald-800 w-24 text-right">Total</th>
-                  <th className="px-3 py-3 border border-emerald-800 w-20 text-right">Luggage</th>
-                  <th className="px-3 py-3 border border-emerald-800 w-24 text-right">L. Amount</th>
-                  <th className="px-3 py-3 border border-emerald-800 w-16 text-right">Coolie</th>
-                  <th className="px-3 py-3 border border-emerald-800 w-24 text-right">Paid Amount</th>
-                  <th className="px-3 py-3 border border-emerald-800 w-28 text-left">Remarks</th>
-                  <th className="px-3 py-3 border border-emerald-800 w-20 text-center">Action</th>
-                </tr>
-              </thead>
-              <tbody>
-                {items.length === 0 ? <tr><td colSpan="14" className="p-12 text-center text-slate-400 italic font-medium text-sm tracking-wide">No transactions recorded for this session</td></tr> : items.map((item, idx) => {
-                  const grossVal = Number(item.qty) * Number(item.rate);
-                  const lagVal = Number(item.laguage || 0) * Number(item.qty);
-                  const coolieVal = Number(item.coolie || 0);
-                  return (
-                  <tr key={item.id} className="hover:bg-primary-50 border-b border-slate-100 group transition-colors">
-                    <td className="px-3 py-2.5 border-r border-slate-100 text-center text-slate-400 font-semibold">{String(idx+1)}</td>
-                    <td className="px-3 py-2.5 border-r border-slate-100 font-semibold text-slate-700">{String(item.vehicle || '--')}</td>
-                    <td className="px-3 py-2.5 border-r border-slate-100 text-slate-600">{String(item.date)}</td>
-                    <td className="px-3 py-2.5 border-r border-slate-100 text-slate-600">{String(item.itemCode || '--')}</td>
-                    <td className="px-3 py-2.5 border-r border-slate-100 font-semibold text-slate-800">{String(item.itemName)}</td>
-                    <td className="px-3 py-2.5 border-r border-slate-100 text-right font-bold">{String(item.qty)}</td>
-                    <td className="px-3 py-2.5 border-r border-slate-100 text-right font-mono">₹{String(item.rate)}</td>
-                    <td className="px-3 py-2.5 border-r border-slate-100 text-right font-bold text-primary-600">₹{grossVal.toLocaleString()}</td>
-                    <td className="px-3 py-2.5 border-r border-slate-100 text-right text-slate-500">{String(item.laguage || 0)}</td>
-                    <td className="px-3 py-2.5 border-r border-slate-100 text-right font-semibold text-blue-600">₹{lagVal.toLocaleString()}</td>
-                    <td className="px-3 py-2.5 border-r border-slate-100 text-right text-slate-500">₹{String(item.coolie || 0)}</td>
-                    <td className="px-3 py-2.5 border-r border-slate-100 text-right text-emerald-600 font-semibold">₹{String(item.paidAmt||0)}</td>
-                    <td className="px-3 py-2.5 border-r border-slate-100 text-slate-500">{String(item.remarks || '--')}</td>
-                    <td className="px-3 py-2.5 text-center space-x-1"><button onClick={()=>onEditItem(item)} className="p-1.5 text-blue-600 opacity-0 group-hover:opacity-100 transition-all hover:bg-blue-50 rounded"><Edit2 className="w-4 h-4"/></button><button onClick={()=>onRemoveItem(item.id)} className="p-1.5 text-red-600 opacity-0 group-hover:opacity-100 transition-all hover:bg-red-50 rounded"><Trash2 className="w-4 h-4"/></button></td>
-                  </tr>
-                )})}
-              </tbody>
-            </table>
-          </div>
-        </section>
-      </div>
-      <aside className="w-[340px] bg-slate-800 flex flex-col p-5 shrink-0 shadow-2xl">
-        <h3 className="text-xs font-semibold text-primary-400 uppercase tracking-wider flex items-center gap-2 mb-5"><Sparkles className="w-4 h-4" /> Aggregate Summary</h3>
-        <div className="space-y-4 flex-1 overflow-auto text-white scrollbar-thin">
-          <div className="flex flex-col gap-1.5"><label className="text-xs font-medium text-slate-400">Item Qty Total</label><input type="text" readOnly className="bg-slate-700/50 px-3 py-2.5 text-lg font-bold text-right rounded-sm border border-slate-600 outline-none" value={String(summary.qty)} /></div>
-          <div className="flex flex-col gap-1.5"><label className="text-xs font-medium text-slate-400">Total Gross Amount</label><input type="text" readOnly className="bg-slate-700/50 px-3 py-2.5 text-lg font-bold text-right text-emerald-400 rounded-sm border border-slate-600 outline-none" value={`₹ ${summary.itemTotal.toFixed(2)}`} /></div>
-          <div className="grid grid-cols-2 gap-3 p-3 bg-slate-900/50 rounded border border-slate-700"><div className="flex flex-col gap-1.5"><label className="text-xs font-medium text-primary-400">Commission %</label><input type="number" className="bg-slate-800 px-2 py-2 font-semibold text-right rounded-sm border border-slate-600 outline-none focus:border-primary-500" value={commissionPct} onChange={e => setCommissionPct(e.target.value)} /></div><div className="flex flex-col gap-1.5"><label className="text-xs font-medium text-slate-500">Commission Val</label><input type="text" readOnly className="bg-slate-700/20 px-2 py-2 text-right text-slate-400 rounded-sm border border-slate-600 outline-none" value={summary.totalCommission.toFixed(2)} /></div></div>
-          <div className="flex flex-col gap-1.5"><label className="text-xs font-medium text-slate-400">Coolie Aggregate</label><input type="text" readOnly className="bg-slate-700/50 px-3 py-2.5 text-lg font-bold text-right rounded-sm border border-slate-600 outline-none" value={`₹ ${summary.coolieTotal.toFixed(2)}`} /></div>
-          <div className="flex flex-col gap-1.5"><label className="text-xs font-medium text-slate-400">Luggage Aggregate</label><input type="text" readOnly className="bg-slate-700/50 px-3 py-2.5 text-lg font-bold text-right rounded-sm border border-slate-600 outline-none" value={`₹ ${summary.laguageTotal.toFixed(2)}`} /></div>
-          <div className="pt-5 border-t border-white/10 text-center"><p className="text-xs text-primary-400 font-semibold tracking-wider mb-2">Net Final Amount</p><p className="text-3xl font-bold text-primary-500 tabular-nums drop-shadow-xl">₹ {summary.netTotal.toFixed(2)}</p></div>
-        </div>
-        <div className="mt-5 space-y-3">
-          <div className="bg-slate-700 p-4 rounded-sm border border-slate-600">
-            <label className="block text-xs font-medium text-primary-400 uppercase tracking-wider mb-1">Total Paid Amount</label>
-            <div className="text-2xl font-bold text-center text-white tabular-nums">₹ {totalPaidAmount.toFixed(2)}</div>
-          </div>
-          <button onClick={onViewReport} disabled={!customerInfo.customerName} className="w-full bg-slate-700 py-3 font-semibold text-sm text-white border border-slate-600 rounded-sm disabled:opacity-30 hover:bg-slate-600 transition-all">Client Account Statement</button>
-        </div>
-      </aside>
-    </div>
-  );
-}
 
 // --- MAIN APPLICATION SHELL ---
 
@@ -597,8 +494,22 @@ export default function App() {
   const auth = useAuth();
   const { registerElement, unregisterElement } = useKeyboardNavigation();
   
+  // Check if user is master admin
+  const isMasterAdmin = localStorage.getItem('skfs_master_admin') === 'true';
+  
+  // NOTE: Global Enter key blocker has been removed to allow proper keyboard navigation
+  
   if (!auth.authenticated) {
-    return <Login onLogin={auth.login} loading={auth.loading} error={auth.error} />;
+    return <AuthTabs />;
+  }
+  
+  // Show master admin dashboard if master admin is logged in
+  if (isMasterAdmin) {
+    return <MasterAdminDashboard onLogout={() => {
+      localStorage.removeItem('skfs_auth_token');
+      localStorage.removeItem('skfs_master_admin');
+      window.location.reload();
+    }} />;
   }
   const [activeSection, setActiveSection] = useState('daily');
   const [notification, setNotification] = useState({ message: '', type: 'info' });
@@ -669,29 +580,6 @@ export default function App() {
     return () => window.removeEventListener('afterprint', handleAfter);
   }, []);
 
-  // High-level keyboard navigation using only arrows + Enter.
-  // Arrows change active module when focus is not inside a text input/textarea/select.
-  useEffect(() => {
-    const sections = ['daily', 'group-reg', 'reports', 'advance', 'saala'];
-
-    const handleKeyDown = (e) => {
-      const tag = (e.target && e.target.tagName) || '';
-      const isTextField = ['INPUT', 'TEXTAREA', 'SELECT'].includes(tag);
-      if (isTextField) return; // do not hijack typing/navigation inside fields
-
-      if (e.key === 'ArrowLeft' || e.key === 'ArrowRight') {
-        const idx = sections.indexOf(activeSection);
-        if (idx === -1) return;
-        const delta = e.key === 'ArrowRight' ? 1 : -1;
-        const next = (idx + delta + sections.length) % sections.length;
-        setActiveSection(sections[next]);
-        e.preventDefault();
-      }
-    };
-
-    window.addEventListener('keydown', handleKeyDown);
-    return () => window.removeEventListener('keydown', handleKeyDown);
-  }, [activeSection]);
 
   // Close all dropdown menus when clicking outside
   useEffect(() => {
@@ -730,6 +618,17 @@ export default function App() {
       unregisterElement('nav-more');
     };
   }, [registerElement, unregisterElement]);
+  
+  // Register DailyTransactionsView elements when active
+  useEffect(() => {
+    if (activeSection === 'daily') {
+      // Give time for the component to render
+      setTimeout(() => {
+        // The DailyTransactionsView should register its own elements
+        // through the useKeyboardNavigation hook in the component
+      }, 100);
+    }
+  }, [activeSection]);
   
   // Reset component states when navigating to a new section
   useEffect(() => {
@@ -960,11 +859,18 @@ export default function App() {
         ]);
   
         if (cancelled) return;
-        setGroups(gRows);
-        const mappedCustomers = cRows.map(c => ({ id: c.id, group: c.groupName || '', name: c.name, contact: c.contact, address: c.address }));
+        const groupData = Array.isArray(gRows) ? gRows : (gRows?.items || []);
+        const customerData = Array.isArray(cRows) ? cRows : (cRows?.items || []);
+        const catalogData = Array.isArray(catRows) ? catRows : (catRows?.items || []);
+        const vehicleData = Array.isArray(vRows) ? vRows : (vRows?.items || []);
+                
+        console.log('Fetched data:', { groups: groupData, customers: customerData, catalog: catalogData, vehicles: vehicleData });
+        
+        setGroups(groupData);
+        const mappedCustomers = customerData.map(c => ({ id: c.id, group: c.groupName || '', name: c.name, contact: c.contact, address: c.address }));
         setCustomers(mappedCustomers);
-        setCatalog(catRows);
-        setVehicles(vRows);
+        setCatalog(catalogData);
+        setVehicles(vehicleData);
   
         // hydrate advanceStore from backend logs (used in Daily + Reports)
         const advancePairs = await Promise.all(
@@ -986,6 +892,7 @@ export default function App() {
         }
         setAdvanceStore(nextAdvanceStore);
       } catch (e) {
+        console.error('Data fetch error:', e);
         showNotify(`Backend not reachable: ${e.message}`, 'error');
       }
     })();
@@ -1152,24 +1059,24 @@ export default function App() {
           <div className="grid grid-cols-2 gap-4">
             <div>
               <label className="text-xs font-medium text-slate-600 block mb-1">From Date</label>
-              <input type="date" className="w-full border border-slate-300 px-3 text-sm font-medium rounded-sm outline-none focus:border-primary-500 focus:ring-2 focus:ring-primary-50 transition-all" style={{ height: '40px' }} value={groupPattiForm.fromDate} onChange={e => setGroupPattiForm({ ...groupPattiForm, fromDate: e.target.value })} />
+              <input type="date" className="w-full border border-slate-300 px-3 text-sm font-medium rounded-sm outline-none focus:border-primary-500 focus:ring-2 focus:ring-primary-50 transition-all" style={{ height: '40px' }} value={groupPattiForm.fromDate} onChange={e => setGroupPattiForm({ ...groupPattiForm, fromDate: e.target.value })} data-enter-index="1" />
             </div>
             <div>
               <label className="text-xs font-medium text-slate-600 block mb-1">To Date</label>
-              <input type="date" className="w-full border border-slate-300 px-3 text-sm font-medium rounded-sm outline-none focus:border-primary-500 focus:ring-2 focus:ring-primary-50 transition-all" style={{ height: '40px' }} value={groupPattiForm.toDate} onChange={e => setGroupPattiForm({ ...groupPattiForm, toDate: e.target.value })} />
+              <input type="date" className="w-full border border-slate-300 px-3 text-sm font-medium rounded-sm outline-none focus:border-primary-500 focus:ring-2 focus:ring-primary-50 transition-all" style={{ height: '40px' }} value={groupPattiForm.toDate} onChange={e => setGroupPattiForm({ ...groupPattiForm, toDate: e.target.value })} data-enter-index="2" />
             </div>
           </div>
 
-          <SearchableSelect label="Group Name" options={groups.map(g => g.name)} value={groupPattiForm.groupName} onChange={(val) => setGroupPattiForm({ ...groupPattiForm, groupName: val })} placeholder="Select group" />
+          <SearchableSelect label="Group Name" options={groups.map(g => g.name)} value={groupPattiForm.groupName} onChange={(val) => setGroupPattiForm({ ...groupPattiForm, groupName: val })} placeholder="Select group" data-enter-index="3" />
 
           <div>
             <label className="text-xs font-medium text-slate-600 block mb-1">Commission (%)</label>
-            <input type="number" className="w-full border border-slate-300 px-3 text-sm font-medium rounded-sm outline-none text-right focus:border-primary-500 focus:ring-2 focus:ring-primary-50 transition-all" style={{ height: '40px' }} value={groupPattiForm.commissionPct} onChange={e => setGroupPattiForm({ ...groupPattiForm, commissionPct: e.target.value })} />
+            <input type="number" className="w-full border border-slate-300 px-3 text-sm font-medium rounded-sm outline-none text-right focus:border-primary-500 focus:ring-2 focus:ring-primary-50 transition-all" style={{ height: '40px' }} value={groupPattiForm.commissionPct} onChange={e => setGroupPattiForm({ ...groupPattiForm, commissionPct: e.target.value })} data-enter-index="4" />
           </div>
 
           <div className="flex gap-3 pt-2">
-            <button onClick={handleGroupPattiPrint} disabled={!groupPattiForm.groupName || isGroupPattiPrinting} className="flex-1 bg-primary-600 text-white py-3 font-semibold text-sm rounded-sm shadow-md disabled:opacity-40 hover:bg-primary-700 transition-colors">Print</button>
-            <button onClick={() => { setIsGroupPattiPrinting(false); setActiveSection('daily'); }} className="flex-1 bg-slate-100 text-slate-700 py-3 font-semibold text-sm border border-slate-300 rounded-sm shadow-sm hover:bg-slate-200 transition-colors">Cancel</button>
+            <button onClick={handleGroupPattiPrint} disabled={!groupPattiForm.groupName || isGroupPattiPrinting} className="flex-1 bg-primary-600 text-white py-3 font-semibold text-sm rounded-sm shadow-md disabled:opacity-40 hover:bg-primary-700 transition-colors" data-enter-index="5">Print</button>
+            <button onClick={() => { setIsGroupPattiPrinting(false); setActiveSection('daily'); }} className="flex-1 bg-slate-100 text-slate-700 py-3 font-semibold text-sm border border-slate-300 rounded-sm shadow-sm hover:bg-slate-200 transition-colors" data-enter-index="6">Cancel</button>
           </div>
 
           <div className="text-sm font-medium text-slate-500 min-h-[20px]">
@@ -1192,19 +1099,19 @@ export default function App() {
           <div className="grid grid-cols-2 gap-4">
             <div>
               <label className="text-xs font-medium text-slate-600 block mb-1">From Date</label>
-              <input type="date" className="w-full border border-slate-300 px-3 text-sm font-medium rounded-sm outline-none focus:border-primary-500 focus:ring-2 focus:ring-primary-50 transition-all" style={{ height: '40px' }} value={groupTotalForm.fromDate} onChange={e => setGroupTotalForm({ ...groupTotalForm, fromDate: e.target.value })} />
+              <input type="date" className="w-full border border-slate-300 px-3 text-sm font-medium rounded-sm outline-none focus:border-primary-500 focus:ring-2 focus:ring-primary-50 transition-all" style={{ height: '40px' }} value={groupTotalForm.fromDate} onChange={e => setGroupTotalForm({ ...groupTotalForm, fromDate: e.target.value })} data-enter-index="1" />
             </div>
             <div>
               <label className="text-xs font-medium text-slate-600 block mb-1">To Date</label>
-              <input type="date" className="w-full border border-slate-300 px-3 text-sm font-medium rounded-sm outline-none focus:border-primary-500 focus:ring-2 focus:ring-primary-50 transition-all" style={{ height: '40px' }} value={groupTotalForm.toDate} onChange={e => setGroupTotalForm({ ...groupTotalForm, toDate: e.target.value })} />
+              <input type="date" className="w-full border border-slate-300 px-3 text-sm font-medium rounded-sm outline-none focus:border-primary-500 focus:ring-2 focus:ring-primary-50 transition-all" style={{ height: '40px' }} value={groupTotalForm.toDate} onChange={e => setGroupTotalForm({ ...groupTotalForm, toDate: e.target.value })} data-enter-index="2" />
             </div>
           </div>
 
-          <SearchableSelect label="Group Name" options={groups.map(g => g.name)} value={groupTotalForm.groupName} onChange={(val) => setGroupTotalForm({ ...groupTotalForm, groupName: val })} placeholder="Select group" />
+          <SearchableSelect label="Group Name" options={groups.map(g => g.name)} value={groupTotalForm.groupName} onChange={(val) => setGroupTotalForm({ ...groupTotalForm, groupName: val })} placeholder="Select group" data-enter-index="3" />
 
           <div className="flex gap-3 pt-2">
-            <button onClick={handleGroupTotalPrint} disabled={!groupTotalForm.groupName || isGroupTotalPrinting} className="flex-1 bg-primary-600 text-white py-3 font-semibold text-sm rounded-sm shadow-md disabled:opacity-40 hover:bg-primary-700 transition-colors">Print</button>
-            <button onClick={() => { setIsGroupTotalPrinting(false); setActiveSection('daily'); }} className="flex-1 bg-slate-100 text-slate-700 py-3 font-semibold text-sm border border-slate-300 rounded-sm shadow-sm hover:bg-slate-200 transition-colors">Cancel</button>
+            <button onClick={handleGroupTotalPrint} disabled={!groupTotalForm.groupName || isGroupTotalPrinting} className="flex-1 bg-primary-600 text-white py-3 font-semibold text-sm rounded-sm shadow-md disabled:opacity-40 hover:bg-primary-700 transition-colors" data-enter-index="4">Print</button>
+            <button onClick={() => { setIsGroupTotalPrinting(false); setActiveSection('daily'); }} className="flex-1 bg-slate-100 text-slate-700 py-3 font-semibold text-sm border border-slate-300 rounded-sm shadow-sm hover:bg-slate-200 transition-colors" data-enter-index="5">Cancel</button>
           </div>
 
           <div className="text-sm font-medium text-slate-500 min-h-[20px]">
@@ -1218,27 +1125,27 @@ export default function App() {
   return (
     <div className="h-screen flex flex-col bg-white overflow-hidden text-slate-900 font-sans">
       <Toast message={notification.message} type={notification.type} onClose={() => setNotification({ message: '', type: 'info' })} />
-      <nav className="h-12 bg-slate-900 flex items-center px-5 shrink-0 z-[4000] border-b border-black/50 shadow-2xl">
+      <nav className="h-12 bg-slate-900 flex items-center px-5 shrink-0 z-[4000] border-b border-black/50 shadow-2xl navbar-element" data-navbar-element>
         <div className="flex items-center gap-6 h-full">
-          <div ref={navRefs.logo} className="flex items-center gap-2 pr-6 border-r border-slate-700 cursor-pointer h-full" onClick={() => setActiveSection('daily')} tabIndex="0"><Flower2 className="w-5 h-5 text-primary-400" /><span className="text-sm font-bold text-white tracking-wide">SKFS ERP</span><span className="text-xs text-slate-400 font-medium">v5.0.4</span></div>
+          <div ref={navRefs.logo} className="flex items-center gap-2 pr-6 border-r border-slate-700 cursor-pointer h-full navbar-element" onClick={() => setActiveSection('daily')} data-navbar-element><Flower2 className="w-5 h-5 text-primary-400" /><span className="text-sm font-bold text-white tracking-wide">SKFS ERP</span><span className="text-xs text-slate-400 font-medium">v5.0.4</span></div>
           
-          <div className="relative h-full flex items-center"><button ref={navRefs.transactionMenu} onClick={() => setShowTMenu(!showTMenu)} className={`flex items-center gap-2 px-4 h-full text-xs font-semibold transition-all ${showTMenu ? 'bg-white text-slate-900 shadow-xl' : 'text-slate-300 hover:text-white'}`} tabIndex="0">Transaction <ChevronDown className="w-3.5 h-3.5" /></button>
+          <div className="relative h-full flex items-center"><button ref={navRefs.transactionMenu} onClick={() => setShowTMenu(!showTMenu)} className={`flex items-center gap-2 px-4 h-full text-xs font-semibold transition-all ${showTMenu ? 'bg-white text-slate-900 shadow-xl' : 'text-slate-300 hover:text-white'} navbar-element`} data-navbar-element>Transaction <ChevronDown className="w-3.5 h-3.5" /></button>
             {showTMenu && <div className="absolute top-12 left-0 w-56 bg-white border border-slate-200 shadow-dropdown py-1 animate-in slide-in-from-top-2 duration-150 rounded-sm overflow-hidden z-[5000]">
               {[ 
                 { id: 'daily', l: 'Daily Transaction', i: Receipt }, 
                 { id: 'group-reg', l: 'New Group', i: FolderPlus }, 
-                { id: 'item-reg', l: 'New Item', i: PackagePlus }, 
-                { id: 'party', l: 'Party Details', i: Users }, 
-                { id: 'vehicle', l: 'Extra Vehicle', i: Truck } 
+                { id: 'item-reg', l: 'New Item', i: PackagePlus },
+                { id: 'party', l: 'Party Details', i: Users },
+                { id: 'vehicle', l: 'Extra Vehicle', i: Truck }
               ].map(item => (
-                <button key={item.id} onClick={() => { setShowTMenu(false); setActiveSection(item.id); }} className={`w-full text-left px-4 py-2.5 text-sm font-medium flex items-center gap-3 transition-colors ${activeSection === item.id ? 'bg-primary-600 text-white' : 'text-slate-700 hover:bg-primary-50 hover:text-primary-700'}`}><item.i className="w-4 h-4" /> {item.l}</button>
+                <button key={item.id} onClick={() => { setShowTMenu(false); setActiveSection(item.id); }} className={`w-full text-left px-4 py-2.5 text-sm font-medium flex items-center gap-3 transition-colors ${activeSection === item.id ? 'bg-primary-600 text-white' : 'text-slate-700 hover:bg-primary-50 hover:text-primary-700'} navbar-element`} data-navbar-element><item.i className="w-4 h-4" /> {item.l}</button>
               ))}
             </div>}
           </div>
 
-          <button ref={navRefs.reportsButton} onClick={() => { setShowTMenu(false); setShowUMenu(false); setShowMMenu(false); setActiveSection('reports'); }} className={`flex items-center gap-2 px-4 h-full text-xs font-semibold transition-all ${activeSection === 'reports' ? 'bg-white text-slate-900' : 'text-slate-300 hover:text-white'}`} tabIndex="0">Reports</button>
+          <button ref={navRefs.reportsButton} onClick={() => { setShowTMenu(false); setShowUMenu(false); setShowMMenu(false); setActiveSection('reports'); }} className={`flex items-center gap-2 px-4 h-full text-xs font-semibold transition-all ${activeSection === 'reports' ? 'bg-white text-slate-900' : 'text-slate-300 hover:text-white'} navbar-element`} data-navbar-element>Reports</button>
 
-          <div className="relative h-full flex items-center"><button ref={navRefs.utilityMenu} onClick={() => setShowUMenu(!showUMenu)} className={`flex items-center gap-2 px-4 h-full text-xs font-semibold transition-all ${showUMenu ? 'bg-white text-slate-900 shadow-xl' : 'text-slate-300 hover:text-white'}`} tabIndex="0">Utility <ChevronDown className="w-3.5 h-3.5" /></button>
+          <div className="relative h-full flex items-center"><button ref={navRefs.utilityMenu} onClick={() => setShowUMenu(!showUMenu)} className={`flex items-center gap-2 px-4 h-full text-xs font-semibold transition-all ${showUMenu ? 'bg-white text-slate-900 shadow-xl' : 'text-slate-300 hover:text-white'} navbar-element`} data-navbar-element>Utility <ChevronDown className="w-3.5 h-3.5" /></button>
             {showUMenu && <div className="absolute top-12 left-0 w-64 bg-white border border-slate-200 shadow-dropdown py-1 animate-in slide-in-from-top-2 duration-150 rounded-sm overflow-hidden z-[5000]">
               {[ 
                 { id: 'group-print', l: 'Group Printing', i: Printer },
@@ -1285,15 +1192,15 @@ export default function App() {
                     return;
                   }
                   setActiveSection(item.id);
-                }} className={`w-full text-left px-4 py-2.5 text-sm font-medium flex items-center gap-3 transition-colors ${activeSection === item.id ? 'bg-primary-50 text-primary-700' : 'text-slate-700 hover:bg-slate-50'}`}><item.i className="w-4 h-4" /> {item.l}</button>
+                }} className={`w-full text-left px-4 py-2.5 text-sm font-medium flex items-center gap-3 transition-colors ${activeSection === item.id ? 'bg-primary-50 text-primary-700' : 'text-slate-700 hover:bg-slate-50'} navbar-element`} data-navbar-element><item.i className="w-4 h-4" /> {item.l}</button>
               ))}
             </div>}
           </div>
 
-          <div className="relative h-full flex items-center"><button ref={navRefs.moreMenu} onClick={() => setShowMMenu(!showMMenu)} className={`flex items-center gap-2 px-4 h-full text-xs font-semibold transition-all ${showMMenu ? 'bg-white text-slate-900 shadow-xl' : 'text-slate-300 hover:text-white'}`} tabIndex="0">More <ChevronDown className="w-3.5 h-3.5" /></button>
+          <div className="relative h-full flex items-center"><button ref={navRefs.moreMenu} onClick={() => setShowMMenu(!showMMenu)} className={`flex items-center gap-2 px-4 h-full text-xs font-semibold transition-all ${showMMenu ? 'bg-white text-slate-900 shadow-xl' : 'text-slate-300 hover:text-white'} navbar-element`} data-navbar-element>More <ChevronDown className="w-3.5 h-3.5" /></button>
             {showMMenu && <div className="absolute top-12 left-0 w-52 bg-white border border-slate-200 shadow-dropdown py-1 animate-in slide-in-from-top-2 duration-150 rounded-sm overflow-hidden z-[5000]">
               {[ { id: 'advance', l: 'Advance', i: WalletCards }, { id: 'saala', l: 'Saala (Credit)', i: Landmark }, { id: 'silk', l: 'Silk', i: Layers } ].map(item => (
-                <button key={item.id} onClick={() => { setShowMMenu(false); setActiveSection(item.id); }} className={`w-full text-left px-4 py-2.5 text-sm font-medium flex items-center gap-3 transition-colors ${activeSection === item.id ? 'bg-primary-50 text-primary-700' : 'text-slate-700 hover:bg-slate-50'}`}><item.i className="w-4 h-4" /> {item.l}</button>
+                <button key={item.id} onClick={() => { setShowMMenu(false); setActiveSection(item.id); }} className={`w-full text-left px-4 py-2.5 text-sm font-medium flex items-center gap-3 transition-colors ${activeSection === item.id ? 'bg-primary-50 text-primary-700' : 'text-slate-700 hover:bg-slate-50'} navbar-element`} data-navbar-element><item.i className="w-4 h-4" /> {item.l}</button>
               ))}
             </div>}
           </div>
@@ -1360,7 +1267,7 @@ export default function App() {
           } catch (e) {
             showNotify(`Save failed: ${e.message}`, 'error');
           }
-        }} advanceStore={advanceStore} commissionPct={commissionPct} setCommissionPct={setCommissionPct} onViewReport={() => setActiveSection('reports')} totalPaidAmount={totalPaidAmount} />}
+        }} advanceStore={advanceStore} commissionPct={commissionPct} setCommissionPct={setCommissionPct} onViewReport={() => setActiveSection('reports')} totalPaidAmount={totalPaidAmount} activeSection={activeSection} />}
         {activeSection === 'group-reg' && <GroupCustomerRegistryForm title="NEW GROUP" initialTab="group" groups={groups} setGroups={setGroups} customers={customers} setCustomers={setCustomers} showNotify={showNotify} onCancel={() => setActiveSection('daily')} />}
         {activeSection === 'party' && <PartyDetailsView customers={customers} showNotify={showNotify} onCancel={() => setActiveSection('daily')} />}
         {activeSection === 'item-reg' && <ItemRegistryForm form={itemForm} setForm={setItemForm} onSave={async () => {

@@ -1,4 +1,4 @@
-from sqlalchemy import Column, Integer, String, TIMESTAMP, ForeignKey, func
+from sqlalchemy import Column, Integer, String, TIMESTAMP, ForeignKey, func, Boolean
 from sqlalchemy.orm import relationship
 from app.core.db import Base
 
@@ -21,6 +21,9 @@ class User(Base):
 
     # vendor_admin / staff
     role = Column(String(20), nullable=False, default="staff")
+    
+    # Account status
+    is_active = Column(Boolean, nullable=False, default=True)
 
     created_at = Column(TIMESTAMP, server_default=func.now())
 

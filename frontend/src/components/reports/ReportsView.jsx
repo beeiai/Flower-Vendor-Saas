@@ -242,6 +242,7 @@ export default function ReportsView({ groups, customers, vehicles, advanceStore 
 										style={{ height: '36px' }}
 										value={fromDate}
 										onChange={e => setFromDate(e.target.value)}
+										data-enter-index="1"
 									/>
 								</div>
 
@@ -253,6 +254,7 @@ export default function ReportsView({ groups, customers, vehicles, advanceStore 
 										style={{ height: '36px' }}
 										value={toDate}
 										onChange={e => setToDate(e.target.value)}
+										data-enter-index="2"
 									/>
 								</div>
 
@@ -263,6 +265,7 @@ export default function ReportsView({ groups, customers, vehicles, advanceStore 
 										value={groupName}
 										onChange={setGroupName}
 										placeholder="Select group"
+										data-enter-index="3"
 									/>
 								</div>
 
@@ -276,10 +279,11 @@ export default function ReportsView({ groups, customers, vehicles, advanceStore 
 												value={customerName}
 												onChange={setCustomerName}
 												placeholder="Select customer"
+												data-enter-index="4"
 											/>
 										</div>
-										<button type="button" className="w-8 border border-slate-300 bg-slate-100 font-semibold text-sm rounded-sm hover:bg-slate-200 transition-colors" style={{ height: '36px' }} onClick={goPrevCustomer} aria-label="Previous customer">{'<'}</button>
-										<button type="button" className="w-8 border border-slate-300 bg-slate-100 font-semibold text-sm rounded-sm hover:bg-slate-200 transition-colors" style={{ height: '36px' }} onClick={goNextCustomer} aria-label="Next customer">{'>'}</button>
+										<button type="button" className="w-8 border border-slate-300 bg-slate-100 font-semibold text-sm rounded-sm hover:bg-slate-200 transition-colors" style={{ height: '36px' }} onClick={goPrevCustomer} aria-label="Previous customer" data-enter-index="5">{'<'}</button>
+										<button type="button" className="w-8 border border-slate-300 bg-slate-100 font-semibold text-sm rounded-sm hover:bg-slate-200 transition-colors" style={{ height: '36px' }} onClick={goNextCustomer} aria-label="Next customer" data-enter-index="6">{'>'}</button>
 									</div>
 								</div>
 
@@ -290,6 +294,7 @@ export default function ReportsView({ groups, customers, vehicles, advanceStore 
 										value={vehicle}
 										onChange={setVehicle}
 										placeholder="(Opt)"
+										data-enter-index="7"
 									/>
 								</div>
 
@@ -330,6 +335,7 @@ export default function ReportsView({ groups, customers, vehicles, advanceStore 
 								style={{ height: '40px' }}
 								onClick={handleSubmit}
 								tabIndex="0"
+								data-enter-index="8"
 							>
 								Submit
 							</button>
@@ -427,6 +433,7 @@ export default function ReportsView({ groups, customers, vehicles, advanceStore 
 					className="px-6 bg-slate-800 text-white text-sm font-semibold rounded-sm hover:bg-slate-700 transition-colors"
 					style={{ height: '40px' }}
 					onClick={handlePrint}
+					data-enter-index="9"
 				>
 					Print
 				</button>
@@ -435,6 +442,7 @@ export default function ReportsView({ groups, customers, vehicles, advanceStore 
 					className="px-6 border border-slate-300 bg-white text-slate-700 text-sm font-semibold rounded-sm hover:bg-slate-50 transition-colors"
 					style={{ height: '40px' }}
 					onClick={onCancel}
+					data-enter-index="10"
 				>
 					Cancel
 				</button>

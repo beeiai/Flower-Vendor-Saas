@@ -1,4 +1,7 @@
-const BACKEND_URL = import.meta.env.VITE_BACKEND_URL || 'http://localhost:8000';
+const BACKEND_URL = import.meta.env.VITE_API_BASE_URL;
+if (!BACKEND_URL) {
+  throw new Error("VITE_API_BASE_URL is not defined");
+}
 // Ensure we target the backend API base (mount routers under /api, no trailing slash)
 const BACKEND_API = (function () {
   try {
@@ -39,7 +42,14 @@ async function handleResponse(res) {
   if (res.status === 204) return null;
   const text = await res.text();
   if (!text) return null;
-  return safeParseJson(text);
+  const data = safeParseJson(text);
+  
+  // Safety check: normalize list responses that might have {items: [...]} structure
+  if (data && typeof data === "object" && !Array.isArray(data) && data.items && Array.isArray(data.items)) {
+    return data.items;
+  }
+  
+  return data;
 }
 
 function getAuthToken() {
@@ -163,16 +173,6 @@ export const authApi = {
   },
 
   /**
-   * Signup against FastAPI backend
-   */
-  async signup(payload) {
-    return backendRequest('/auth/signup', {
-      method: 'POST',
-      body: payload,
-    });
-  },
-
-  /**
    * Clear client-side auth state
    */
   logout() {
@@ -184,6 +184,61 @@ export const authApi = {
    */
   me() {
     return backendRequest('/auth/me', { auth: true });
+  },
+
+  /**
+   * Master admin login
+   */
+  async masterLogin(credentials) {
+    const res = await fetch(`${BACKEND_API}/admin/master-login`, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify({
+        username: credentials.username,
+        password: credentials.password
+      }),
+    });
+
+    if (!res.ok) {
+      const text = await res.text();
+      const details = safeParseJson(text) || null;
+      const message =
+        (details && (details.detail || details.message || details.error)) ||
+        `Request failed: ${res.status}`;
+      const err = new Error(message);
+      err.status = res.status;
+      err.details = details;
+      throw err;
+    }
+
+    const data = await res.json();
+    // Store the master admin token
+    localStorage.setItem(AUTH_TOKEN_KEY, data.access_token);
+    return data;
+  },
+
+  /**
+   * Create vendor (master admin only)
+   */
+  async createVendor(vendorData, masterToken) {
+    return backendRequest('/admin/create-vendor', {
+      method: 'POST',
+      body: vendorData,
+      auth: !!masterToken,
+    });
+  },
+
+  /**
+   * Change master password (master admin only)
+   */
+  async changeMasterPassword(passwordData, masterToken) {
+    return backendRequest('/admin/change-master-password', {
+      method: 'POST',
+      body: passwordData,
+      auth: !!masterToken,
+    });
   },
 };
 

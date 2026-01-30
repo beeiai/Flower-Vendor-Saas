@@ -1,5 +1,6 @@
-from fastapi import APIRouter, Depends, HTTPException, status
-from sqlalchemy.orm import Session
+from fastapi import APIRouter, Depends, HTTPException, status, Query
+from sqlalchemy.orm import Session, joinedload
+from sqlalchemy import func
 
 from app.core.db import get_db
 from app.models.vehicle import Vehicle
@@ -75,12 +76,24 @@ def create_vehicle(
 # ---------- READ (LIST) ----------
 @router.get("/")
 def list_vehicles(
+    page: int = Query(1, ge=1),
+    size: int = Query(50, ge=1, le=1000),
     db: Session = Depends(get_db),
     user = Depends(get_current_user)
 ):
-    rows = db.query(Vehicle).filter(
-        Vehicle.vendor_id == user.vendor_id
-    ).all()
+    # Hard cap to prevent accidental overload
+    size = min(size, 1000)
+    offset = (page - 1) * size
+    
+    # Use joinedload if needed for related data
+    query = db.query(Vehicle)\
+        .filter(Vehicle.vendor_id == user.vendor_id)
+    
+    total = db.query(func.count(Vehicle.id))\
+        .filter(Vehicle.vendor_id == user.vendor_id)\
+        .scalar()
+    
+    rows = query.offset(offset).limit(size).all()
     def as_dict(v: Vehicle):
         desc = (v.vehicle_name or v.vehicle_number or "").strip()
         if v.vehicle_name and v.vehicle_number:
@@ -95,7 +108,10 @@ def list_vehicles(
             "description": desc,
             "vehicleDescription": desc,
         }
-    return [as_dict(v) for v in rows]
+    
+    items = [as_dict(v) for v in rows]
+    
+    return items
 
 # ---------- READ (ONE) ----------
 @router.get("/{vehicle_id}")

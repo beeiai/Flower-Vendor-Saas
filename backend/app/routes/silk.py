@@ -4,6 +4,7 @@ from sqlalchemy import func
 from datetime import date, datetime
 from decimal import Decimal
 from typing import Optional
+import logging
 
 from app.core.db import get_db
 from app.dependencies import get_current_user
@@ -15,6 +16,7 @@ from app.models.collection_item import CollectionItem
 from app.models.saala_customer import SaalaCustomer, SaalaTransaction
 from pydantic import BaseModel, Field
 
+logger = logging.getLogger(__name__)
 
 router = APIRouter(
     prefix="/silk",
@@ -517,39 +519,145 @@ def get_silk_daily_credit(
     except ValueError:
         raise HTTPException(status_code=400, detail="Invalid date format. Use YYYY-MM-DD")
     
-    # Get all customers for the vendor
-    customers = db.query(SaalaCustomer).filter(
-        SaalaCustomer.vendor_id == user.vendor_id
-    ).all()
-    
-    total_daily_credit = 0
-    
-    # For each customer, get the sum of (total_amount - paid_amount) for transactions on that date
-    for customer in customers:
-        # Calculate daily credit correctly: sum(total_amount - paid_amount) for the day
-        daily_credit = (
-            db.query(func.sum(SaalaTransaction.total_amount - SaalaTransaction.paid_amount))
-            .filter(
-                SaalaTransaction.customer_id == customer.id,
-                SaalaTransaction.date >= start_of_day,
-                SaalaTransaction.date <= end_of_day
-            )
-            .scalar()
-        ) or 0
+    try:
+        # Get all customers for the vendor
+        customers = db.query(SaalaCustomer).filter(
+            SaalaCustomer.vendor_id == user.vendor_id
+        ).all()
         
-        # Ensure we don't include negative values (overpayments)
-        daily_credit = max(float(daily_credit), 0)
-        total_daily_credit += daily_credit
+        logger.info(f"Found {len(customers)} customers for vendor {user.vendor_id}")
         
-        print(f"[DAILY CREDIT] date={date} customer={customer.id} credit={daily_credit}")
-    
-    print(f"[SILK DAILY CREDIT] date={date} total={total_daily_credit}")
-    
-    return {
-        "date": date,
-        "total_credit": total_daily_credit
-    }
+        total_daily_credit = 0
+        
+        # For each customer, get the sum of (total_amount - paid_amount) for transactions on that date
+        for customer in customers:
+            try:
+                # Calculate daily credit correctly: sum(total_amount - paid_amount) for the day
+                daily_credit = (
+                    db.query(func.sum(SaalaTransaction.total_amount - SaalaTransaction.paid_amount))
+                    .filter(
+                        SaalaTransaction.customer_id == customer.id,
+                        SaalaTransaction.date >= start_of_day,
+                        SaalaTransaction.date <= end_of_day
+                    )
+                    .scalar()
+                ) or 0
+                
+                # Ensure we don't include negative values (overpayments)
+                daily_credit = max(float(daily_credit), 0)
+                total_daily_credit += daily_credit
+                
+                logger.debug(f"Customer {customer.id}: credit = {daily_credit}")
+                
+            except Exception as e:
+                logger.error(f"Error calculating credit for customer {customer.id}: {str(e)}")
+                continue  # Skip this customer and continue with others
+        
+        logger.info(f"Total daily credit for {date}: {total_daily_credit}")
+        
+        return {
+            "date": date,
+            "total_credit": total_daily_credit
+        }
+        
+    except Exception as e:
+        logger.error(f"Error in get_silk_daily_credit: {str(e)}")
+        raise HTTPException(status_code=500, detail=f"Internal server error: {str(e)}")
 
+
+@router.get("/saala-transactions-by-date-range")
+def get_saala_transactions_by_date_range(
+    from_date: str = Query(..., description="Start date in YYYY-MM-DD format"),
+    to_date: str = Query(..., description="End date in YYYY-MM-DD format"),
+    db: Session = Depends(get_db),
+    user = Depends(get_current_user)
+):
+    """
+    Get all SAALA transactions for a date range, grouped by customer.
+    Returns transactions for all customers within the specified date range.
+    """
+    try:
+        start_date = datetime.strptime(from_date, "%Y-%m-%d").date()
+        end_date = datetime.strptime(to_date, "%Y-%m-%d").date()
+        
+        # Create datetime range for the entire days to handle timezone issues
+        from datetime import time
+        start_datetime = datetime.combine(start_date, time.min)
+        end_datetime = datetime.combine(end_date, time.max)
+    except ValueError:
+        raise HTTPException(status_code=400, detail="Invalid date format. Use YYYY-MM-DD")
+    
+    try:
+        # Get all customers for the vendor
+        customers = db.query(SaalaCustomer).filter(
+            SaalaCustomer.vendor_id == user.vendor_id
+        ).all()
+        
+        logger.info(f"Found {len(customers)} customers for vendor {user.vendor_id}")
+        
+        result = []
+        
+        # For each customer, get transactions within the date range
+        for customer in customers:
+            try:
+                # Get transactions for this customer within the date range
+                transactions = (
+                    db.query(SaalaTransaction)
+                    .filter(
+                        SaalaTransaction.customer_id == customer.id,
+                        SaalaTransaction.date >= start_datetime,
+                        SaalaTransaction.date <= end_datetime
+                    )
+                    .order_by(SaalaTransaction.date.desc())
+                    .all()
+                )
+                
+                if transactions:
+                    # Convert transactions to dictionary format
+                    transaction_data = []
+                    for txn in transactions:
+                        transaction_data.append({
+                            "id": txn.id,
+                            "date": txn.date.isoformat() if txn.date else None,
+                            "description": txn.description or "",
+                            "item_code": txn.item_code or "",
+                            "item_name": txn.item_name or "",
+                            "qty": float(txn.qty) if txn.qty is not None else 0,
+                            "rate": float(txn.rate) if txn.rate is not None else 0,
+                            "total_amount": float(txn.total_amount) if txn.total_amount is not None else 0,
+                            "paid_amount": float(txn.paid_amount) if txn.paid_amount is not None else 0,
+                            "balance": float(txn.balance) if txn.balance is not None else 0,
+                            "created_at": txn.created_at.isoformat() if txn.created_at else None
+                        })
+                    
+                    # Add customer data with their transactions
+                    result.append({
+                        "customer_id": customer.id,
+                        "customer_name": customer.name,
+                        "customer_contact": customer.contact or "",
+                        "customer_address": customer.address or "",
+                        "transactions": transaction_data,
+                        "transaction_count": len(transaction_data)
+                    })
+                    
+                    logger.debug(f"Customer {customer.id}: {len(transaction_data)} transactions")
+                
+            except Exception as e:
+                logger.error(f"Error fetching transactions for customer {customer.id}: {str(e)}")
+                continue  # Skip this customer and continue with others
+        
+        logger.info(f"Total customers with transactions: {len(result)}")
+        
+        return {
+            "from_date": from_date,
+            "to_date": to_date,
+            "customers": result,
+            "total_customers": len(result)
+        }
+        
+    except Exception as e:
+        logger.error(f"Error in get_saala_transactions_by_date_range: {str(e)}")
+        raise HTTPException(status_code=500, detail=f"Internal server error: {str(e)}")
 
 # ========== DAILY CASH & UPI COLLECTIONS ========== #
 
@@ -585,7 +693,11 @@ def save_daily_collection(
     # Check if record exists for the date
     existing = db.query(SilkDailyCollection).filter_by(date=target_date).first()
 
-    print(f"[SILK COLLECTION SAVE] date={target_date} cash={data.cash} upi={data.upi}")
+    logger.debug("Silk collection save", extra={
+        "date": target_date,
+        "cash": data.cash,
+        "upi": data.upi
+    })
 
     if existing:
         # Update existing record
@@ -638,9 +750,11 @@ def get_daily_collections(
         .all()
     )
 
-    # Print debug logs
-    for collection in collections:
-        print(f"[SILK COLLECTION FETCH] date={collection.date} cash={collection.cash} upi={collection.upi}")
+    # Log debug info
+    logger.debug("Silk collection fetch", extra={
+        "collections_count": len(collections),
+        "sample_dates": [c.date for c in collections[:3]]
+    })
 
     return {"collections": collections}
 
@@ -669,6 +783,10 @@ def get_daily_collection_by_date(
     if not collection:
         raise HTTPException(status_code=404, detail="No collection found for the specified date")
 
-    print(f"[SILK COLLECTION FETCH] date={collection.date} cash={collection.cash} upi={collection.upi}")
+    logger.debug("Silk collection fetch by date", extra={
+        "date": collection.date,
+        "cash": collection.cash,
+        "upi": collection.upi
+    })
     
     return collection

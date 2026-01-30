@@ -2,6 +2,8 @@
 @tailwind components;
 @tailwind utilities;
 
+/* Keyboard Navigation Focus Styles */
+
 /* ============================================
    ENTERPRISE UI DESIGN SYSTEM
    Professional SaaS / ERP Styling
@@ -72,6 +74,33 @@ button:active {
   transform: translateY(1px);
 }
 
+/* Enhanced focus visibility for keyboard navigation */
+:focus-visible {
+  outline: 2px solid #2563eb;
+  outline-offset: 2px;
+  box-shadow: 0 0 0 4px rgba(37, 99, 235, 0.1);
+}
+
+/* Specific focus styles for ERP data entry fields */
+[data-enter-index]:focus-visible {
+  outline: 2px solid #2563eb;
+  outline-offset: 2px;
+  box-shadow: 0 0 0 4px rgba(37, 99, 235, 0.15);
+  border-color: #2563eb !important;
+}
+
+/* SearchableSelect focus enhancement */
+[data-searchable-select] input:focus-visible {
+  outline: 2px solid #2563eb;
+  outline-offset: 2px;
+}
+
+/* Validation error states */
+[data-enter-index].validation-error {
+  border-color: #ef4444 !important;
+  box-shadow: 0 0 0 2px rgba(239, 68, 68, 0.2);
+}
+
 /* Table row hover enhancement - subtle */
 tbody tr {
   transition: background-color 0.15s ease;
@@ -79,6 +108,19 @@ tbody tr {
 
 tbody tr:hover {
   background-color: #f8fafc !important;
+}
+
+/* High contrast focus for accessibility */
+@media (prefers-contrast: high) {
+  :focus-visible {
+    outline: 3px solid #000;
+    outline-offset: 3px;
+  }
+  
+  [data-enter-index]:focus-visible {
+    outline: 3px solid #000;
+    outline-offset: 3px;
+  }
 }
 
 /* Enhanced table styling */

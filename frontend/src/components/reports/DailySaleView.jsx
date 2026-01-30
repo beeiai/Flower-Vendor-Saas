@@ -214,6 +214,7 @@ const DailySaleReport = ({ onCancel }) => {
                 value={selectedGroup}
                 onChange={(e) => setSelectedGroup(e.target.value)}
                 className="w-full border p-2 text-[11px] font-bold outline-none bg-white"
+                data-enter-index="1"
               >
                 <option value="">-- Select Group --</option>
                 {groups.map(group => <option key={group.id} value={group.name}>{group.name}</option>)}
@@ -228,6 +229,7 @@ const DailySaleReport = ({ onCancel }) => {
                 value={fromDate}
                 onChange={(e) => setFromDate(e.target.value)}
                 className="w-full border p-2 text-[11px] font-bold outline-none" 
+                data-enter-index="2"
               />
             </div>
             <div className="col-span-3">
@@ -237,6 +239,7 @@ const DailySaleReport = ({ onCancel }) => {
                 value={toDate}
                 onChange={(e) => setToDate(e.target.value)}
                 className="w-full border p-2 text-[11px] font-bold outline-none" 
+                data-enter-index="3"
               />
             </div>
 
@@ -246,6 +249,7 @@ const DailySaleReport = ({ onCancel }) => {
                 onClick={handleFilter}
                 disabled={loading || !selectedGroup}
                 className="bg-slate-800 text-white px-6 h-9 font-black uppercase text-[10px] hover:bg-slate-700 shadow-lg disabled:opacity-40 flex items-center gap-2"
+                data-enter-index="4"
               >
                 <Search size={14} /> {loading ? 'Loading...' : 'GO'}
               </button>
@@ -319,12 +323,14 @@ const DailySaleReport = ({ onCancel }) => {
               <button 
                 onClick={handleSendSMS}
                 className="bg-emerald-600 text-white px-6 h-9 font-black uppercase text-[10px] hover:bg-emerald-700 shadow-lg flex items-center gap-2"
+                data-enter-index="5"
               >
                 <Send size={14} /> SEND SMS
               </button>
               <button 
                 onClick={handlePrint}
                 className="bg-slate-800 text-white px-6 h-9 font-black uppercase text-[10px] hover:bg-slate-700 shadow-lg flex items-center gap-2"
+                data-enter-index="6"
               >
                 <Printer size={14} /> PRINT
               </button>
@@ -332,6 +338,7 @@ const DailySaleReport = ({ onCancel }) => {
                 <button 
                   onClick={onCancel}
                   className="bg-slate-300 text-slate-800 px-6 h-9 font-black uppercase text-[10px] hover:bg-slate-400 flex items-center gap-2"
+                  data-enter-index="7"
                 >
                   CANCEL
                 </button>

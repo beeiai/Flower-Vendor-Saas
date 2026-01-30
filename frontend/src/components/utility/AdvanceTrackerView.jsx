@@ -115,7 +115,7 @@ export default function AdvanceTrackerView({ groups = [], customers = [], advanc
     <div className="flex-1 flex flex-col h-full bg-[#f1f3f5] overflow-hidden">
       <div className="bg-slate-800 px-4 py-2 flex justify-between items-center text-white shrink-0 shadow-lg">
         <h1 className="text-[14px] font-black uppercase flex items-center gap-2"><WalletCards className="w-4 h-4 text-rose-500" /> ADVANCE</h1>
-        <button onClick={onCancel} className="p-1 hover:bg-rose-600"><X className="w-4 h-4" /></button>
+        <button onClick={onCancel} className="p-1 hover:bg-rose-600" data-enter-index="6"><X className="w-4 h-4" /></button>
       </div>
 
       <div className="p-4 flex-1 flex flex-col gap-3 overflow-hidden">
@@ -128,6 +128,7 @@ export default function AdvanceTrackerView({ groups = [], customers = [], advanc
                 className="w-full border p-2 text-[11px] font-bold outline-none bg-white"
                 value={groupName}
                 onChange={e => setGroupName(e.target.value)}
+                data-enter-index="1"
               >
                 <option value="">Select group</option>
                 {groupOptions.map(g => (
@@ -143,6 +144,7 @@ export default function AdvanceTrackerView({ groups = [], customers = [], advanc
                 value={customerName}
                 onChange={e => setCustomerName(e.target.value)}
                 disabled={!groupName}
+                data-enter-index="2"
               >
                 <option value="">Select customer</option>
                 {filteredCustomers.map(c => (
@@ -164,6 +166,7 @@ export default function AdvanceTrackerView({ groups = [], customers = [], advanc
                 value={givenInput}
                 onChange={e => setGivenInput(e.target.value)}
                 disabled={!selectedCustomer?.id}
+                data-enter-index="3"
               />
             </div>
 
@@ -175,6 +178,7 @@ export default function AdvanceTrackerView({ groups = [], customers = [], advanc
                 value={deductedInput}
                 onChange={e => setDeductedInput(e.target.value)}
                 disabled={!selectedCustomer?.id}
+                data-enter-index="4"
               />
             </div>
 
@@ -193,6 +197,7 @@ export default function AdvanceTrackerView({ groups = [], customers = [], advanc
                 onClick={handleSave}
                 disabled={!selectedCustomer?.id || saving}
                 className="bg-emerald-600 text-white px-10 h-9 rounded-none font-black uppercase text-[10px] flex items-center gap-2 hover:bg-emerald-700 shadow-lg disabled:opacity-40"
+                data-enter-index="5"
               >
                 <Save className="w-3.5 h-3.5" /> SAVE
               </button>

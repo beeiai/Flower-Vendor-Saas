@@ -122,6 +122,7 @@ export default function PartyDetailsView({ customers = [], onCancel, showNotify 
               className="w-full border p-2 text-[11px] font-bold outline-none bg-white"
               value={selectedGroup}
               onChange={(e) => setSelectedGroup(e.target.value)}
+              data-enter-index="1"
             >
               {groupOptions.map(g => (
                 <option key={String(g)} value={String(g)}>{String(g)}</option>
@@ -149,13 +150,14 @@ export default function PartyDetailsView({ customers = [], onCancel, showNotify 
                 const smsEnabled = Boolean(smsByKey[key] ?? true);
 
                 return (
-                  <tr key={key || idx} className="border-b hover:bg-slate-50 transition-colors">
+                  <tr key={key || idx} className="border-b hover:bg-slate-50 transition-colors" data-enter-index={4 + idx}>
                     <td className="p-3 text-center">
                       <input
                         type="checkbox"
                         checked={checked}
                         onChange={() => toggleRowSelected(key)}
                         className="h-4 w-4"
+                        data-enter-index={4 + idx}
                       />
                     </td>
                     <td className="p-3 font-bold text-slate-700">{idx + 1}</td>
@@ -188,11 +190,11 @@ export default function PartyDetailsView({ customers = [], onCancel, showNotify 
 
         <div className="flex items-center justify-between bg-white border border-slate-300 p-3">
           <label className="flex items-center gap-2 text-[10px] font-black uppercase text-slate-600">
-            <input type="checkbox" checked={allSelected} onChange={toggleSelectAll} className="h-4 w-4" />
+            <input type="checkbox" checked={allSelected} onChange={toggleSelectAll} className="h-4 w-4" data-enter-index="2" />
             Select All
           </label>
 
-          <button onClick={handleSave} className="bg-emerald-600 text-white px-6 py-2 rounded-none font-black uppercase text-[10px] flex items-center gap-2 hover:bg-emerald-700 shadow-lg">
+          <button onClick={handleSave} className="bg-emerald-600 text-white px-6 py-2 rounded-none font-black uppercase text-[10px] flex items-center gap-2 hover:bg-emerald-700 shadow-lg" data-enter-index="3">
             <Save className="w-3.5 h-3.5" /> SAVE
           </button>
         </div>

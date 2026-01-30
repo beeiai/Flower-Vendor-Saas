@@ -1,6 +1,6 @@
-from fastapi import APIRouter, Depends, HTTPException, status
-from sqlalchemy.orm import Session
-from sqlalchemy import or_
+from fastapi import APIRouter, Depends, HTTPException, status, Query
+from sqlalchemy.orm import Session, joinedload
+from sqlalchemy import or_, func
 
 from app.core.db import get_db
 from app.models.farmer import Farmer
@@ -80,15 +80,28 @@ def create_farmer(
 # ---------- READ (LIST) ----------
 @router.get("/")
 def list_farmers(
+    page: int = Query(1, ge=1),
+    size: int = Query(50, ge=1, le=1000),
     db: Session = Depends(get_db),
     user = Depends(get_current_user)
 ):
-    rows = db.query(Farmer).filter(
-        Farmer.vendor_id == user.vendor_id
-    ).all()
+    # Hard cap to prevent accidental overload
+    size = min(size, 1000)
+    offset = (page - 1) * size
+    
+    # Use joinedload to prevent N+1 queries
+    query = db.query(Farmer)\
+        .options(joinedload(Farmer.group))\
+        .filter(Farmer.vendor_id == user.vendor_id)
+    
+    total = db.query(func.count(Farmer.id))\
+        .filter(Farmer.vendor_id == user.vendor_id)\
+        .scalar()
+    
+    rows = query.offset(offset).limit(size).all()
 
     def to_ui(f: Farmer):
-        grp_name = f.group.name if getattr(f, "group", None) else None
+        grp_name = f.group.name if f.group else None
         return {
             "id": f.id,
             "name": f.name,
@@ -101,7 +114,9 @@ def list_farmers(
             "code": f.farmer_code,
         }
 
-    return [to_ui(f) for f in rows]
+    items = [to_ui(f) for f in rows]
+    
+    return items
 
 
 # ---------- READ (SELECT UI: by group / search) ----------
@@ -110,6 +125,8 @@ def list_farmers_by_group(
     group_id: int | None = None,
     group_name: str | None = None,
     q: str | None = None,
+    page: int = Query(1, ge=1),
+    size: int = Query(100, ge=1, le=1000),
     db: Session = Depends(get_db),
     user = Depends(get_current_user),
 ):
@@ -118,7 +135,12 @@ def list_farmers_by_group(
     The payload is shaped for dropdown/autocomplete components:
     [{ id, name, code, label, value, phone }].
     """
-    query = db.query(Farmer).filter(Farmer.vendor_id == user.vendor_id)
+    # Hard cap to prevent accidental overload
+    size = min(size, 1000)
+    offset = (page - 1) * size
+    query = db.query(Farmer)\
+        .options(joinedload(Farmer.group))\
+        .filter(Farmer.vendor_id == user.vendor_id)
 
     if group_id is None and group_name:
         grp = db.query(FarmerGroup.id).filter(
@@ -135,7 +157,8 @@ def list_farmers_by_group(
         like = f"%{q}%"
         query = query.filter(or_(Farmer.name.ilike(like), Farmer.farmer_code.ilike(like)))
 
-    rows = query.order_by(Farmer.name.asc()).all()
+    total = query.count()
+    rows = query.order_by(Farmer.name.asc()).offset(offset).limit(size).all()
 
     def to_select(f: Farmer):
         code = f.farmer_code or ""
@@ -143,7 +166,7 @@ def list_farmers_by_group(
         return {
             "id": f.id,
             "name": f.name,
-            "group_name": f.group.name if getattr(f, "group", None) else None,
+            "group_name": f.group.name if f.group else None,
             "code": code,
             "farmer_code": code,
             "label": label,
@@ -153,7 +176,9 @@ def list_farmers_by_group(
             "address": f.address,
         }
 
-    return [to_select(f) for f in rows]
+    items = [to_select(f) for f in rows]
+    
+    return items
 
 
 @router.get("/group/{group_id}/")

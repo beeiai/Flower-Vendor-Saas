@@ -7,26 +7,49 @@ from fastapi.responses import JSONResponse
 from jose import jwt, JWTError
 
 from app.core.config import settings
+from app.core.redis_client import redis_client
 
 
 logger = logging.getLogger(__name__)
 
 
-class _FixedWindowRateLimiter:
-    """Simple in-memory fixed-window rate limiter.
+class _DistributedRateLimiter:
+    """Distributed rate limiter using Redis with sliding window approximation.
 
-    This implementation is per-process and suitable for single-instance or
-    low-scale deployments. In a multi-instance environment, replace this with a
-    shared store (e.g. Redis) but keep the same interface.
+    Falls back to in-memory if Redis is unavailable.
+    Uses atomic operations for thread/multi-process safety.
     """
 
     def __init__(self) -> None:
-        # key -> (window_start, count)
-        self._buckets: Dict[str, Tuple[float, int]] = {}
+        # Fallback in-memory storage
+        self._local_buckets: Dict[str, Tuple[float, int]] = {}
 
-    def is_allowed(self, key: str, limit: int, window_seconds: int) -> bool:
+    async def is_allowed(self, key: str, limit: int, window_seconds: int) -> bool:
+        # Attempt Redis connection if not already attempted
+        # This ensures connection is tried lazily on first use
+        if settings.ENABLE_DISTRIBUTED_RATE_LIMITING and settings.REDIS_URL:
+            # Initialize connection if needed (lazy connection)
+            if not redis_client._connection_attempted:
+                await redis_client.connect()
+            
+            # Try Redis if connected
+            if redis_client.is_connected:
+                try:
+                    # Use Redis atomic increment with TTL
+                    current_count = await redis_client.increment_with_ttl(
+                        f"rate_limit:{key}", 
+                        window_seconds
+                    )
+                    return current_count <= limit
+                except Exception as e:
+                    logger.warning(f"Redis rate limiting failed for key {key}: {e}")
+                    # Fall back to in-memory on Redis failure
+                    # Connection status will be updated in redis_client
+                    pass
+        
+        # In-memory fallback (existing logic)
         now = time.monotonic()
-        window_start, count = self._buckets.get(key, (now, 0))
+        window_start, count = self._local_buckets.get(key, (now, 0))
 
         # Reset window if it has expired
         if now - window_start >= window_seconds:
@@ -34,14 +57,14 @@ class _FixedWindowRateLimiter:
 
         if count >= limit:
             # Store the existing window so we don't extend the block time
-            self._buckets[key] = (window_start, count)
+            self._local_buckets[key] = (window_start, count)
             return False
 
-        self._buckets[key] = (window_start, count + 1)
+        self._local_buckets[key] = (window_start, count + 1)
         return True
 
 
-_limiter = _FixedWindowRateLimiter()
+_limiter = _DistributedRateLimiter()
 
 
 def _get_client_ip(request: Request) -> str:
@@ -91,6 +114,7 @@ async def rate_limit_middleware(request: Request, call_next):
     * General API: broader limits (API_RATE_LIMIT).
 
     On violation, returns HTTP 429 with a standardized JSON body.
+    Supports both in-memory and distributed (Redis) rate limiting.
     """
 
     path = request.url.path or ""
@@ -110,7 +134,7 @@ async def rate_limit_middleware(request: Request, call_next):
 
     # IP-based limiting
     ip_key = f"{scope}:ip:{ip}"
-    if not _limiter.is_allowed(ip_key, limit, window):
+    if not await _limiter.is_allowed(ip_key, limit, window):
         logger.warning(
             "Rate limit exceeded (scope=%s, ip=%s, user=%s, path=%s)",
             scope,
@@ -120,13 +144,16 @@ async def rate_limit_middleware(request: Request, call_next):
         )
         return JSONResponse(
             status_code=429,
-            content={"detail": "Too many requests. Please try again later."},
+            content={
+                "detail": "Too many requests. Please try again later.",
+                "retry_after": window
+            },
         )
 
     # Authenticated user-based limiting (applies only when we have a valid JWT)
     if user_id is not None:
         user_key = f"{scope}:{user_id}"
-        if not _limiter.is_allowed(user_key, limit, window):
+        if not await _limiter.is_allowed(user_key, limit * 3, window):  # Higher limit for authenticated users
             logger.warning(
                 "User rate limit exceeded (scope=%s, user=%s, ip=%s, path=%s)",
                 scope,
@@ -136,7 +163,10 @@ async def rate_limit_middleware(request: Request, call_next):
             )
             return JSONResponse(
                 status_code=429,
-                content={"detail": "Too many requests. Please try again later."},
+                content={
+                    "detail": "Too many requests. Please try again later.",
+                    "retry_after": window
+                },
             )
 
     # Within rate limits; proceed to the next middleware/handler

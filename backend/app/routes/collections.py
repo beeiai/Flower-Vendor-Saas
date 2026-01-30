@@ -1,5 +1,6 @@
-from fastapi import APIRouter, Depends, HTTPException, status
-from sqlalchemy.orm import Session
+from fastapi import APIRouter, Depends, HTTPException, status, Query
+from sqlalchemy.orm import Session, joinedload
+from sqlalchemy import func
 from datetime import date
 
 from app.core.db import get_db
@@ -84,19 +85,42 @@ def create_collection_items(
 def list_collections(
     from_date: date | None = None,
     to_date: date | None = None,
+    page: int = Query(1, ge=1),
+    size: int = Query(100, ge=1, le=1000),
     db: Session = Depends(get_db),
     user = Depends(get_current_user)
 ):
-    q = db.query(CollectionItem).filter(
-        CollectionItem.vendor_id == user.vendor_id
-    )
+    # Hard cap to prevent accidental overload
+    size = min(size, 1000)
+    offset = (page - 1) * size
+    
+    # Use joinedload for related data to prevent N+1 queries
+    q = db.query(CollectionItem)\
+        .options(
+            joinedload(CollectionItem.farmer),
+            joinedload(CollectionItem.vehicle),
+            joinedload(CollectionItem.group)
+        )\
+        .filter(CollectionItem.vendor_id == user.vendor_id)
 
     if from_date:
         q = q.filter(CollectionItem.date >= from_date)
     if to_date:
         q = q.filter(CollectionItem.date <= to_date)
-
-    return q.order_by(CollectionItem.date.desc()).all()
+    
+    # Add pagination
+    total = q.count()
+    items = q.order_by(CollectionItem.date.desc()).offset(offset).limit(size).all()
+    
+    return {
+        "items": items,
+        "pagination": {
+            "page": page,
+            "size": size,
+            "total": total,
+            "pages": (total + size - 1) // size
+        }
+    }
 
 @router.put("/{item_id}")
 def update_collection_item(

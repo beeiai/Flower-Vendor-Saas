@@ -379,7 +379,7 @@ export function SilkSummaryView({ ledgerStore = {}, customers = [], onCancel }) 
           </h1>
           <p className="text-[8px] text-slate-400 uppercase font-bold tracking-widest mt-0.5 italic">Automated Financial Reconciliation</p>
         </div>
-        <button onClick={handleCancel} className="p-1 hover:bg-rose-600 transition-colors"><X className="w-4 h-4" /></button>
+        <button onClick={handleCancel} className="p-1 hover:bg-rose-600 transition-colors" data-enter-index="7"><X className="w-4 h-4" /></button>
       </div>
 
       <div className="p-4 flex-1 flex flex-col gap-4 overflow-hidden">
@@ -395,11 +395,13 @@ export function SilkSummaryView({ ledgerStore = {}, customers = [], onCancel }) 
                 className="border-2 border-slate-100 p-1.5 text-[12px] font-bold outline-none focus:border-rose-500 bg-slate-50 h-[32px]"
                 value={selectedDate}
                 onChange={(e) => setSelectedDate(e.target.value)}
+                data-enter-index="1"
               />
             </div>
             <button 
               onClick={handleFetch}
               className="mt-4 flex items-center gap-2 bg-slate-800 text-white px-4 py-2 text-[10px] font-black uppercase hover:bg-rose-600 transition-all shadow-md active:scale-95"
+              data-enter-index="2"
             >
               <RefreshCcw className="w-3.5 h-3.5" /> Fetch
             </button>
@@ -435,7 +437,7 @@ export function SilkSummaryView({ ledgerStore = {}, customers = [], onCancel }) 
               <label className="text-[9px] font-black uppercase text-slate-400">Credit Amount</label>
               <div className="relative">
                 <History className="absolute left-2 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-300" />
-                <input type="number" placeholder="0.00" className="w-full pl-8 pr-3 py-2 border-2 border-slate-100 font-black text-lg outline-none focus:border-rose-500 transition-all shadow-inner bg-slate-50 cursor-not-allowed" value={dailyCredit} readOnly />
+                <input type="number" placeholder="0.00" className="w-full pl-8 pr-3 py-2 border-2 border-slate-100 font-black text-lg outline-none focus:border-rose-500 transition-all shadow-inner bg-slate-50 cursor-not-allowed" value={dailyCredit} readOnly data-enter-index="3" />
               </div>
             </div>
             <div className="space-y-1">
@@ -448,6 +450,7 @@ export function SilkSummaryView({ ledgerStore = {}, customers = [], onCancel }) 
                   className="w-full pl-8 pr-3 py-2 border-2 border-slate-100 font-black text-lg outline-none focus:border-emerald-500 transition-all shadow-inner"
                   value={cashAmount}
                   onChange={(e) => setCashAmount(Number(e.target.value) || 0)}
+                  data-enter-index="4"
                 />
               </div>
             </div>
@@ -461,6 +464,7 @@ export function SilkSummaryView({ ledgerStore = {}, customers = [], onCancel }) 
                   className="w-full pl-8 pr-3 py-2 border-2 border-slate-100 font-black text-lg outline-none focus:border-blue-500 transition-all shadow-inner"
                   value={upiAmount}
                   onChange={(e) => setUpiAmount(Number(e.target.value) || 0)}
+                  data-enter-index="5"
                 />
               </div>
             </div>
@@ -470,6 +474,7 @@ export function SilkSummaryView({ ledgerStore = {}, customers = [], onCancel }) 
               onClick={handleSaveCollection}
               disabled={saving || loading}
               className="bg-slate-800 text-white px-8 py-3 font-semibold uppercase text-sm flex items-center gap-2 shadow-md disabled:opacity-40 rounded-sm transition-all hover:bg-primary-600"
+              data-enter-index="6"
             >
               <Coins className="w-4 h-4" /> {saving ? 'Saving...' : 'Save Collection'}
             </button>

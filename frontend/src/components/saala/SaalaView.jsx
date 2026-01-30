@@ -3,6 +3,8 @@ import { X, Users, UserPlus, Edit2, Trash2, Database, PackagePlus, Save, Plus } 
 import { SearchableSelect } from '../shared/SearchableSelect';
 import { api } from '../../utils/api';
 import { DEFAULT_STATES } from '../../utils/stateManager';
+import { useKeyboardNavigation } from '../../hooks/useKeyboardNavigation';
+import { useERPEnterNavigation } from '../../hooks/useERPEnterNavigation';
 
 // ============================================================================
 // TAB 1: SAALA CUSTOMER ADDITION
@@ -70,6 +72,7 @@ function CustomerAdditionTab({ customers, setCustomers, showNotify }) {
               value={form.name} 
               onChange={e => setForm({ ...form, name: e.target.value })} 
               placeholder="Enter name"
+              data-enter-index="1"
             />
           </div>
           <div>
@@ -81,6 +84,7 @@ function CustomerAdditionTab({ customers, setCustomers, showNotify }) {
               value={form.contact} 
               onChange={e => setForm({ ...form, contact: e.target.value })} 
               placeholder="Phone number"
+              data-enter-index="2"
             />
           </div>
           <div>
@@ -92,12 +96,15 @@ function CustomerAdditionTab({ customers, setCustomers, showNotify }) {
               value={form.address} 
               onChange={e => setForm({ ...form, address: e.target.value })} 
               placeholder="Address"
+              data-enter-index="3"
             />
           </div>
           <div className="flex gap-2 pt-2">
             <button 
+              data-action="primary"
               onClick={handleSave} 
               className="flex-1 bg-primary-600 text-white py-3 font-semibold text-sm rounded-sm hover:bg-primary-700 transition-all"
+              data-enter-index="4"
             >
               {editingId ? 'Update' : 'Add Customer'}
             </button>
@@ -105,6 +112,7 @@ function CustomerAdditionTab({ customers, setCustomers, showNotify }) {
               <button 
                 onClick={handleCancel} 
                 className="px-4 bg-slate-100 text-slate-700 py-3 font-semibold text-sm rounded-sm border border-slate-300 hover:bg-slate-200 transition-all"
+                data-enter-index="5"
               >
                 Cancel
               </button>
@@ -161,9 +169,252 @@ function CustomerAdditionTab({ customers, setCustomers, showNotify }) {
 }
 
 // ============================================================================
+// TAB 4: DATE RANGE REPORT
+// ============================================================================
+function DateRangeReportTab({ customers, showNotify }) {
+  const [dateRange, setDateRange] = useState({
+    fromDate: '',
+    toDate: ''
+  });
+  const [reportData, setReportData] = useState([]);
+  const [loading, setLoading] = useState(false);
+  const [error, setError] = useState('');
+
+  const handleGenerateReport = async () => {
+    // Validation
+    if (!dateRange.fromDate || !dateRange.toDate) {
+      showNotify?.('Please select both from and to dates', 'error');
+      return;
+    }
+
+    if (new Date(dateRange.fromDate) > new Date(dateRange.toDate)) {
+      showNotify?.('From date cannot be later than to date', 'error');
+      return;
+    }
+
+    setLoading(true);
+    setError('');
+    setReportData([]);
+
+    try {
+      const token = localStorage.getItem('skfs_auth_token');
+      const vendorId = localStorage.getItem('skfs_vendor_id');
+
+      const response = await fetch(
+        `http://localhost:8000/api/silk/saala-transactions-by-date-range?from_date=${dateRange.fromDate}&to_date=${dateRange.toDate}`,
+        {
+          method: 'GET',
+          headers: {
+            'Authorization': `Bearer ${token}`,
+            'Content-Type': 'application/json'
+          }
+        }
+      );
+
+      if (!response.ok) {
+        const errorData = await response.json();
+        throw new Error(errorData.detail || 'Failed to fetch report data');
+      }
+
+      const result = await response.json();
+      setReportData(result.customers || []);
+      
+      if (result.customers && result.customers.length === 0) {
+        showNotify?.('No transactions found for the selected date range', 'info');
+      } else {
+        showNotify?.(`Report generated successfully: ${result.total_customers} customers with transactions`, 'success');
+      }
+    } catch (e) {
+      setError(e.message);
+      showNotify?.(`Error: ${e.message}`, 'error');
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const formatDate = (dateString) => {
+    if (!dateString) return '--';
+    return new Date(dateString).toLocaleDateString('en-GB');
+  };
+
+  const formatCurrency = (amount) => {
+    return `₹${Number(amount || 0).toLocaleString()}`;
+  };
+
+  return (
+    <div className="flex-1 flex flex-col gap-4 p-4 overflow-hidden">
+      {/* Date Range Selection */}
+      <section className="bg-white border border-slate-200 p-4 shadow-card rounded-sm shrink-0">
+        <div className="flex items-center gap-2 mb-4 text-primary-600 font-semibold text-xs border-b pb-2">
+          <Database className="w-4 h-4" /> Date Range Selection
+        </div>
+        <div className="grid grid-cols-1 md:grid-cols-4 gap-4 max-w-2xl">
+          <div>
+            <label className="text-xs font-medium text-slate-600 block mb-1">From Date *</label>
+            <input 
+              type="date" 
+              className="w-full border border-slate-300 px-3 rounded-sm outline-none focus:border-primary-500 focus:ring-2 focus:ring-primary-50 transition-all" 
+              style={{ height: '36px' }}
+              value={dateRange.fromDate} 
+              onChange={e => setDateRange({...dateRange, fromDate: e.target.value})} 
+            />
+          </div>
+          <div>
+            <label className="text-xs font-medium text-slate-600 block mb-1">To Date *</label>
+            <input 
+              type="date" 
+              className="w-full border border-slate-300 px-3 rounded-sm outline-none focus:border-primary-500 focus:ring-2 focus:ring-primary-50 transition-all" 
+              style={{ height: '36px' }}
+              value={dateRange.toDate} 
+              onChange={e => setDateRange({...dateRange, toDate: e.target.value})} 
+            />
+          </div>
+          <div className="md:col-span-2 flex items-end">
+            <button 
+              onClick={handleGenerateReport}
+              disabled={loading || !dateRange.fromDate || !dateRange.toDate}
+              className="w-full bg-primary-600 text-white py-2 px-4 text-sm font-semibold rounded-sm hover:bg-primary-700 shadow-md transition-all active:translate-y-px disabled:opacity-40 flex items-center justify-center gap-2"
+              style={{ height: '36px' }}
+            >
+              {loading ? (
+                <>
+                  <div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin"></div>
+                  Generating...
+                </>
+              ) : (
+                <>
+                  <Database className="w-4 h-4" />
+                  Generate Report
+                </>
+              )}
+            </button>
+          </div>
+        </div>
+      </section>
+
+      {/* Error Message */}
+      {error && (
+        <div className="bg-red-50 border border-red-200 rounded-sm p-3 text-red-800 text-sm">
+          <div className="flex items-center gap-2">
+            <span className="font-semibold">Error:</span>
+            {error}
+          </div>
+        </div>
+      )}
+
+      {/* Report Results */}
+      <section className="flex-1 bg-white border border-slate-200 shadow-card rounded-sm overflow-hidden flex flex-col">
+        <div className="bg-slate-100 px-4 py-2.5 border-b font-semibold text-xs text-slate-600 flex items-center justify-between">
+          <div className="flex items-center gap-2">
+            <Users className="w-4 h-4" /> SAALA Transactions Report
+            {reportData.length > 0 && (
+              <span className="bg-primary-100 text-primary-800 px-2 py-0.5 rounded-full text-xs">
+                {reportData.length} Customer{reportData.length !== 1 ? 's' : ''}
+              </span>
+            )}
+          </div>
+          <div className="text-xs text-slate-500">
+            {dateRange.fromDate && dateRange.toDate && (
+              `Period: ${new Date(dateRange.fromDate).toLocaleDateString()} - ${new Date(dateRange.toDate).toLocaleDateString()}`
+            )}
+          </div>
+        </div>
+        
+        <div className="flex-1 overflow-auto custom-table-scroll">
+          {reportData.length === 0 ? (
+            <div className="p-12 text-center text-slate-400 italic font-medium text-sm">
+              {loading ? 'Generating report...' : 'Select a date range and click Generate Report to view transactions'}
+            </div>
+          ) : (
+            <div className="divide-y divide-slate-100">
+              {reportData.map((customerData, customerIndex) => (
+                <div key={customerData.customer_id} className="border-b border-slate-200 last:border-b-0">
+                  {/* Customer Header */}
+                  <div className="bg-slate-50 px-4 py-3 border-l-4 border-primary-500">
+                    <div className="flex items-center justify-between">
+                      <div>
+                        <h3 className="font-semibold text-slate-800 text-sm">
+                          {customerData.customer_name}
+                        </h3>
+                        <div className="flex items-center gap-4 mt-1 text-xs text-slate-600">
+                          {customerData.customer_contact && (
+                            <span>📞 {customerData.customer_contact}</span>
+                          )}
+                          {customerData.customer_address && (
+                            <span>📍 {customerData.customer_address}</span>
+                          )}
+                          <span>{customerData.transaction_count} transaction{customerData.transaction_count !== 1 ? 's' : ''}</span>
+                        </div>
+                      </div>
+                      <div className="text-right">
+                        <div className="text-xs text-slate-500">Total Amount</div>
+                        <div className="font-semibold text-slate-800">
+                          {formatCurrency(
+                            customerData.transactions.reduce((sum, txn) => sum + (txn.total_amount || 0), 0)
+                          )}
+                        </div>
+                        <div className="text-xs text-emerald-600">Paid: {
+                          formatCurrency(
+                            customerData.transactions.reduce((sum, txn) => sum + (txn.paid_amount || 0), 0)
+                          )
+                        }</div>
+                      </div>
+                    </div>
+                  </div>
+                  
+                  {/* Customer Transactions */}
+                  <div className="overflow-x-auto">
+                    <table className="w-full text-left text-xs">
+                      <thead className="bg-slate-100 sticky top-0">
+                        <tr>
+                          <th className="px-3 py-2 w-20">Date</th>
+                          <th className="px-3 py-2 w-20">Item Code</th>
+                          <th className="px-3 py-2 w-24">Item Name</th>
+                          <th className="px-3 py-2 text-right w-12">Qty</th>
+                          <th className="px-3 py-2 text-right w-12">Rate</th>
+                          <th className="px-3 py-2 text-right w-20">Total</th>
+                          <th className="px-3 py-2 text-right w-20">Paid</th>
+                          <th className="px-3 py-2 text-right w-20">Balance</th>
+                          <th className="px-3 py-2 w-24">Remarks</th>
+                        </tr>
+                      </thead>
+                      <tbody>
+                        {customerData.transactions.map((txn, txnIndex) => (
+                          <tr key={txn.id} className="border-b border-slate-100 hover:bg-slate-50">
+                            <td className="px-3 py-2 font-mono text-slate-600">{formatDate(txn.date)}</td>
+                            <td className="px-3 py-2 font-mono text-slate-600">{txn.item_code || '--'}</td>
+                            <td className="px-3 py-2 text-slate-800">{txn.item_name || '--'}</td>
+                            <td className="px-3 py-2 text-right font-medium">{txn.qty || '0'}</td>
+                            <td className="px-3 py-2 text-right font-mono">₹{txn.rate || '0'}</td>
+                            <td className="px-3 py-2 text-right font-semibold text-slate-700">
+                              {formatCurrency(txn.total_amount)}
+                            </td>
+                            <td className="px-3 py-2 text-right font-semibold text-emerald-600">
+                              {formatCurrency(txn.paid_amount)}
+                            </td>
+                            <td className="px-3 py-2 text-right font-bold text-primary-600">
+                              {formatCurrency(txn.balance)}
+                            </td>
+                            <td className="px-3 py-2 text-slate-600 truncate max-w-[100px]">{txn.description || '--'}</td>
+                          </tr>
+                        ))}
+                      </tbody>
+                    </table>
+                  </div>
+                </div>
+              ))}
+            </div>
+          )}
+        </div>
+      </section>
+    </div>
+  );
+}
+
+// ============================================================================
 // TAB 3: SAALA PAYMENTS
 // ============================================================================
-function SaalaPaymentTab({ customers, showNotify }) {
+function SaalaPaymentTab({ customers, showNotify, setDropdownOpen }) {
   const [selectedCustomerId, setSelectedCustomerId] = useState(null);
   const [paymentForm, setPaymentForm] = useState({
     amount: '',
@@ -262,6 +513,8 @@ function SaalaPaymentTab({ customers, showNotify }) {
               value={selectedCustomer?.name || ''} 
               onChange={handleCustomerSelect} 
               placeholder="Search Customer" 
+              data-enter-index="18"
+              onDropdownStateChange={setDropdownOpen}
             />
           </div>
           <div>
@@ -312,6 +565,7 @@ function SaalaPaymentTab({ customers, showNotify }) {
                 style={{ height: '36px' }}
                 value={paymentForm.date} 
                 onChange={e => setPaymentForm({...paymentForm, date: e.target.value})} 
+                data-enter-index="19"
               />
             </div>
             <div>
@@ -325,6 +579,7 @@ function SaalaPaymentTab({ customers, showNotify }) {
                 placeholder="0.00"
                 min="0"
                 step="any"
+                data-enter-index="20"
               />
             </div>
             <div className="col-span-2">
@@ -336,6 +591,7 @@ function SaalaPaymentTab({ customers, showNotify }) {
                 value={paymentForm.description} 
                 onChange={e => setPaymentForm({...paymentForm, description: e.target.value})} 
                 placeholder="Payment description (optional)"
+                data-enter-index="21"
               />
             </div>
           </div>
@@ -344,6 +600,7 @@ function SaalaPaymentTab({ customers, showNotify }) {
               onClick={handlePaymentSubmit} 
               disabled={!selectedCustomerId || !paymentForm.amount}
               className="bg-emerald-600 text-white px-6 py-2 text-sm font-semibold rounded-sm hover:bg-emerald-700 shadow-md transition-all active:translate-y-px disabled:opacity-40 flex items-center gap-2"
+              data-enter-index="22"
             >
               <Save className="w-4 h-4" />
               Record Payment
@@ -362,7 +619,7 @@ function SaalaPaymentTab({ customers, showNotify }) {
 // ============================================================================
 // TAB 2: SAALA TRANSACTION (CONTINUED)
 // ============================================================================
-function SaalaTransactionTab({ customers, catalog, showNotify }) {
+function SaalaTransactionTab({ customers, catalog, showNotify, setDropdownOpen }) {
   const [selectedCustomerId, setSelectedCustomerId] = useState(null);
   const [transactions, setTransactions] = useState([]);
   const [summary, setSummary] = useState({ totalCredit: 0, totalPaid: 0, balance: 0 });
@@ -375,7 +632,7 @@ function SaalaTransactionTab({ customers, catalog, showNotify }) {
     rate: '',
     totalAmount: '',
     paidAmount: '',
-    remarks: ''
+    remarks: 'regular'
   });
 
   const qtyRef = useRef(null);
@@ -429,8 +686,16 @@ function SaalaTransactionTab({ customers, catalog, showNotify }) {
       rate: '',
       totalAmount: '',
       paidAmount: '',
-      remarks: ''
+      remarks: 'regular'
     });
+    
+    // Focus on the item code field after customer selection
+    setTimeout(() => {
+      const itemCodeField = document.querySelector('[data-enter-index="12"]');
+      if (itemCodeField) {
+        itemCodeField.focus();
+      }
+    }, 100);
   };
 
   const handleItemCodeSelect = (itemCode) => {
@@ -478,7 +743,7 @@ function SaalaTransactionTab({ customers, catalog, showNotify }) {
     // Build payload with snake_case field names to match backend expectations
     const payload = {
       date: currentEntry.date,
-      description: currentEntry.remarks?.trim() || '',
+      description: currentEntry.remarks?.trim() || 'regular',
       item_code: currentEntry.itemCode?.trim() || '',
       item_name: currentEntry.itemName?.trim() || '',
       qty: qty,
@@ -527,8 +792,16 @@ function SaalaTransactionTab({ customers, catalog, showNotify }) {
         rate: '',
         totalAmount: '',
         paidAmount: '',
-        remarks: ''
+        remarks: 'regular'
       });
+      
+      // Focus back to customer selection for next entry
+      setTimeout(() => {
+        const customerSelect = document.querySelector('[data-enter-index="10"]');
+        if (customerSelect) {
+          customerSelect.focus();
+        }
+      }, 100);
     } catch (e) {
       showNotify?.(`Failed: ${e.message}`, 'error');
     }
@@ -545,7 +818,7 @@ function SaalaTransactionTab({ customers, catalog, showNotify }) {
       rate: txn.rate !== null && txn.rate !== undefined ? String(txn.rate) : '',
       totalAmount: txn.total_amount !== null && txn.total_amount !== undefined ? String(txn.total_amount) : '',
       paidAmount: txn.paid_amount !== null && txn.paid_amount !== undefined ? String(txn.paid_amount) : '',
-      remarks: txn.description || ''
+      remarks: txn.description || 'regular'
     };
     setCurrentEntry(updatedEntry);
     console.log('Set current entry to:', updatedEntry);
@@ -569,15 +842,10 @@ function SaalaTransactionTab({ customers, catalog, showNotify }) {
     }
   };
 
-  const handleKey = (e, nextRef) => {
-    if (e.key === 'Enter') {
-      e.preventDefault();
-      nextRef?.current?.focus();
-    }
-  };
+
 
   return (
-    <div className="flex-1 flex flex-col gap-3 p-3 overflow-hidden">
+    <div className="flex-1 flex flex-col gap-3 p-3 overflow-auto">
       {/* Customer Selection & Summary */}
       <section className="bg-white border border-slate-200 p-4 shadow-card rounded-sm shrink-0">
         <div className="flex items-center gap-2 mb-3 text-primary-600 font-semibold text-xs border-b pb-2">
@@ -591,6 +859,17 @@ function SaalaTransactionTab({ customers, catalog, showNotify }) {
               value={selectedCustomer?.name || ''} 
               onChange={handleCustomerSelect} 
               placeholder="Search Customer" 
+              data-enter-index="10"
+              onDropdownStateChange={setDropdownOpen}
+              onSelectionComplete={() => {
+                // Focus on item code field after customer selection is complete
+                setTimeout(() => {
+                  const itemCodeField = document.querySelector('[data-enter-index="12"]');
+                  if (itemCodeField) {
+                    itemCodeField.focus();
+                  }
+                }, 100);
+              }}
             />
           </div>
           <div>
@@ -633,14 +912,15 @@ function SaalaTransactionTab({ customers, catalog, showNotify }) {
         </div>
         <div className="p-3 border-b bg-slate-50 overflow-x-auto">
           <div className="flex items-end gap-2 min-w-[1000px]">
-            <div className="w-[100px]">
-              <label className="text-xs font-medium text-slate-600 text-center block mb-1">Date</label>
+            <div className="w-[120px]">
+              <label className="text-xs font-medium text-slate-600 block text-center mb-1">Date</label>
               <input 
                 type="date" 
-                className="w-full text-sm border border-slate-300 px-2 font-medium rounded-sm outline-none focus:border-primary-500 focus:ring-2 focus:ring-primary-50 transition-all" 
+                className="w-full border border-slate-300 px-2 text-sm rounded-sm outline-none focus:border-primary-500 focus:ring-2 focus:ring-primary-50 transition-all" 
                 style={{ height: '36px' }}
                 value={currentEntry.date} 
                 onChange={e => setCurrentEntry({ ...currentEntry, date: e.target.value })} 
+                data-enter-index="10"
               />
             </div>
             <div className="w-[90px]">
@@ -650,6 +930,17 @@ function SaalaTransactionTab({ customers, catalog, showNotify }) {
                 value={currentEntry.itemCode} 
                 onChange={handleItemCodeSelect} 
                 placeholder="Select Code" 
+                data-enter-index="11"
+                onDropdownStateChange={setDropdownOpen}
+                onSelectionComplete={() => {
+                  // Focus on qty field after item code selection
+                  setTimeout(() => {
+                    const qtyField = document.querySelector('[data-enter-index="12"]');
+                    if (qtyField) {
+                      qtyField.focus();
+                    }
+                  }, 100);
+                }}
               />
             </div>
             <div className="w-[140px]">
@@ -672,7 +963,7 @@ function SaalaTransactionTab({ customers, catalog, showNotify }) {
                 style={{ height: '36px' }}
                 value={currentEntry.qty} 
                 onChange={e => setCurrentEntry({ ...currentEntry, qty: e.target.value })} 
-                onKeyDown={e => handleKey(e, rateRef)}
+                data-enter-index="12"
               />
             </div>
             <div className="w-[70px]">
@@ -684,7 +975,7 @@ function SaalaTransactionTab({ customers, catalog, showNotify }) {
                 style={{ height: '36px' }}
                 value={currentEntry.rate} 
                 onChange={e => setCurrentEntry({ ...currentEntry, rate: e.target.value })} 
-                onKeyDown={e => handleKey(e, paidRef)}
+                data-enter-index="13"
               />
             </div>
             <div className="w-[100px]">
@@ -706,7 +997,7 @@ function SaalaTransactionTab({ customers, catalog, showNotify }) {
                 style={{ height: '36px' }}
                 value={currentEntry.paidAmount} 
                 onChange={e => setCurrentEntry({ ...currentEntry, paidAmount: e.target.value })} 
-                onKeyDown={e => handleKey(e, remarksRef)}
+                data-enter-index="14"
               />
             </div>
             <div className="w-[100px]">
@@ -728,15 +1019,17 @@ function SaalaTransactionTab({ customers, catalog, showNotify }) {
                 style={{ height: '36px' }}
                 value={currentEntry.remarks} 
                 onChange={e => setCurrentEntry({ ...currentEntry, remarks: e.target.value })} 
-                onKeyDown={e => { if (e.key === 'Enter') handleAddOrUpdate(); }}
+                data-enter-index="15"
               />
             </div>
             <div className="ml-auto pr-1">
               <button 
+                data-action="primary"
                 onClick={handleAddOrUpdate} 
                 disabled={!selectedCustomerId}
                 className="bg-primary-600 text-white px-8 text-sm font-semibold rounded-sm hover:bg-primary-700 shadow-md transition-all active:translate-y-px disabled:opacity-40"
                 style={{ height: '36px' }}
+                data-enter-index="16"
               >
                 {currentEntry.id ? 'Update' : 'Add'}
               </button>
@@ -745,8 +1038,8 @@ function SaalaTransactionTab({ customers, catalog, showNotify }) {
         </div>
 
         {/* Transaction Table */}
-        <div className="flex-1 overflow-auto bg-white custom-table-scroll" style={{ maxHeight: '400px' }}>
-          <table className="w-full text-left text-sm border-collapse relative">
+        <div className="flex-1 overflow-auto bg-white custom-table-scroll" style={{ minHeight: '300px', maxHeight: '500px' }}>
+          <table className="w-full text-left text-sm border-collapse relative min-w-full">
             <thead className="sticky top-0 bg-slate-700 text-white z-20 border-b-2 font-semibold uppercase text-xs shadow-md">
               <tr>
                 <th className="px-3 py-3 w-14 text-center">Sl.No.</th>
@@ -783,7 +1076,7 @@ function SaalaTransactionTab({ customers, catalog, showNotify }) {
                   return (
                     <tr key={txn.id} className="hover:bg-primary-50 border-b border-slate-100 group transition-colors">
                       <td className="px-3 py-2.5 text-center text-slate-400 font-semibold">{String(idx + 1)}</td>
-                      <td className="px-3 py-2.5 font-mono text-slate-600">{String(txn.date)}</td>
+                      <td className="px-3 py-2.5 font-mono text-slate-600">{txn.date ? new Date(txn.date).toLocaleDateString('en-GB') : '--'}</td>
                       <td className="px-3 py-2.5 font-mono text-slate-600">{String(txn.item_code || txn.itemCode || '--')}</td>
                       <td className="px-3 py-2.5 font-semibold text-slate-800">{String(txn.item_name || txn.itemName || '')}</td>
                       <td className="px-3 py-2.5 text-right font-bold">{String(txn.qty)}</td>
@@ -822,6 +1115,14 @@ export default function SaalaView({ catalog, onCancel, showNotify }) {
     tab: 'customers',
     customers: [],
     isLoading: true
+  });
+  
+  // Keyboard navigation hooks
+  const { registerElement } = useKeyboardNavigation();
+  const saalaContainerRef = useRef(null);
+  const { setDropdownOpen } = useERPEnterNavigation(saalaContainerRef, {
+    enabled: true,
+    autoFocusFirst: false
   });
   
   const {
@@ -888,13 +1189,13 @@ export default function SaalaView({ catalog, onCancel, showNotify }) {
   };
 
   return (
-    <div className="flex-1 flex flex-col h-full bg-slate-50 overflow-hidden">
+    <div ref={saalaContainerRef} className="flex-1 flex flex-col h-full bg-slate-50 overflow-hidden">
       {/* Header */}
       <div className="bg-slate-800 px-5 py-3 flex justify-between items-center text-white shrink-0 shadow-lg">
         <h1 className="text-base font-semibold flex items-center gap-2">
           <Database className="w-5 h-5 text-primary-400" /> SAALA Management
         </h1>
-        <button onClick={handleCancel} className="p-1.5 hover:bg-slate-700 rounded transition-colors">
+        <button onClick={handleCancel} className="p-1.5 hover:bg-slate-700 rounded transition-colors" data-enter-index="6">
           <X className="w-4 h-4" />
         </button>
       </div>
@@ -906,6 +1207,7 @@ export default function SaalaView({ catalog, onCancel, showNotify }) {
           onClick={() => setTab('customers')} 
           className={`px-5 text-sm font-semibold rounded-sm border transition-colors ${tab === 'customers' ? 'bg-slate-800 text-white border-slate-800' : 'bg-slate-50 text-slate-600 border-slate-300 hover:bg-slate-100'}`}
           style={{ height: '36px' }}
+          data-enter-index="7"
         >
           Customer Addition
         </button>
@@ -914,6 +1216,7 @@ export default function SaalaView({ catalog, onCancel, showNotify }) {
           onClick={() => setTab('transactions')} 
           className={`px-5 text-sm font-semibold rounded-sm border transition-colors ${tab === 'transactions' ? 'bg-slate-800 text-white border-slate-800' : 'bg-slate-50 text-slate-600 border-slate-300 hover:bg-slate-100'}`}
           style={{ height: '36px' }}
+          data-enter-index="8"
         >
           SAALA Transaction
         </button>
@@ -922,8 +1225,18 @@ export default function SaalaView({ catalog, onCancel, showNotify }) {
           onClick={() => setTab('payments')} 
           className={`px-5 text-sm font-semibold rounded-sm border transition-colors ${tab === 'payments' ? 'bg-slate-800 text-white border-slate-800' : 'bg-slate-50 text-slate-600 border-slate-300 hover:bg-slate-100'}`}
           style={{ height: '36px' }}
+          data-enter-index="9"
         >
           Record Payment
+        </button>
+        <button 
+          type="button" 
+          onClick={() => setTab('dateRangeReport')} 
+          className={`px-5 text-sm font-semibold rounded-sm border transition-colors ${tab === 'dateRangeReport' ? 'bg-slate-800 text-white border-slate-800' : 'bg-slate-50 text-slate-600 border-slate-300 hover:bg-slate-100'}`}
+          style={{ height: '36px' }}
+          data-enter-index="10"
+        >
+          Date Range Report
         </button>
       </div>
 
@@ -946,10 +1259,18 @@ export default function SaalaView({ catalog, onCancel, showNotify }) {
               customers={customers} 
               catalog={catalog || []} 
               showNotify={showNotify} 
+              setDropdownOpen={setDropdownOpen}
             />
           )}
           {tab === 'payments' && (
             <SaalaPaymentTab 
+              customers={customers} 
+              showNotify={showNotify} 
+              setDropdownOpen={setDropdownOpen}
+            />
+          )}
+          {tab === 'dateRangeReport' && (
+            <DateRangeReportTab 
               customers={customers} 
               showNotify={showNotify} 
             />

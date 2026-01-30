@@ -1,4 +1,4 @@
-from fastapi import APIRouter, Depends, HTTPException, status
+from fastapi import APIRouter, Depends, HTTPException, status, Query
 from sqlalchemy.orm import Session
 
 from app.core.db import get_db
@@ -19,12 +19,25 @@ def _to_ui(item: Catalog) -> dict:
 
 
 @router.get("/", operation_id="getCatalogItems")
-def list_items(q: str | None = None, db: Session = Depends(get_db), user=Depends(get_current_user)):
+def list_items(
+    q: str | None = None,
+    page: int = Query(1, ge=1),
+    size: int = Query(100, ge=1, le=1000),
+    db: Session = Depends(get_db),
+    user=Depends(get_current_user)
+):
+    # Hard cap to prevent accidental overload
+    size = min(size, 1000)
+    offset = (page - 1) * size
+    
     query = db.query(Catalog).filter(Catalog.vendor_id == user.vendor_id)
     if q:
         like = f"%{q}%"
         query = query.filter((Catalog.name.ilike(like)) | (Catalog.code.ilike(like)))
-    rows = query.order_by(Catalog.name.asc()).all()
+    
+    total = query.count()
+    rows = query.order_by(Catalog.name.asc()).offset(offset).limit(size).all()
+    
     return [_to_ui(r) for r in rows]
 
 
@@ -83,8 +96,14 @@ alias = APIRouter(prefix="/items", tags=["Catalog"])
 
 
 @alias.get("/")
-async def list_items_alias(db: Session = Depends(get_db), user=Depends(get_current_user)):
-    return list_items(db=db, user=user)
+async def list_items_alias(
+    q: str | None = None,
+    page: int = Query(1, ge=1),
+    size: int = Query(100, ge=1, le=1000),
+    db: Session = Depends(get_db),
+    user=Depends(get_current_user)
+):
+    return list_items(q=q, page=page, size=size, db=db, user=user)
 
 
 @alias.post("/", status_code=201)
