@@ -33,4 +33,4 @@ ENV PYTHONDONTWRITEBYTECODE=1
 ENV PYTHONUNBUFFERED=1
 
 # Run with Gunicorn
-CMD ["gunicorn", "backend.app.main:app", "-c", "backend.gunicorn.conf.py"]
+CMD ["gunicorn", "backend.app.main:app", "-c", "backend/gunicorn.conf.py"]
