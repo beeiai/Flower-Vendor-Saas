@@ -28,7 +28,7 @@ COPY --chown=app:app . .
 EXPOSE 8000
 
 # Set environment variables for production
-ENV PYTHONPATH=/app
+ENV PYTHONPATH=/app/backend
 ENV PYTHONDONTWRITEBYTECODE=1
 ENV PYTHONUNBUFFERED=1
 
