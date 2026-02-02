@@ -33,4 +33,5 @@ ENV PYTHONDONTWRITEBYTECODE=1
 ENV PYTHONUNBUFFERED=1
 
 # Run with Gunicorn
-CMD ["gunicorn", "--chdir", "backend", "app.main:app", "-c", "gunicorn.conf.py"]
+#CMD ["gunicorn", "--chdir", "backend", "app.main:app", "-c", "gunicorn.conf.py"]
+CMD ["gunicorn", "--chdir", "backend", "-w", "2", "-k", "uvicorn.workers.UvicornWorker", "-b", "0.0.0.0:8000", "app.main:app"]
