@@ -26,7 +26,7 @@ from app.core.security_middleware import SecurityHeadersMiddleware
 from app.core.structured_logging import log_security_event
 from app.core.redis_client import redis_client
 from app.core.request_id_middleware import RequestIDMiddleware
-from app.core.cache_middleware import PerRequestCacheMiddleware
+from app.core.cache_middleware import CacheMiddleware
 import uvicorn
 
 # Initialize structured logging
@@ -81,8 +81,8 @@ app.add_middleware(SecurityHeadersMiddleware)
 # 4. Compression
 app.add_middleware(GZipMiddleware, minimum_size=1000)
 
-# 5. Per-request cache cleanup
-app.add_middleware(PerRequestCacheMiddleware)
+# 5. Cache middleware
+app.add_middleware(CacheMiddleware)
 
 # 5. CORS configuration is environment-driven so production can restrict origins
 # without changing code. Defaults are localhost Vite dev URLs.
@@ -189,8 +189,12 @@ async def unhandled_exception_handler(request: Request, exc: Exception):
 
 
 @app.get("/")
-def home():
-    return {"message": "API is running"}
+def root():
+    return {"status": "ok"}
+
+@app.head("/")
+def head_root():
+    return {}
 
 
 

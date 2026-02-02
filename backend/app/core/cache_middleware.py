@@ -4,22 +4,15 @@ Clears the per-request cache after each request completes.
 """
 from fastapi import Request, Response
 from starlette.middleware.base import BaseHTTPMiddleware
-from starlette.middleware.base import RequestResponseEndpoint
-from app.utils.cache import clear_per_request_cache
+from fastapi import Request, Response
 
-
-class PerRequestCacheMiddleware(BaseHTTPMiddleware):
-    """
-    Middleware to clear per-request cache after each request.
-    Ensures cache doesn't leak between requests.
-    """
-    
-    async def dispatch(self, request: Request, call_next: RequestResponseEndpoint) -> Response:
+class CacheMiddleware(BaseHTTPMiddleware):
+    async def dispatch(self, request: Request, call_next):
         try:
-            # Process the request
             response = await call_next(request)
-        finally:
-            # Clear per-request cache after request completes (success or failure)
-            clear_per_request_cache()
-        
-        return response
+            return response
+        except Exception:
+            return Response(
+                content="Internal Server Error",
+                status_code=500
+            )
