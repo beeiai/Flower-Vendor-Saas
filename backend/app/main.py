@@ -40,7 +40,7 @@ app = FastAPI(
     title="Flower Vendor SaaS API",
     version="1.0.0",
     # Security: Disable OpenAPI in production
-    docs_url=None if settings.REQUIRE_SECURE_SECRETS else "/docs",
+    docs_url="/docs",
     redoc_url=None if settings.REQUIRE_SECURE_SECRETS else "/redoc",
     openapi_url=None if settings.REQUIRE_SECURE_SECRETS else "/openapi.json"
 )
