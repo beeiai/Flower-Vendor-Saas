@@ -201,7 +201,7 @@ function DateRangeReportTab({ customers, showNotify }) {
       const vendorId = localStorage.getItem('skfs_vendor_id');
 
       const response = await fetch(
-        `http://localhost:8000/api/silk/saala-transactions-by-date-range?from_date=${dateRange.fromDate}&to_date=${dateRange.toDate}`,
+        `${import.meta.env.VITE_API_BASE_URL}/api/silk/saala-transactions-by-date-range?from_date=${dateRange.fromDate}&to_date=${dateRange.toDate}`,
         {
           method: 'GET',
           headers: {

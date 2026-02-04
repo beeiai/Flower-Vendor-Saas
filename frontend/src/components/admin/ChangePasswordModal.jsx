@@ -58,7 +58,7 @@ export default function ChangePasswordModal({ isOpen, onClose, vendorId, vendorE
     try {
       const token = localStorage.getItem('skfs_auth_token');
       
-      const response = await fetch(`http://localhost:8000/api/admin/change-vendor-password`, {
+      const response = await fetch(`${import.meta.env.VITE_API_BASE_URL}/api/admin/change-vendor-password`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',

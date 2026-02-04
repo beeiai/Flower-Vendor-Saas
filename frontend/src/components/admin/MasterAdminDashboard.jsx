@@ -34,7 +34,7 @@ export default function MasterAdminDashboard({ onLogout }) {
     try {
       const token = localStorage.getItem('skfs_auth_token');
       
-      const response = await fetch('http://localhost:8000/api/admin/create-vendor', {
+      const response = await fetch(`${import.meta.env.VITE_API_BASE_URL}/api/admin/create-vendor`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
@@ -98,7 +98,7 @@ export default function MasterAdminDashboard({ onLogout }) {
         return;
       }
       
-      const response = await fetch('http://localhost:8000/api/admin/vendors', {
+      const response = await fetch(`${import.meta.env.VITE_API_BASE_URL}/api/admin/vendors`, {
         method: 'GET',
         headers: {
           'Authorization': `Bearer ${token}`
