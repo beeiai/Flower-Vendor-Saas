@@ -1,5 +1,6 @@
 import React, { useState } from 'react';
 import { X, Lock, Eye, EyeOff } from 'lucide-react';
+import { api } from '../../utils/api';
 
 export default function ChangePasswordModal({ isOpen, onClose, vendorId, vendorEmail }) {
   const [formData, setFormData] = useState({
@@ -56,47 +57,30 @@ export default function ChangePasswordModal({ isOpen, onClose, vendorId, vendorE
     setLoading(true);
 
     try {
-      const token = localStorage.getItem('skfs_auth_token');
-      
-      const response = await fetch(`${import.meta.env.VITE_API_BASE_URL}/api/admin/change-vendor-password`, {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          'Authorization': `Bearer ${token}`
-        },
-        body: JSON.stringify({
-          vendor_id: vendorId,
-          new_password: formData.newPassword
-        })
+      await api.changeVendorPassword({
+        vendor_id: vendorId,
+        new_password: formData.newPassword
       });
 
-      const result = await response.json();
-
-      if (response.ok) {
-        setMessage({
-          type: 'success',
-          text: 'Password changed successfully!'
-        });
-        // Clear form after success
-        setFormData({
-          newPassword: '',
-          confirmPassword: ''
-        });
-      } else {
-        // Handle FastAPI validation errors
-        const errorMsg = 
-          result?.detail?.[0]?.msg ||
-          result?.detail ||
-          'Failed to change password';
-        setMessage({
-          type: 'error',
-          text: String(errorMsg)
-        });
-      }
+      setMessage({
+        type: 'success',
+        text: 'Password changed successfully!'
+      });
+      // Clear form after success
+      setFormData({
+        newPassword: '',
+        confirmPassword: ''
+      });
     } catch (error) {
+      // Handle FastAPI validation errors
+      const errorMsg = 
+        error?.details?.[0]?.msg ||
+        error?.details ||
+        error?.message ||
+        'Failed to change password';
       setMessage({
         type: 'error',
-        text: 'Network error: ' + error.message
+        text: String(errorMsg)
       });
     } finally {
       setLoading(false);

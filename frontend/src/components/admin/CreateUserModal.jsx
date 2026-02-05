@@ -1,5 +1,6 @@
 import React, { useState } from 'react';
 import { X, UserPlus, Mail, Lock, UserCheck, Users } from 'lucide-react';
+import { api } from '../../utils/api';
 
 export default function CreateUserModal({ isOpen, onClose, vendor, onCreateUser }) {
   const [formData, setFormData] = useState({
@@ -61,51 +62,39 @@ export default function CreateUserModal({ isOpen, onClose, vendor, onCreateUser 
     setLoading(true);
 
     try {
-      const token = localStorage.getItem('skfs_auth_token');
-      
-      const response = await fetch(`${import.meta.env.VITE_API_BASE_URL}/api/admin/create-user-for-vendor`, {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          'Authorization': `Bearer ${token}`
-        },
-        body: JSON.stringify({
-          vendor_id: vendor.id,
-          name: formData.name,
-          email: formData.email,
-          password: formData.password,
-          role: formData.role
-        })
+      const result = await api.createVendorUser({
+        vendor_id: vendor.id,
+        name: formData.name,
+        email: formData.email,
+        password: formData.password,
+        role: formData.role
       });
 
-      const result = await response.json();
-
-      if (response.ok) {
-        setMessage({
-          type: 'success',
-          text: `User created successfully! User ID: ${result.user_id}`
-        });
-        
-        // Clear form
-        setFormData({
-          name: '',
-          email: '',
-          password: '',
-          role: 'User'
-        });
-        
-        // Notify parent component to refresh data
-        onCreateUser();
-      } else {
-        setMessage({
-          type: 'error',
-          text: result.detail || 'Failed to create user'
-        });
-      }
+      setMessage({
+        type: 'success',
+        text: `User created successfully! User ID: ${result.user_id}`
+      });
+      
+      // Clear form
+      setFormData({
+        name: '',
+        email: '',
+        password: '',
+        role: 'User'
+      });
+      
+      // Notify parent component to refresh data
+      onCreateUser();
     } catch (error) {
+      // Handle FastAPI validation errors
+      const errorMsg = 
+        error?.details?.[0]?.msg ||
+        error?.details ||
+        error?.message ||
+        'Failed to create user';
       setMessage({
         type: 'error',
-        text: 'Network error: ' + error.message
+        text: String(errorMsg)
       });
     } finally {
       setLoading(false);

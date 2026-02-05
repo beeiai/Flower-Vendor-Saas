@@ -226,6 +226,11 @@ export const api = {
   updateSaalaCustomer: (id, payload) => request(`/saala/customers/${id}/`, { method: 'PUT', body: JSON.stringify(payload) }),
   deleteSaalaCustomer: (id) => request(`/saala/customers/${id}/`, { method: 'DELETE' }),
 
+  // Admin APIs
+  createVendorUser: (payload) => request('/admin/create-user-for-vendor', { method: 'POST', body: JSON.stringify(payload) }),
+  changeVendorPassword: (payload) => request('/admin/change-vendor-password', { method: 'POST', body: JSON.stringify(payload) }),
+  getVendors: () => request('/admin/vendors', { method: 'GET' }),
+
   listSaalaTransactions: (customerId) => request(`/saala/customers/${customerId}/transactions/`),
   createSaalaTransaction: (customerId, payload) => request(`/saala/customers/${customerId}/transactions/`, { method: 'POST', body: JSON.stringify(payload) }),
   updateSaalaTransaction: (id, payload) => request(`/saala/transactions/${id}`, { method: 'PUT', body: JSON.stringify(payload) }),

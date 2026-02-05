@@ -2,6 +2,8 @@ import React, { useState, useEffect } from 'react';
 import { X, Users, UserPlus, Building, Mail, Lock, Phone, UserCheck, Shield, Settings2, Edit2 } from 'lucide-react';
 import ChangePasswordModal from './ChangePasswordModal';
 import CreateUserModal from './CreateUserModal';
+import { authApi } from '../../utils/apiService';
+import { api } from '../../utils/api';
 
 export default function MasterAdminDashboard({ onLogout }) {
   const [formData, setFormData] = useState({
@@ -31,53 +33,36 @@ export default function MasterAdminDashboard({ onLogout }) {
     setMessage('');
 
     try {
-      const token = localStorage.getItem('skfs_auth_token');
-      
-      const response = await fetch(`${import.meta.env.VITE_API_BASE_URL}/api/admin/create-vendor`, {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          'Authorization': `Bearer ${token}`
-        },
-        body: JSON.stringify({
-          vendor_name: formData.vendorName,
-          owner_name: formData.ownerName,
-          email: formData.email,
-          password: formData.password
-        })
+      const result = await authApi.createVendor({
+        vendor_name: formData.vendorName,
+        owner_name: formData.ownerName,
+        email: formData.email,
+        password: formData.password
       });
 
-      const result = await response.json();
-
-      if (response.ok) {
-        setMessage({
-          type: 'success',
-          text: `Vendor created successfully! Vendor ID: ${result.vendor_id}, Email: ${result.admin_email}`
-        });
-        // Reset form
-        setFormData({
-          vendorName: '',
-          ownerName: '',
-          email: '',
-          password: ''
-        });
-        // Refresh vendors list
-        fetchVendors();
-      } else {
-        // Handle FastAPI validation errors
-        const errorMsg = 
-          result?.detail?.[0]?.msg ||
-          result?.detail ||
-          'Failed to create vendor';
-        setMessage({
-          type: 'error',
-          text: String(errorMsg)
-        });
-      }
+      setMessage({
+        type: 'success',
+        text: `Vendor created successfully! Vendor ID: ${result.vendor_id}, Email: ${result.admin_email}`
+      });
+      // Reset form
+      setFormData({
+        vendorName: '',
+        ownerName: '',
+        email: '',
+        password: ''
+      });
+      // Refresh vendors list
+      fetchVendors();
     } catch (error) {
+      // Handle FastAPI validation errors
+      const errorMsg = 
+        error?.details?.[0]?.msg ||
+        error?.details ||
+        error?.message ||
+        'Failed to create vendor';
       setMessage({
         type: 'error',
-        text: 'Network error: ' + error.message
+        text: String(errorMsg)
       });
     } finally {
       setLoading(false);
@@ -100,26 +85,15 @@ export default function MasterAdminDashboard({ onLogout }) {
         return;
       }
       
-      const response = await fetch(`${import.meta.env.VITE_API_BASE_URL}/api/admin/vendors`, {
-        method: 'GET',
-        headers: {
-          'Authorization': `Bearer ${token}`
-        }
-      });
-
-      if (response.ok) {
-        const result = await response.json();
-        setVendors(result);
-      } else {
-        console.error('Failed to fetch vendors:', response.status);
-        // If unauthorized, maybe token expired - log out user
-        if (response.status === 401) {
-          alert('Session expired. Please log in again.');
-          onLogout();
-        }
-      }
+      const result = await api.getVendors();
+      setVendors(result);
     } catch (error) {
       console.error('Error fetching vendors:', error);
+      // If unauthorized, maybe token expired - log out user
+      if (error?.status === 401) {
+        alert('Session expired. Please log in again.');
+        onLogout();
+      }
     } finally {
       setVendorsLoading(false);
     }
