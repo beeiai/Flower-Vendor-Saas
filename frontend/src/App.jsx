@@ -1201,6 +1201,15 @@ export default function App() {
             </div>}
           </div>
         </div>
+        <div className="ml-auto flex items-center">
+          <button 
+            onClick={auth.logout}
+            className="text-slate-300 hover:text-white text-xs font-semibold px-3 py-1 rounded transition-colors"
+            title="Logout"
+          >
+            Logout
+          </button>
+        </div>
       </nav>
 
       <div className="flex-1 overflow-hidden flex flex-col bg-slate-100 relative">
