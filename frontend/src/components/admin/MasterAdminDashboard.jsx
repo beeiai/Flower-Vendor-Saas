@@ -8,7 +8,6 @@ export default function MasterAdminDashboard({ onLogout }) {
     vendorName: '',
     ownerName: '',
     email: '',
-    phone: '',
     password: ''
   });
   const [loading, setLoading] = useState(false);
@@ -44,7 +43,6 @@ export default function MasterAdminDashboard({ onLogout }) {
           vendor_name: formData.vendorName,
           owner_name: formData.ownerName,
           email: formData.email,
-          phone: formData.phone,
           password: formData.password
         })
       });
@@ -61,7 +59,6 @@ export default function MasterAdminDashboard({ onLogout }) {
           vendorName: '',
           ownerName: '',
           email: '',
-          phone: '',
           password: ''
         });
         // Refresh vendors list
@@ -229,23 +226,6 @@ export default function MasterAdminDashboard({ onLogout }) {
                       required
                       className="w-full pl-10 pr-3 py-2 border border-slate-300 rounded-sm focus:outline-none focus:ring-2 focus:ring-primary-500 focus:border-primary-500"
                       placeholder="owner@company.com"
-                    />
-                  </div>
-                </div>
-
-                <div>
-                  <label className="block text-sm font-medium text-slate-700 mb-1">
-                    Phone Number
-                  </label>
-                  <div className="relative">
-                    <Phone className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400" />
-                    <input
-                      type="tel"
-                      name="phone"
-                      value={formData.phone}
-                      onChange={handleChange}
-                      className="w-full pl-10 pr-3 py-2 border border-slate-300 rounded-sm focus:outline-none focus:ring-2 focus:ring-primary-500 focus:border-primary-500"
-                      placeholder="+91-XXXXXXXXXX"
                     />
                   </div>
                 </div>
