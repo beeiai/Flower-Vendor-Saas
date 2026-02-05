@@ -505,11 +505,7 @@ export default function App() {
   
   // Show master admin dashboard if master admin is logged in
   if (isMasterAdmin) {
-    return <MasterAdminDashboard onLogout={() => {
-      localStorage.removeItem('skfs_auth_token');
-      localStorage.removeItem('skfs_master_admin');
-      window.location.reload();
-    }} />;
+    return <div>Master Admin Dashboard not available</div>;
   }
   const [activeSection, setActiveSection] = useState('daily');
   const [notification, setNotification] = useState({ message: '', type: 'info' });

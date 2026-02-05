@@ -531,12 +531,13 @@ def create_user_for_vendor(
     
     try:
         # Create User
+        # For master admin creating users for vendors, always set role to "vendor_admin"
         user = User(
             vendor_id=request.vendor_id,
             name=request.name,
             email=email,
             password_hash=hash_password(request.password),
-            role=request.role,
+            role="vendor_admin",
             is_active=True
         )
         

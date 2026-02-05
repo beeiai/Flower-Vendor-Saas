@@ -83,9 +83,14 @@ export default function ChangePasswordModal({ isOpen, onClose, vendorId, vendorE
           confirmPassword: ''
         });
       } else {
+        // Handle FastAPI validation errors
+        const errorMsg = 
+          result?.detail?.[0]?.msg ||
+          result?.detail ||
+          'Failed to change password';
         setMessage({
           type: 'error',
-          text: result.detail || 'Failed to change password'
+          text: String(errorMsg)
         });
       }
     } catch (error) {

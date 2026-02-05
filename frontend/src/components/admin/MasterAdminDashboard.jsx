@@ -64,9 +64,14 @@ export default function MasterAdminDashboard({ onLogout }) {
         // Refresh vendors list
         fetchVendors();
       } else {
+        // Handle FastAPI validation errors
+        const errorMsg = 
+          result?.detail?.[0]?.msg ||
+          result?.detail ||
+          'Failed to create vendor';
         setMessage({
           type: 'error',
-          text: result.detail || 'Failed to create vendor'
+          text: String(errorMsg)
         });
       }
     } catch (error) {
