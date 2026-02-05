@@ -216,7 +216,11 @@ def create_vendor(
             address=""
         )
         
-        # Create Admin User
+        # Add vendor and flush to get ID
+        db.add(vendor)
+        db.flush()  # Get vendor ID without committing
+        
+        # Create Admin User with the vendor ID
         user = User(
             vendor_id=vendor.id,
             name=request.owner_name,
@@ -226,24 +230,11 @@ def create_vendor(
             is_active=True
         )
         
-        # Add both records and commit in transaction
-        try:
-            db.add(vendor)
-            db.flush()  # Get vendor ID without committing
-            
-            db.add(user)
-            
-            # Commit both records in single transaction
-            db.commit()
-            db.refresh(user)
-            db.refresh(vendor)
-        except Exception:
-            db.rollback()
-            logger.error("Vendor creation failed - rolled back")
-            raise HTTPException(
-                status_code=500,
-                detail="Vendor creation failed. Please try again."
-            )
+        # Add user and commit in single transaction
+        db.add(user)
+        db.commit()
+        db.refresh(user)
+        db.refresh(vendor)
         
         logger.info(f"New vendor created by master admin: {vendor.name} (ID: {vendor.id})")
         log_security_event(
@@ -554,12 +545,12 @@ def create_user_for_vendor(
             db.add(user)
             db.commit()
             db.refresh(user)
-        except Exception:
+        except Exception as e:
             db.rollback()
-            logger.error("User creation failed - rolled back")
+            logger.error(f"User creation failed: {str(e)}", exc_info=True)
             raise HTTPException(
                 status_code=500,
-                detail="User creation failed. Please try again."
+                detail=f"User creation failed: {str(e)}"
             )
         
         logger.info(f"New user created for vendor {request.vendor_id}: {user.name} ({user.email})")
@@ -587,10 +578,10 @@ def create_user_for_vendor(
         raise
     except Exception as e:
         db.rollback()
-        logger.error(f"User creation failed: {str(e)}")
+        logger.error(f"User creation failed: {str(e)}", exc_info=True)
         raise HTTPException(
             status_code=500,
-            detail="User creation failed. Please try again."
+            detail=f"User creation failed: {str(e)}"
         )
 
 
