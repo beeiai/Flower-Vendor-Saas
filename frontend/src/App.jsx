@@ -505,7 +505,10 @@ export default function App() {
   
   // Show master admin dashboard if master admin is logged in
   if (isMasterAdmin) {
-    return <div>Master Admin Dashboard not available</div>;
+    return <MasterAdminDashboard onLogout={() => {
+      auth.logout();
+      window.location.reload();
+    }} />;
   }
   const [activeSection, setActiveSection] = useState('daily');
   const [notification, setNotification] = useState({ message: '', type: 'info' });
