@@ -370,167 +370,190 @@ export function SilkSummaryView({ ledgerStore = {}, customers = [], onCancel }) 
   };
 
   return (
-    <div className="flex-1 flex flex-col h-full bg-[#f8fafc] animate-in fade-in duration-300 overflow-hidden">
+    <div className="flex-1 flex flex-col h-full bg-gradient-to-br from-slate-50 to-slate-100 animate-in fade-in duration-300 overflow-hidden">
       {/* Header */}
-      <div className="bg-slate-900 px-4 py-2 flex justify-between items-center text-white shrink-0">
+      <div className="bg-gradient-to-r from-[#5B55E6] to-[#4A44D0] px-5 py-3 flex justify-between items-center text-white shrink-0 shadow-xl rounded-b-xl">
         <div className="flex flex-col">
-          <h1 className="text-[14px] font-black uppercase flex items-center gap-2 tracking-widest">
-            <Layers className="w-4 h-4 text-rose-500" /> Silk Daily Group Summary
+          <h1 className="text-base font-bold uppercase flex items-center gap-2.5 tracking-wider">
+            <Layers className="w-5 h-5 text-white" /> SILK DAILY GROUP SUMMARY
           </h1>
-          <p className="text-[8px] text-slate-400 uppercase font-bold tracking-widest mt-0.5 italic">Automated Financial Reconciliation</p>
+          <p className="text-[9px] text-white/80 uppercase font-black tracking-widest mt-1">Automated Financial Reconciliation</p>
         </div>
-        <button onClick={handleCancel} className="p-1 hover:bg-rose-600 transition-colors" data-enter-index="7"><X className="w-4 h-4" /></button>
+        <button onClick={handleCancel} className="p-1.5 rounded-lg hover:bg-white/20 transition-all" data-enter-index="7"><X className="w-5 h-5" /></button>
       </div>
 
-      <div className="p-4 flex-1 flex flex-col gap-4 overflow-hidden">
+      <div className="p-5 flex-1 flex flex-col gap-4 overflow-hidden">
         {/* Controls: Date Picker and Fetch */}
-        <section className="bg-white border-2 border-slate-200 p-4 shadow-sm flex items-center justify-between shrink-0 rounded-sm">
-          <div className="flex items-center gap-4">
-            <div className="flex flex-col gap-1">
-              <label className="text-[9px] font-black uppercase text-slate-500 flex items-center gap-1">
-                <Calendar className="w-3 h-3" /> Select Report Date
+        <section className="bg-white rounded-xl border-2 border-slate-200 p-5 shadow-lg flex flex-col gap-4 shrink-0 backdrop-blur-sm">
+          <div className="bg-gradient-to-r from-slate-100 to-slate-200 px-4 py-2.5 border-b-2 font-bold text-sm text-slate-700 flex items-center gap-2 uppercase tracking-wider">
+            <Calendar className="w-5 h-5 text-rose-500" /> REPORT CONTROLS
+          </div>
+          
+          {/* Combined Filters Row */}
+          <div className="grid grid-cols-12 gap-4 items-end">
+            <div className="col-span-3">
+              <label className="text-[10px] font-black uppercase text-slate-600 mb-1.5 block tracking-wider">
+                <Calendar className="w-4 h-4 text-rose-500 inline mr-1.5" /> SELECT REPORT DATE
               </label>
               <input 
                 type="date" 
-                className="border-2 border-slate-100 p-1.5 text-[12px] font-bold outline-none focus:border-rose-500 bg-slate-50 h-[32px]"
+                className="w-full bg-rose-50 border-2 border-rose-200 rounded-lg p-2.5 text-sm font-bold text-slate-800 outline-none transition-all duration-200 hover:border-rose-300 focus:border-rose-400 focus:ring-2 focus:ring-rose-100" 
                 value={selectedDate}
                 onChange={(e) => setSelectedDate(e.target.value)}
                 data-enter-index="1"
               />
             </div>
-            <button 
-              onClick={handleFetch}
-              className="mt-4 flex items-center gap-2 bg-slate-800 text-white px-4 py-2 text-[10px] font-black uppercase hover:bg-rose-600 transition-all shadow-md active:scale-95"
-              data-enter-index="2"
-            >
-              <RefreshCcw className="w-3.5 h-3.5" /> Fetch
-            </button>
+            
+            <div className="col-span-2">
+              <label className="text-[10px] font-black uppercase text-slate-600 mb-1.5 block tracking-wider">
+                <History className="w-4 h-4 text-slate-400 inline mr-1.5" /> CREDIT AMOUNT
+              </label>
+              <input 
+                type="number" 
+                placeholder="0.00" 
+                className="w-full bg-slate-50 border-2 border-slate-200 rounded-lg p-2.5 text-sm font-black text-slate-800 outline-none cursor-not-allowed" 
+                value={dailyCredit} 
+                readOnly 
+                data-enter-index="3" 
+              />
+            </div>
+            
+            <div className="col-span-2">
+              <label className="text-[10px] font-black uppercase text-slate-600 mb-1.5 block tracking-wider">
+                <Landmark className="w-4 h-4 text-emerald-500 inline mr-1.5" /> CASH COLLECTION
+              </label>
+              <input
+                type="number"
+                placeholder="0.00"
+                className="w-full bg-rose-50 border-2 border-rose-200 rounded-lg p-2.5 text-sm font-bold text-slate-800 outline-none transition-all duration-200 hover:border-rose-300 focus:border-rose-400 focus:ring-2 focus:ring-rose-100"
+                value={cashAmount}
+                onChange={(e) => setCashAmount(Number(e.target.value) || 0)}
+                data-enter-index="4"
+              />
+            </div>
+            
+            <div className="col-span-2">
+              <label className="text-[10px] font-black uppercase text-slate-600 mb-1.5 block tracking-wider">
+                <Smartphone className="w-4 h-4 text-blue-500 inline mr-1.5" /> PHONEPE / UPI
+              </label>
+              <input
+                type="number"
+                placeholder="0.00"
+                className="w-full bg-rose-50 border-2 border-rose-200 rounded-lg p-2.5 text-sm font-bold text-slate-800 outline-none transition-all duration-200 hover:border-rose-300 focus:border-rose-400 focus:ring-2 focus:ring-rose-100"
+                value={upiAmount}
+                onChange={(e) => setUpiAmount(Number(e.target.value) || 0)}
+                data-enter-index="5"
+              />
+            </div>
+            
+            <div className="col-span-3 flex gap-2">
+              <button 
+                onClick={handleFetch}
+                className="flex-1 bg-gradient-to-r from-slate-700 to-slate-800 text-white px-4 py-2.5 text-xs font-black uppercase rounded-lg shadow-lg hover:from-slate-800 hover:to-slate-900 transition-all duration-200 flex items-center justify-center gap-2 tracking-wider"
+                data-enter-index="2"
+              >
+                <RefreshCcw className="w-4 h-4" /> FETCH
+              </button>
+              <button 
+                onClick={handleSaveCollection}
+                disabled={saving || loading}
+                className="flex-1 bg-gradient-to-r from-[#5B55E6] to-[#4A44D0] text-white px-4 py-2.5 text-xs font-black uppercase rounded-lg shadow-lg hover:from-[#4A44D0] hover:to-[#3A34C0] transition-all duration-200 flex items-center justify-center gap-2 tracking-wider disabled:opacity-50"
+                data-enter-index="6"
+              >
+                <Coins className="w-4 h-4" /> {saving ? 'SAVING...' : 'SAVE'}
+              </button>
+            </div>
           </div>
           
-          {/* Profit/Loss Warning */}
-          {(isProfit || isLoss) && (
-            <div className={`flex items-center gap-2 px-4 py-2 border rounded-sm ${isProfit ? 'bg-emerald-50 text-emerald-600 border-emerald-200' : 'bg-rose-50 text-rose-600 border-rose-200'}`}>
-              <AlertTriangle className="w-4 h-4 animate-pulse" />
-              <div className="flex flex-col">
-                <span className="text-[12px] font-black uppercase leading-tight">{isProfit ? 'PROFIT' : 'LOSS'}</span>
-                <span className="text-[9px] font-bold">Amount: ₹{Math.abs(Number(profitLoss || 0)).toFixed(2)}</span>
+          {/* Status Messages */}
+          <div className="flex gap-3">
+            {/* Profit/Loss Warning */}
+            {(isProfit || isLoss) && (
+              <div className={`flex items-center gap-2 px-4 py-2.5 border-2 rounded-lg ${isProfit ? 'bg-gradient-to-r from-emerald-50 to-emerald-100 text-emerald-700 border-emerald-200' : 'bg-gradient-to-r from-rose-50 to-rose-100 text-rose-700 border-rose-200'}`}>
+                <AlertTriangle className="w-4 h-4 animate-pulse" />
+                <div className="flex flex-col">
+                  <span className="text-[11px] font-black uppercase leading-tight">{isProfit ? 'PROFIT' : 'LOSS'}</span>
+                  <span className="text-[9px] font-bold">Amount: ₹{Math.abs(Number(profitLoss || 0)).toFixed(2)}</span>
+                </div>
               </div>
-            </div>
-          )}
-
-          {/* Status Message */}
-          {message.text && (
-            <div className={`flex items-center gap-2 px-4 py-2 border rounded-sm ${message.type === 'success' ? 'bg-emerald-50 text-emerald-600 border-emerald-200' : 'bg-rose-50 text-rose-600 border-rose-200'}`}>
-              {message.type === 'success' ? <Coins className="w-4 h-4" /> : <AlertTriangle className="w-4 h-4" />}
-              <span className="text-[10px] font-black uppercase">{message.text}</span>
-            </div>
-          )}
-        </section>
-
-        {/* Manual Collection Entry */}
-        <section className="bg-white border-2 border-slate-200 p-4 shadow-sm shrink-0 rounded-sm">
-          <h3 className="text-[10px] font-black uppercase text-slate-500 tracking-widest flex items-center gap-2 mb-4">
-            <Coins className="w-3.5 h-3.5" /> Manual Collection Entry
-          </h3>
-          <div className="grid grid-cols-3 gap-6">
-            <div className="space-y-1">
-              <label className="text-[9px] font-black uppercase text-slate-400">Credit Amount</label>
-              <div className="relative">
-                <History className="absolute left-2 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-300" />
-                <input type="number" placeholder="0.00" className="w-full pl-8 pr-3 py-2 border-2 border-slate-100 font-black text-lg outline-none focus:border-rose-500 transition-all shadow-inner bg-slate-50 cursor-not-allowed" value={dailyCredit} readOnly data-enter-index="3" />
+            )}
+            
+            {/* Status Message */}
+            {message.text && (
+              <div className={`flex items-center gap-2 px-4 py-2.5 border-2 rounded-lg ${message.type === 'success' ? 'bg-gradient-to-r from-emerald-50 to-emerald-100 text-emerald-700 border-emerald-200' : 'bg-gradient-to-r from-rose-50 to-rose-100 text-rose-700 border-rose-200'}`}>
+                {message.type === 'success' ? <Coins className="w-4 h-4" /> : <AlertTriangle className="w-4 h-4" />}
+                <span className="text-[10px] font-black uppercase">{message.text}</span>
               </div>
-            </div>
-            <div className="space-y-1">
-              <label className="text-[9px] font-black uppercase text-slate-400">Cash Collection</label>
-              <div className="relative">
-                <Landmark className="absolute left-2 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-300" />
-                <input
-                  type="number"
-                  placeholder="0.00"
-                  className="w-full pl-8 pr-3 py-2 border-2 border-slate-100 font-black text-lg outline-none focus:border-emerald-500 transition-all shadow-inner"
-                  value={cashAmount}
-                  onChange={(e) => setCashAmount(Number(e.target.value) || 0)}
-                  data-enter-index="4"
-                />
-              </div>
-            </div>
-            <div className="space-y-1">
-              <label className="text-[9px] font-black uppercase text-slate-400">PhonePe / UPI</label>
-              <div className="relative">
-                <Smartphone className="absolute left-2 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-300" />
-                <input
-                  type="number"
-                  placeholder="0.00"
-                  className="w-full pl-8 pr-3 py-2 border-2 border-slate-100 font-black text-lg outline-none focus:border-blue-500 transition-all shadow-inner"
-                  value={upiAmount}
-                  onChange={(e) => setUpiAmount(Number(e.target.value) || 0)}
-                  data-enter-index="5"
-                />
-              </div>
-            </div>
-          </div>
-          <div className="flex justify-end mt-4">
-            <button 
-              onClick={handleSaveCollection}
-              disabled={saving || loading}
-              className="bg-slate-800 text-white px-8 py-3 font-semibold uppercase text-sm flex items-center gap-2 shadow-md disabled:opacity-40 rounded-sm transition-all hover:bg-primary-600"
-              data-enter-index="6"
-            >
-              <Coins className="w-4 h-4" /> {saving ? 'Saving...' : 'Save Collection'}
-            </button>
+            )}
           </div>
         </section>
+
+        {/* Manual Collection Entry - REMOVED (now in combined filters above) */}
 
 
 
         {/* Aggregated Group Table */}
-        <section className="flex-1 bg-white border-2 border-slate-200 shadow-xl overflow-hidden flex flex-col rounded-sm">
-          <div className="bg-slate-100 p-2 border-b font-black text-[9px] uppercase text-slate-500 tracking-widest flex items-center justify-between">
-            <span className="flex items-center gap-2"><List className="w-3.5 h-3.5" /> Aggregated Summary for {selectedDate}</span>
-            <span className="bg-white px-2 py-0.5 border text-slate-800">Groups Found: {groupAggregation.length}</span>
+        <section className="flex-1 bg-white rounded-xl border-2 border-slate-200 shadow-lg overflow-hidden flex flex-col">
+          <div className="bg-gradient-to-r from-slate-100 to-slate-200 px-5 py-3 border-b-2 font-bold text-sm text-slate-700 flex items-center justify-between uppercase tracking-wider">
+            <div className="flex items-center gap-2.5">
+              <List className="w-5 h-5 text-rose-500" /> AGGREGATED SUMMARY FOR {selectedDate}
+            </div>
+            <span className="bg-gradient-to-r from-rose-100 to-rose-200 text-rose-800 px-3 py-1 rounded-full text-xs font-black uppercase tracking-wider">
+              Groups Found: {groupAggregation.length}
+            </span>
           </div>
-          <div className="flex-1 overflow-auto custom-table-scroll" style={{ maxHeight: '400px' }}>
-            <table className="w-full text-left text-[11px] border-collapse">
-              <thead className="sticky top-0 bg-slate-800 text-white z-20 font-black uppercase text-[9px] shadow-md">
+          <div className="flex-1 overflow-auto custom-table-scroll">
+            <table className="w-full text-left text-sm border-collapse">
+              <thead className="bg-gradient-to-r from-[#5B55E6] to-[#4A44D0] sticky top-0 text-white uppercase font-bold text-xs z-10 border-b-2 border-black/20 shadow-lg">
                 <tr>
-                  <th className="p-3 border-r border-slate-700">Group Name</th>
-                  <th className="p-3 border-r border-slate-700 text-right">Total KG</th>
-                  <th className="p-3 text-right">Total Amount</th>
+                  <th className="px-4 py-3.5 border-r border-black/20">Group Name</th>
+                  <th className="px-4 py-3.5 border-r border-black/20 text-right">Total KG</th>
+                  <th className="px-4 py-3.5 text-right">Total Amount</th>
                 </tr>
               </thead>
               <tbody>
                 {loading ? (
-                  <tr><td colSpan="4" className="p-20 text-center text-slate-400 italic font-black uppercase tracking-widest text-[10px]">Loading...</td></tr>
-                ) : groupAggregation.length === 0 ? (
-                  <tr><td colSpan="4" className="p-20 text-center text-slate-300 italic font-black uppercase tracking-widest text-[10px]">No Transactions Recorded for this date</td></tr>
-                ) : groupAggregation.map((row, idx) => (
-                  <tr key={idx} className="border-b border-slate-100 hover:bg-slate-50 transition-colors font-bold text-slate-700">
-                    <td className="p-3 border-r border-slate-50 bg-slate-50/30 uppercase">{String(row.groupName)}</td>
-                    <td className="p-3 border-r border-slate-50 text-right font-black text-blue-600">{Number(row.kg || 0).toFixed(2)} KG</td>
-                    <td className="p-3 text-right font-black text-emerald-600">₹{Number(row.amount || 0).toLocaleString(undefined, {minimumFractionDigits: 2})}</td>
+                  <tr>
+                    <td colSpan="3" className="p-16 text-center text-slate-500 text-sm font-bold">
+                      Loading group data...
+                    </td>
                   </tr>
-                ))}
+                ) : groupAggregation.length === 0 ? (
+                  <tr>
+                    <td colSpan="3" className="p-16 text-center text-slate-500 text-sm font-bold">
+                      Select a date and click FETCH to load group summary
+                    </td>
+                  </tr>
+                ) : (
+                  groupAggregation.map((group, index) => (
+                    <tr key={index} className="border-b border-slate-100 hover:bg-slate-50 transition-all duration-150">
+                      <td className="px-4 py-3.5 font-bold text-slate-800 border-r border-slate-100">{group.groupName}</td>
+                      <td className="px-4 py-3.5 text-right font-bold text-slate-700 border-r border-slate-100">{Number(group.kg || 0).toFixed(2)} KG</td>
+                      <td className="px-4 py-3.5 text-right font-bold text-slate-800">₹{Number(group.amount || 0).toLocaleString()}</td>
+                    </tr>
+                  ))
+                )}
               </tbody>
             </table>
           </div>
           
           {/* Footer Grand Totals */}
-          <div className="bg-slate-900 p-4 flex justify-between items-center text-white border-t-4 border-rose-600 shadow-inner shrink-0">
+          <div className="bg-gradient-to-r from-slate-800 to-slate-900 p-5 flex justify-between items-center text-white border-t-4 border-[#5B55E6] shadow-lg shrink-0">
             <div className="text-center">
-              <p className="text-[8px] text-slate-400 font-black uppercase tracking-widest">Total Weight</p>
+              <p className="text-[10px] text-slate-300 font-black uppercase tracking-widest">Total Weight</p>
               <p className="text-2xl font-black text-blue-400 tabular-nums">{Number(grandTotals.kg || 0).toFixed(2)} KG</p>
             </div>
             <div className="text-center flex-1">
-              <p className="text-[8px] text-slate-400 font-black uppercase tracking-widest">Total Collected</p>
+              <p className="text-[10px] text-slate-300 font-black uppercase tracking-widest">Total Collected</p>
               <p className="text-4xl font-black text-emerald-400 tabular-nums drop-shadow-lg">₹{totalCollected.toLocaleString('en-IN', {
                 minimumFractionDigits: 2,
                 maximumFractionDigits: 2
               })}</p>
             </div>
             <div className="text-right">
-              <p className="text-[8px] text-rose-400 font-black uppercase tracking-widest">Grand Total Ledger Value</p>
-              <p className="text-4xl font-black text-rose-500 tabular-nums drop-shadow-lg">₹{Number(grandTotals.amount || 0).toLocaleString(undefined, {minimumFractionDigits: 2})}</p>
-              <div className={`mt-2 text-sm font-bold ${isProfit ? 'text-emerald-400' : isLoss ? 'text-rose-400' : 'text-slate-400'}`}>
+              <p className="text-[10px] text-rose-300 font-black uppercase tracking-widest">Grand Total Ledger Value</p>
+              <p className="text-4xl font-black text-rose-400 tabular-nums drop-shadow-lg">₹{Number(grandTotals.amount || 0).toLocaleString(undefined, {minimumFractionDigits: 2})}</p>
+              <div className={`mt-2 text-sm font-bold ${isProfit ? 'text-emerald-400' : isLoss ? 'text-rose-400' : 'text-slate-300'}`}>
                 {isProfit ? 'PROFIT' : isLoss ? 'LOSS' : 'BREAK EVEN'}: ₹{Math.abs(profitLoss).toFixed(2)}
               </div>
             </div>

@@ -187,58 +187,61 @@ const DailySaleReport = ({ onCancel }) => {
   };
 
   return (
-    <div className="flex-1 flex flex-col h-full bg-[#f1f3f5] overflow-hidden">
+    <div className="flex-1 flex flex-col h-full bg-gradient-to-br from-slate-50 to-slate-100 overflow-hidden">
       
       {/* Modal Header */}
-      <div className="bg-slate-800 px-4 py-2 flex justify-between items-center text-white shrink-0 shadow-lg">
-        <h1 className="text-[14px] font-black uppercase flex items-center gap-2">
-          <Package className="w-4 h-4 text-rose-500" /> GROUP DAILY SALE
+      <div className="bg-gradient-to-r from-[#5B55E6] to-[#4A44D0] px-5 py-3 flex justify-between items-center text-white shrink-0 shadow-xl rounded-b-xl">
+        <h1 className="text-base font-bold uppercase flex items-center gap-2.5 tracking-wider">
+          <Package className="w-5 h-5 text-white" /> GROUP DAILY SALE
         </h1>
         {onCancel && (
-          <button onClick={handleCancel} className="p-1 hover:bg-rose-600">
-            <X className="w-4 h-4" />
+          <button onClick={handleCancel} className="p-1.5 rounded-lg hover:bg-white/20 transition-all">
+            <X className="w-5 h-5" />
           </button>
         )}
       </div>
 
-      <div className="p-4 flex-1 flex flex-col gap-3 overflow-hidden">
+      <div className="p-5 flex-1 flex flex-col gap-4 overflow-hidden">
         
         {/* Controls Section */}
-        <div className="bg-white border border-slate-300 p-3 shadow-sm shrink-0">
-          <div className="grid grid-cols-12 gap-3 items-end">
+        <div className="bg-white rounded-xl border border-slate-200 p-4 shadow-lg shrink-0 backdrop-blur-sm">
+          <div className="grid grid-cols-12 gap-4 items-end">
             
             {/* Group Filter */}
             <div className="col-span-4">
-              <label className="text-[9px] font-black uppercase text-slate-500">Select Group</label>
-              <select 
-                value={selectedGroup}
-                onChange={(e) => setSelectedGroup(e.target.value)}
-                className="w-full border p-2 text-[11px] font-bold outline-none bg-white"
-                data-enter-index="1"
-              >
-                <option value="">-- Select Group --</option>
-                {groups.map(group => <option key={group.id} value={group.name}>{group.name}</option>)}
-              </select>
+              <label className="text-[10px] font-black uppercase text-slate-600 mb-1.5 block tracking-wider">Select Group</label>
+              <div className="relative">
+                <select 
+                  value={selectedGroup}
+                  onChange={(e) => setSelectedGroup(e.target.value)}
+                  className="w-full bg-rose-50 border-2 border-rose-200 rounded-lg p-2.5 text-sm font-bold text-slate-800 outline-none transition-all duration-200 hover:border-rose-300 focus:border-rose-400 focus:ring-2 focus:ring-rose-100 appearance-none"
+                  data-enter-index="1"
+                >
+                  <option value="">-- Select Group --</option>
+                  {groups.map(group => <option key={group.id} value={group.name}>{group.name}</option>)}
+                </select>
+                <ChevronDown className="absolute right-3 top-1/2 -translate-y-1/2 w-4 h-4 text-rose-400 pointer-events-none" />
+              </div>
             </div>
 
             {/* Date Selection */}
             <div className="col-span-3">
-              <label className="text-[9px] font-black uppercase text-slate-500">From Date</label>
+              <label className="text-[10px] font-black uppercase text-slate-600 mb-1.5 block tracking-wider">From Date</label>
               <input 
                 type="date" 
                 value={fromDate}
                 onChange={(e) => setFromDate(e.target.value)}
-                className="w-full border p-2 text-[11px] font-bold outline-none" 
+                className="w-full bg-rose-50 border-2 border-rose-200 rounded-lg p-2.5 text-sm font-bold text-slate-800 outline-none transition-all duration-200 hover:border-rose-300 focus:border-rose-400 focus:ring-2 focus:ring-rose-100" 
                 data-enter-index="2"
               />
             </div>
             <div className="col-span-3">
-              <label className="text-[9px] font-black uppercase text-slate-500">To Date</label>
+              <label className="text-[10px] font-black uppercase text-slate-600 mb-1.5 block tracking-wider">To Date</label>
               <input 
                 type="date" 
                 value={toDate}
                 onChange={(e) => setToDate(e.target.value)}
-                className="w-full border p-2 text-[11px] font-bold outline-none" 
+                className="w-full bg-rose-50 border-2 border-rose-200 rounded-lg p-2.5 text-sm font-bold text-slate-800 outline-none transition-all duration-200 hover:border-rose-300 focus:border-rose-400 focus:ring-2 focus:ring-rose-100" 
                 data-enter-index="3"
               />
             </div>
@@ -248,10 +251,10 @@ const DailySaleReport = ({ onCancel }) => {
               <button 
                 onClick={handleFilter}
                 disabled={loading || !selectedGroup}
-                className="bg-slate-800 text-white px-6 h-9 font-black uppercase text-[10px] hover:bg-slate-700 shadow-lg disabled:opacity-40 flex items-center gap-2"
+                className="bg-gradient-to-r from-rose-500 to-rose-600 text-white px-6 py-2.5 font-black uppercase text-xs rounded-lg shadow-lg hover:from-rose-600 hover:to-rose-700 disabled:opacity-50 disabled:cursor-not-allowed transition-all duration-200 flex items-center gap-2 tracking-wider"
                 data-enter-index="4"
               >
-                <Search size={14} /> {loading ? 'Loading...' : 'GO'}
+                <Search size={16} /> {loading ? 'Loading...' : 'GO'}
               </button>
             </div>
           </div>
@@ -259,48 +262,52 @@ const DailySaleReport = ({ onCancel }) => {
 
         {/* Error Message */}
         {error && (
-          <div className="bg-red-50 border border-red-300 p-3 text-red-700 text-[11px] font-bold">
+          <div className="bg-red-50 border-2 border-red-200 rounded-lg p-4 text-red-700 text-sm font-bold shadow-sm flex items-center gap-2">
+            <AlertTriangle className="w-5 h-5 text-red-500" />
             {error}
           </div>
         )}
 
         {/* Table Area */}
-        <div className="flex-1 bg-white border-2 border-slate-300 overflow-auto">
-          <table className="w-full text-left text-[11px]">
-            <thead className="bg-slate-200 sticky top-0 uppercase font-black text-[9px] z-10 border-b-2 border-slate-400">
+        <div className="flex-1 bg-white rounded-xl border-2 border-slate-200 overflow-hidden shadow-lg">
+          <table className="w-full text-left text-sm border-collapse">
+            <thead className="bg-gradient-to-r from-[#5B55E6] to-[#4A44D0] sticky top-0 text-white uppercase font-bold text-xs z-10 border-b-2 border-black/20 shadow-lg">
               <tr>
-                <th className="p-3 w-14">Sl.No</th>
-                <th className="p-3">Customer Name</th>
-                <th className="p-3 w-32 text-right">Total Qty</th>
-                <th className="p-3 w-40 text-right">Total Amount</th>
-                <th className="p-3 w-32 text-center">SMS Status</th>
+                <th className="p-3.5 w-16 border-r border-black/20">Sl.No</th>
+                <th className="p-3.5 border-r border-black/20">Customer Name</th>
+                <th className="p-3.5 w-36 text-right border-r border-black/20">Total Qty</th>
+                <th className="p-3.5 w-44 text-right border-r border-black/20">Total Amount</th>
+                <th className="p-3.5 w-36 text-center">SMS Status</th>
               </tr>
             </thead>
             <tbody>
               {loading ? (
                 <tr>
-                  <td colSpan="5" className="p-12 text-center text-slate-500 text-[11px] font-bold">
-                    Loading data...
+                  <td colSpan="5" className="p-16 text-center text-slate-500 text-sm font-bold">
+                    <div className="flex items-center justify-center gap-3">
+                      <div className="w-5 h-5 border-2 border-slate-300 border-t-transparent rounded-full animate-spin"></div>
+                      Loading data...
+                    </div>
                   </td>
                 </tr>
               ) : filteredData.length === 0 ? (
                 <tr>
-                  <td colSpan="5" className="p-12 text-center text-slate-500 text-[11px] font-bold">
+                  <td colSpan="5" className="p-16 text-center text-slate-500 text-sm font-bold">
                     {selectedGroup ? 'No sales data found for the selected period' : 'Please select a group'}
                   </td>
                 </tr>
               ) : (
                 <>
                   {filteredData.map((row, idx) => (
-                    <tr key={row.party} className="border-b hover:bg-slate-50 transition-colors">
-                      <td className="p-3 font-bold text-slate-700">{idx + 1}</td>
-                      <td className="p-3 font-bold text-slate-800">{row.party}</td>
-                      <td className="p-3 text-right font-bold text-slate-800">{row.totalQty.toFixed(2)}</td>
-                      <td className="p-3 text-right font-black text-slate-900">₹{row.totalAmount.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</td>
-                      <td className="p-3 text-center">
+                    <tr key={row.party} className="border-b border-slate-100 hover:bg-slate-50 transition-all duration-150">
+                      <td className="p-3.5 font-bold text-slate-700 border-r border-slate-100">{idx + 1}</td>
+                      <td className="p-3.5 font-bold text-slate-800 border-r border-slate-100">{row.party}</td>
+                      <td className="p-3.5 text-right font-bold text-slate-800 border-r border-slate-100">{row.totalQty.toFixed(2)}</td>
+                      <td className="p-3.5 text-right font-black text-slate-900 border-r border-slate-100">₹{row.totalAmount.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</td>
+                      <td className="p-3.5 text-center">
                         <div className="flex items-center justify-center gap-2">
                           {getSMSStatusIcon(row.smsStatus)}
-                          <span className={`text-[9px] font-black uppercase ${
+                          <span className={`text-xs font-black uppercase ${
                             row.smsStatus === 'sent' ? 'text-green-600' : 'text-orange-500'
                           }`}>
                             {getSMSStatusText(row.smsStatus)}
@@ -316,28 +323,28 @@ const DailySaleReport = ({ onCancel }) => {
         </div>
 
         {/* Footer Actions & Summary */}
-        <div className="bg-white border border-slate-300 p-3 shadow-sm shrink-0">
-          <div className="grid grid-cols-12 gap-3 items-center">
+        <div className="bg-white rounded-xl border border-slate-200 p-4 shadow-lg shrink-0 backdrop-blur-sm">
+          <div className="grid grid-cols-12 gap-4 items-center">
             
-            <div className="col-span-6 flex gap-2">
+            <div className="col-span-6 flex gap-3">
               <button 
                 onClick={handleSendSMS}
-                className="bg-emerald-600 text-white px-6 h-9 font-black uppercase text-[10px] hover:bg-emerald-700 shadow-lg flex items-center gap-2"
+                className="bg-gradient-to-r from-emerald-500 to-emerald-600 text-white px-5 py-2.5 font-black uppercase text-xs rounded-lg shadow-lg hover:from-emerald-600 hover:to-emerald-700 transition-all duration-200 flex items-center gap-2 tracking-wider"
                 data-enter-index="5"
               >
-                <Send size={14} /> SEND SMS
+                <Send size={16} /> SEND SMS
               </button>
               <button 
                 onClick={handlePrint}
-                className="bg-slate-800 text-white px-6 h-9 font-black uppercase text-[10px] hover:bg-slate-700 shadow-lg flex items-center gap-2"
+                className="bg-gradient-to-r from-slate-700 to-slate-800 text-white px-5 py-2.5 font-black uppercase text-xs rounded-lg shadow-lg hover:from-slate-800 hover:to-slate-900 transition-all duration-200 flex items-center gap-2 tracking-wider"
                 data-enter-index="6"
               >
-                <Printer size={14} /> PRINT
+                <Printer size={16} /> PRINT
               </button>
               {onCancel && (
                 <button 
                   onClick={onCancel}
-                  className="bg-slate-300 text-slate-800 px-6 h-9 font-black uppercase text-[10px] hover:bg-slate-400 flex items-center gap-2"
+                  className="bg-gradient-to-r from-slate-200 to-slate-300 text-slate-700 px-5 py-2.5 font-black uppercase text-xs rounded-lg shadow-lg hover:from-slate-300 hover:to-slate-400 transition-all duration-200 flex items-center gap-2 tracking-wider border border-slate-300"
                   data-enter-index="7"
                 >
                   CANCEL
@@ -346,22 +353,22 @@ const DailySaleReport = ({ onCancel }) => {
             </div>
 
             {/* Totals Section */}
-            <div className="col-span-6 grid grid-cols-2 gap-3">
-              <div>
-                <label className="text-[9px] font-black uppercase text-slate-500">Total Quantity</label>
+            <div className="col-span-6 grid grid-cols-2 gap-4">
+              <div className="bg-gradient-to-br from-slate-50 to-slate-100 rounded-lg p-3 border border-slate-200 shadow-sm">
+                <label className="text-[10px] font-black uppercase text-slate-600 mb-2 block tracking-wider">Total Quantity</label>
                 <input 
                   type="text" 
                   readOnly 
-                  className="w-full bg-slate-100 border p-2 text-[11px] font-black text-right outline-none" 
+                  className="w-full bg-white border-2 border-slate-200 rounded-lg p-2.5 text-sm font-black text-right text-slate-800 outline-none shadow-inner" 
                   value={totals.qty.toFixed(2)}
                 />
               </div>
-              <div>
-                <label className="text-[9px] font-black uppercase text-slate-500">Amount Total</label>
+              <div className="bg-gradient-to-br from-rose-50 to-rose-100 rounded-lg p-3 border-2 border-rose-200 shadow-sm">
+                <label className="text-[10px] font-black uppercase text-rose-700 mb-2 block tracking-wider">Amount Total</label>
                 <input 
                   type="text" 
                   readOnly 
-                  className="w-full bg-rose-600 text-white border border-rose-700 p-2 text-[11px] font-black text-right outline-none" 
+                  className="w-full bg-gradient-to-r from-rose-500 to-rose-600 text-white border-2 border-rose-600 rounded-lg p-2.5 text-sm font-black text-right outline-none shadow-lg" 
                   value={`₹ ${totals.amount.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`}
                 />
               </div>

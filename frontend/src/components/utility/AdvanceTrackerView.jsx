@@ -112,57 +112,56 @@ export default function AdvanceTrackerView({ groups = [], customers = [], advanc
   }, [selectedCustomer, advanceStore]);
 
   return (
-    <div className="flex-1 flex flex-col h-full bg-[#f1f3f5] overflow-hidden">
-      <div className="bg-slate-800 px-4 py-2 flex justify-between items-center text-white shrink-0 shadow-lg">
-        <h1 className="text-[14px] font-black uppercase flex items-center gap-2"><WalletCards className="w-4 h-4 text-rose-500" /> ADVANCE</h1>
-        <button onClick={onCancel} className="p-1 hover:bg-rose-600" data-enter-index="6"><X className="w-4 h-4" /></button>
+    <div className="flex-1 flex flex-col h-full bg-gradient-to-br from-slate-50 to-slate-100 overflow-hidden">
+      <div className="bg-gradient-to-r from-[#5B55E6] to-[#4A44D0] px-5 py-3 flex justify-between items-center text-white shrink-0 shadow-xl rounded-b-xl">
+        <h1 className="text-base font-bold uppercase flex items-center gap-2.5 tracking-wider"><WalletCards className="w-5 h-5 text-white" /> ADVANCE TRACKER</h1>
+        <button onClick={onCancel} className="p-1.5 rounded-lg hover:bg-white/20 transition-all" data-enter-index="6"><X className="w-5 h-5" /></button>
       </div>
 
-      <div className="p-4 flex-1 flex flex-col gap-3 overflow-hidden">
-        {/* TOP SELECTION SECTION */}
-        <div className="bg-white border border-slate-300 p-3 shadow-sm shrink-0">
+      <div className="p-5 flex-1 flex flex-col gap-4 overflow-hidden">
+        {/* ALL FILTERS IN ONE LINE */}
+        <div className="bg-white rounded-xl border border-slate-200 p-4 shadow-lg shrink-0 backdrop-blur-sm">
           <div className="grid grid-cols-12 gap-3 items-end">
-            <div className="col-span-4">
-              <label className="text-[9px] font-black uppercase text-slate-500">Group Selection</label>
-              <select
-                className="w-full border p-2 text-[11px] font-bold outline-none bg-white"
-                value={groupName}
-                onChange={e => setGroupName(e.target.value)}
-                data-enter-index="1"
-              >
-                <option value="">Select group</option>
-                {groupOptions.map(g => (
-                  <option key={g} value={g}>{g}</option>
-                ))}
-              </select>
+            <div className="col-span-2">
+              <label className="text-[9px] font-black uppercase text-slate-600 mb-1 block tracking-wider">Group</label>
+              <div className="relative">
+                <select
+                  className="w-full bg-rose-50 border-2 border-rose-200 rounded-lg p-2 text-xs font-bold text-slate-800 outline-none transition-all duration-200 hover:border-rose-300 focus:border-rose-400 focus:ring-2 focus:ring-rose-100 appearance-none"
+                  value={groupName}
+                  onChange={e => setGroupName(e.target.value)}
+                  data-enter-index="1"
+                >
+                  <option value="">Select group</option>
+                  {groupOptions.map(g => (
+                    <option key={g} value={g}>{g}</option>
+                  ))}
+                </select>
+              </div>
             </div>
 
-            <div className="col-span-4">
-              <label className="text-[9px] font-black uppercase text-slate-500">Customer Selection</label>
-              <select
-                className="w-full border p-2 text-[11px] font-bold outline-none bg-white"
-                value={customerName}
-                onChange={e => setCustomerName(e.target.value)}
-                disabled={!groupName}
-                data-enter-index="2"
-              >
-                <option value="">Select customer</option>
-                {filteredCustomers.map(c => (
-                  <option key={String(c.id ?? c.name)} value={String(c.name || '')}>{String(c.name || '')}</option>
-                ))}
-              </select>
+            <div className="col-span-2">
+              <label className="text-[9px] font-black uppercase text-slate-600 mb-1 block tracking-wider">Customer</label>
+              <div className="relative">
+                <select
+                  className="w-full bg-rose-50 border-2 border-rose-200 rounded-lg p-2 text-xs font-bold text-slate-800 outline-none transition-all duration-200 hover:border-rose-300 focus:border-rose-400 focus:ring-2 focus:ring-rose-100 appearance-none disabled:bg-slate-100 disabled:text-slate-400"
+                  value={customerName}
+                  onChange={e => setCustomerName(e.target.value)}
+                  disabled={!groupName}
+                  data-enter-index="2"
+                >
+                  <option value="">Select customer</option>
+                  {filteredCustomers.map(c => (
+                    <option key={String(c.id ?? c.name)} value={String(c.name || '')}>{String(c.name || '')}</option>
+                  ))}
+                </select>
+              </div>
             </div>
-          </div>
-        </div>
 
-        {/* ADVANCE INPUT SECTION */}
-        <div className="bg-white border border-slate-300 p-3 shadow-sm shrink-0">
-          <div className="grid grid-cols-12 gap-3 items-end">
-            <div className="col-span-3">
-              <label className="text-[9px] font-black uppercase text-slate-500">Advance Given</label>
+            <div className="col-span-2">
+              <label className="text-[9px] font-black uppercase text-slate-600 mb-1 block tracking-wider">Given</label>
               <input
                 type="number"
-                className="w-full border p-2 text-[11px] font-bold outline-none text-right"
+                className="w-full bg-rose-50 border-2 border-rose-200 rounded-lg p-2 text-xs font-bold text-slate-800 outline-none text-right transition-all duration-200 hover:border-rose-300 focus:border-rose-400 focus:ring-2 focus:ring-rose-100 disabled:bg-slate-100 disabled:text-slate-400"
                 value={givenInput}
                 onChange={e => setGivenInput(e.target.value)}
                 disabled={!selectedCustomer?.id}
@@ -170,11 +169,11 @@ export default function AdvanceTrackerView({ groups = [], customers = [], advanc
               />
             </div>
 
-            <div className="col-span-3">
-              <label className="text-[9px] font-black uppercase text-slate-500">Advance Deducted</label>
+            <div className="col-span-2">
+              <label className="text-[9px] font-black uppercase text-slate-600 mb-1 block tracking-wider">Deducted</label>
               <input
                 type="number"
-                className="w-full border p-2 text-[11px] font-bold outline-none text-right"
+                className="w-full bg-rose-50 border-2 border-rose-200 rounded-lg p-2 text-xs font-bold text-slate-800 outline-none text-right transition-all duration-200 hover:border-rose-300 focus:border-rose-400 focus:ring-2 focus:ring-rose-100 disabled:bg-slate-100 disabled:text-slate-400"
                 value={deductedInput}
                 onChange={e => setDeductedInput(e.target.value)}
                 disabled={!selectedCustomer?.id}
@@ -182,57 +181,59 @@ export default function AdvanceTrackerView({ groups = [], customers = [], advanc
               />
             </div>
 
-            <div className="col-span-3">
-              <label className="text-[9px] font-black uppercase text-slate-500">Remaining Advance</label>
+            <div className="col-span-2">
+              <label className="text-[9px] font-black uppercase text-slate-600 mb-1 block tracking-wider">Remaining</label>
               <input
                 type="text"
                 readOnly
-                className="w-full bg-slate-50 border p-2 text-[11px] font-black text-right text-rose-600 cursor-not-allowed"
+                className="w-full bg-gradient-to-r from-rose-50 to-rose-100 border-2 border-rose-200 rounded-lg p-2 text-xs font-black text-right text-rose-700 cursor-not-allowed shadow-inner"
                 value={`₹ ${previewRemaining.toFixed(2)}`}
               />
             </div>
 
-            <div className="col-span-3 flex justify-end">
+            <div className="col-span-2 flex justify-end items-end">
               <button
                 onClick={handleSave}
                 disabled={!selectedCustomer?.id || saving}
-                className="bg-emerald-600 text-white px-10 h-9 rounded-none font-black uppercase text-[10px] flex items-center gap-2 hover:bg-emerald-700 shadow-lg disabled:opacity-40"
+                className="bg-gradient-to-r from-emerald-500 to-emerald-600 text-white px-3 py-2 font-black uppercase text-[9px] rounded-lg shadow-lg hover:from-emerald-600 hover:to-emerald-700 disabled:opacity-50 disabled:cursor-not-allowed transition-all duration-200 flex items-center gap-1.5 tracking-wider"
                 data-enter-index="5"
               >
-                <Save className="w-3.5 h-3.5" /> SAVE
+                <Save className="w-3.5 h-3.5" /> {saving ? 'SAVING' : 'SAVE'}
               </button>
             </div>
           </div>
         </div>
 
         {/* ADVANCE TABLE */}
-        <div className="flex-1 bg-white border-2 border-slate-300 overflow-auto">
-          <table className="w-full text-left text-[11px]">
-            <thead className="bg-slate-200 sticky top-0 uppercase font-black text-[9px] z-10 border-b-2 border-slate-400">
+        <div className="flex-1 bg-white rounded-xl border-2 border-slate-200 overflow-hidden shadow-lg">
+          <table className="w-full text-left text-sm border-collapse">
+            <thead className="bg-gradient-to-r from-[#5B55E6] to-[#4A44D0] sticky top-0 text-white uppercase font-bold text-xs z-10 border-b-2 border-black/20 shadow-lg">
               <tr>
-                <th className="p-3 w-14">Sl No</th>
-                <th className="p-3">Group Name</th>
-                <th className="p-3">Party Name</th>
-                <th className="p-3 w-32 text-right">Given</th>
-                <th className="p-3 w-32 text-right">Deducted</th>
-                <th className="p-3 w-32 text-right">Remaining</th>
+                <th className="p-3.5 w-16 border-r border-black/20">Sl No</th>
+                <th className="p-3.5 border-r border-black/20">Group Name</th>
+                <th className="p-3.5 border-r border-black/20">Party Name</th>
+                <th className="p-3.5 w-36 text-right border-r border-black/20">Given</th>
+                <th className="p-3.5 w-36 text-right border-r border-black/20">Deducted</th>
+                <th className="p-3.5 w-36 text-right">Remaining</th>
               </tr>
             </thead>
             <tbody>
               {tableRows.map((r, idx) => (
-                <tr key={`${r.group}-${r.name}-${idx}`} className="border-b hover:bg-slate-50 transition-colors">
-                  <td className="p-3 font-bold text-slate-700">{idx + 1}</td>
-                  <td className="p-3 font-bold text-slate-800">{r.group}</td>
-                  <td className="p-3 font-bold text-slate-800">{r.name}</td>
-                  <td className="p-3 text-right font-black text-slate-700">₹{r.given.toFixed(2)}</td>
-                  <td className="p-3 text-right font-black text-slate-700">₹{r.deducted.toFixed(2)}</td>
-                  <td className="p-3 text-right font-black text-rose-600">₹{r.remaining.toFixed(2)}</td>
+                <tr key={`${r.group}-${r.name}-${idx}`} className="border-b border-slate-100 hover:bg-slate-50 transition-all duration-150">
+                  <td className="p-3.5 font-bold text-slate-700 border-r border-slate-100">{idx + 1}</td>
+                  <td className="p-3.5 font-bold text-slate-800 border-r border-slate-100">{r.group}</td>
+                  <td className="p-3.5 font-bold text-slate-800 border-r border-slate-100">{r.name}</td>
+                  <td className="p-3.5 text-right font-black text-slate-700 border-r border-slate-100">₹{r.given.toFixed(2)}</td>
+                  <td className="p-3.5 text-right font-black text-slate-700 border-r border-slate-100">₹{r.deducted.toFixed(2)}</td>
+                  <td className="p-3.5 text-right font-black text-rose-600">₹{r.remaining.toFixed(2)}</td>
                 </tr>
               ))}
 
               {tableRows.length === 0 && (
                 <tr>
-                  <td colSpan={6} className="p-8 text-center text-slate-400 font-bold">Select customer to view advance</td>
+                  <td colSpan={6} className="p-16 text-center text-slate-500 text-sm font-bold">
+                    Select customer to view advance
+                  </td>
                 </tr>
               )}
             </tbody>

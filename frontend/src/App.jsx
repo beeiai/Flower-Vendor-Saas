@@ -78,48 +78,57 @@ function GroupCustomerRegistryForm({ title = 'ADD GROUP', initialTab = 'group', 
   };
 
   return (
-    <div className="flex-1 flex flex-col h-full bg-slate-100 overflow-hidden">
-      <div className="bg-slate-800 px-5 py-3 flex justify-between items-center text-white shrink-0 shadow-lg">
-        <h1 className="text-base font-bold uppercase flex items-center gap-2.5 tracking-wide"><FolderPlus className="w-5 h-5 text-primary-400" /> {String(title)}</h1>
-        <button data-action="secondary" onClick={onCancel} className="p-1.5 rounded hover:bg-white/10 transition-colors"><X className="w-5 h-5" /></button>
+    <div className="flex-1 flex flex-col h-full bg-gradient-to-br from-slate-50 to-slate-100 overflow-hidden">
+      <div className="bg-gradient-to-r from-[#5B55E6] to-[#4A44D0] px-5 py-3 flex justify-between items-center text-white shrink-0 shadow-xl rounded-b-xl">
+        <h1 className="text-base font-bold uppercase flex items-center gap-2.5 tracking-wider"><FolderPlus className="w-5 h-5 text-white" /> {String(title)}</h1>
+        <button data-action="secondary" onClick={onCancel} className="p-1.5 rounded-lg hover:bg-white/20 transition-all"><X className="w-5 h-5" /></button>
       </div>
 
       <div className="p-6 flex-1 overflow-auto">
-        <div className="max-w-[760px] mx-auto bg-white border border-slate-200 shadow-card rounded-sm overflow-hidden">
-          <div className="bg-slate-50 border-b border-slate-200 px-5 py-3 flex gap-3">
-            <button type="button" onClick={() => setTab('group')} className={`px-5 h-10 text-sm font-semibold uppercase border rounded-sm transition-all ${tab === 'group' ? 'bg-slate-800 text-white border-slate-800 shadow-sm' : 'bg-white text-slate-600 border-slate-300 hover:bg-slate-100 hover:border-slate-400'}`} data-enter-index="0">Group Addition</button>
-            <button type="button" onClick={() => setTab('customer')} className={`px-5 h-10 text-sm font-semibold uppercase border rounded-sm transition-all ${tab === 'customer' ? 'bg-slate-800 text-white border-slate-800 shadow-sm' : 'bg-white text-slate-600 border-slate-300 hover:bg-slate-100 hover:border-slate-400'}`} data-enter-index="0">Customer Addition</button>
+        <div className="max-w-[760px] mx-auto bg-white border border-slate-200 shadow-xl rounded-2xl overflow-hidden">
+          <div className="bg-gradient-to-r from-slate-50 to-slate-100 border-b border-slate-200 px-5 py-3 flex gap-3 rounded-t-2xl">
+            <button type="button" onClick={() => setTab('group')} className={`px-5 h-10 text-sm font-bold uppercase border rounded-lg transition-all shadow-sm ${tab === 'group' ? 'bg-gradient-to-r from-[#5B55E6] to-[#4A44D0] text-white border-[#4A44D0] shadow-md' : 'bg-white text-slate-600 border-slate-300 hover:bg-[#5B55E6]/10 hover:border-[#5B55E6] hover:text-[#5B55E6]'}`} data-enter-index="0">Group Addition</button>
+            <button type="button" onClick={() => setTab('customer')} className={`px-5 h-10 text-sm font-bold uppercase border rounded-lg transition-all shadow-sm ${tab === 'customer' ? 'bg-gradient-to-r from-[#5B55E6] to-[#4A44D0] text-white border-[#4A44D0] shadow-md' : 'bg-white text-slate-600 border-slate-300 hover:bg-[#5B55E6]/10 hover:border-[#5B55E6] hover:text-[#5B55E6]'}`} data-enter-index="0">Customer Addition</button>
           </div>
 
-          <div className="p-5">
+          <div className="p-6">
         {tab === 'group' && (
-          <div className="space-y-5">
-            <div>
-              <label className="text-xs font-semibold uppercase text-slate-600 tracking-wide block mb-1.5">Group Name</label>
-              <input type="text" className="w-full border border-slate-300 rounded-sm px-3 py-2.5 text-sm font-medium outline-none focus:border-primary-500 focus:ring-2 focus:ring-primary-50 transition-all" style={{height: '42px'}} value={groupName} onChange={e => setGroupName(e.target.value)} placeholder="Enter group name" data-enter-index="1" />
+          <div className="space-y-6">
+            <div className="bg-slate-50/50 p-4 rounded-xl border border-slate-200">
+              <label className="text-xs font-bold uppercase text-slate-600 tracking-widest block mb-2">Group Name</label>
+              <input type="text" className="w-full border border-rose-200 rounded-lg px-4 py-3 text-sm font-medium bg-white outline-none focus:border-rose-500 focus:ring-2 focus:ring-rose-500/20 shadow-sm hover:shadow-md transition-all" style={{height: '46px'}} value={groupName} onChange={e => setGroupName(e.target.value)} placeholder="Enter group name" data-enter-index="1" />
             </div>
-            <button data-action="primary" onClick={addGroup} className="w-full bg-primary-600 text-white py-3 font-semibold uppercase text-sm shadow-md hover:bg-primary-700 rounded-sm transition-all" style={{height: '44px'}} data-enter-index="2">Add Group</button>
+            <button data-action="primary" onClick={addGroup} className="w-full bg-gradient-to-r from-[#5B55E6] to-[#4A44D0] text-white py-3 font-bold uppercase text-sm shadow-lg hover:from-[#4A44D0] hover:to-[#3A34C0] rounded-xl transition-all hover:shadow-xl active:translate-y-0.5" style={{height: '48px'}} data-enter-index="2">Add Group</button>
           </div>
         )}
 
         {tab === 'customer' && (
-          <div className="space-y-5">
-            <SearchableSelect label="Target Group" options={groups.map(g => g.name)} value={custForm.groupName} onChange={(val) => setCustForm({ ...custForm, groupName: val })} placeholder="Select group" data-enter-index="1" />
-            <div>
-              <label className="text-xs font-semibold uppercase text-slate-600 tracking-wide block mb-1.5">Customer Name</label>
-              <input type="text" className="w-full border border-slate-300 rounded-sm px-3 py-2.5 text-sm font-medium outline-none focus:border-primary-500 focus:ring-2 focus:ring-primary-50 transition-all" style={{height: '42px'}} value={custForm.name} onChange={e => setCustForm({ ...custForm, name: e.target.value })} placeholder="Enter customer name" data-enter-index="2" />
+          <div className="space-y-6">
+            <div className="bg-slate-50/50 p-4 rounded-xl border border-slate-200">
+              <div className="relative">
+                <SearchableSelect label="Target Group" options={groups.map(g => g.name)} value={custForm.groupName} onChange={(val) => setCustForm({ ...custForm, groupName: val })} placeholder="Select group" data-enter-index="1" className="focus:border-rose-500 focus:ring-rose-500/20 rounded-lg shadow-sm hover:shadow-md transition-all border-rose-200" />
+                <div className="absolute right-3 top-8 text-rose-400">
+                  <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
+                  </svg>
+                </div>
+              </div>
+            </div>
+            <div className="bg-slate-50/50 p-4 rounded-xl border border-slate-200">
+              <label className="text-xs font-bold uppercase text-slate-600 tracking-widest block mb-2">Customer Name</label>
+              <input type="text" className="w-full border border-rose-200 rounded-lg px-4 py-3 text-sm font-medium bg-white outline-none focus:border-rose-500 focus:ring-2 focus:ring-rose-500/20 shadow-sm hover:shadow-md transition-all" style={{height: '46px'}} value={custForm.name} onChange={e => setCustForm({ ...custForm, name: e.target.value })} placeholder="Enter customer name" data-enter-index="2" />
             </div>
             <div className="grid grid-cols-2 gap-4">
-              <div>
-                <label className="text-xs font-semibold uppercase text-slate-600 tracking-wide block mb-1.5">Phone</label>
-                <input type="text" className="w-full border border-slate-300 rounded-sm px-3 py-2.5 text-sm font-medium outline-none focus:border-primary-500 focus:ring-2 focus:ring-primary-50 transition-all" style={{height: '42px'}} value={custForm.contact} onChange={e => setCustForm({ ...custForm, contact: e.target.value })} placeholder="Phone number" data-enter-index="3" />
+              <div className="bg-slate-50/50 p-4 rounded-xl border border-slate-200">
+                <label className="text-xs font-bold uppercase text-slate-600 tracking-widest block mb-2">Phone</label>
+                <input type="text" className="w-full border border-rose-200 rounded-lg px-4 py-3 text-sm font-medium bg-white outline-none focus:border-rose-500 focus:ring-2 focus:ring-rose-500/20 shadow-sm hover:shadow-md transition-all" style={{height: '46px'}} value={custForm.contact} onChange={e => setCustForm({ ...custForm, contact: e.target.value })} placeholder="Phone number" data-enter-index="3" />
               </div>
-              <div>
-                <label className="text-xs font-semibold uppercase text-slate-600 tracking-wide block mb-1.5">Address</label>
-                <input type="text" className="w-full border border-slate-300 rounded-sm px-3 py-2.5 text-sm font-medium outline-none focus:border-primary-500 focus:ring-2 focus:ring-primary-50 transition-all" style={{height: '42px'}} value={custForm.address} onChange={e => setCustForm({ ...custForm, address: e.target.value })} placeholder="Address" data-enter-index="4" />
+              <div className="bg-slate-50/50 p-4 rounded-xl border border-slate-200">
+                <label className="text-xs font-bold uppercase text-slate-600 tracking-widest block mb-2">Address</label>
+                <input type="text" className="w-full border border-rose-200 rounded-lg px-4 py-3 text-sm font-medium bg-white outline-none focus:border-rose-500 focus:ring-2 focus:ring-rose-500/20 shadow-sm hover:shadow-md transition-all" style={{height: '46px'}} value={custForm.address} onChange={e => setCustForm({ ...custForm, address: e.target.value })} placeholder="Address" data-enter-index="4" />
               </div>
             </div>
-            <button data-action="primary" onClick={addCustomer} className="w-full bg-primary-600 text-white py-3 font-semibold uppercase text-sm shadow-md hover:bg-primary-700 rounded-sm transition-all" style={{height: '44px'}} data-enter-index="5">Add Customer</button>
+            <button data-action="primary" onClick={addCustomer} className="w-full bg-gradient-to-r from-[#5B55E6] to-[#4A44D0] text-white py-3 font-bold uppercase text-sm shadow-lg hover:from-[#4A44D0] hover:to-[#3A34C0] rounded-xl transition-all hover:shadow-xl active:translate-y-0.5" style={{height: '48px'}} data-enter-index="5">Add Customer</button>
           </div>
         )}
           </div>
@@ -131,19 +140,22 @@ function GroupCustomerRegistryForm({ title = 'ADD GROUP', initialTab = 'group', 
 
 function ItemRegistryForm({ form, setForm, onSave, onCancel }) {
   return (
-    <div className="flex-1 flex flex-col h-full bg-slate-100 overflow-hidden">
-      <div className="bg-slate-800 px-5 py-3 flex justify-between items-center text-white shrink-0 shadow-lg">
-        <h1 className="text-base font-bold uppercase flex items-center gap-2.5 tracking-wide"><PackagePlus className="w-5 h-5 text-primary-400" /> NEW ITEM</h1>
-        <button data-action="secondary" onClick={onCancel} className="p-1.5 rounded hover:bg-white/10 transition-colors"><X className="w-5 h-5" /></button>
+    <div className="flex-1 flex flex-col h-full bg-gradient-to-br from-slate-50 to-slate-100 overflow-hidden">
+      <div className="bg-gradient-to-r from-[#5B55E6] to-[#4A44D0] px-5 py-3 flex justify-between items-center text-white shrink-0 shadow-xl rounded-b-xl">
+        <h1 className="text-base font-bold uppercase flex items-center gap-2.5 tracking-wider"><PackagePlus className="w-5 h-5 text-white" /> NEW ITEM</h1>
+        <button data-action="secondary" onClick={onCancel} className="p-1.5 rounded-lg hover:bg-white/20 transition-all"><X className="w-5 h-5" /></button>
       </div>
       <div className="p-6 flex-1 overflow-auto">
-        <div className="max-w-[560px] mx-auto bg-white border border-slate-200 shadow-card rounded-sm p-6 space-y-5">
-          <div>
-            <label className="text-xs font-semibold uppercase text-slate-600 tracking-wide block mb-1.5">Code</label>
-            <input type="text" className="w-full border border-slate-300 rounded-sm px-3 py-2.5 text-sm font-medium outline-none focus:border-primary-500 focus:ring-2 focus:ring-primary-50 transition-all" style={{height: '42px'}} value={form.itemCode} onChange={e => setForm({ ...form, itemCode: e.target.value })} placeholder="Enter item code" data-enter-index="1" />
+        <div className="max-w-[560px] mx-auto bg-white border border-slate-200 shadow-xl rounded-2xl p-6 space-y-6">
+          <div className="bg-slate-50/50 p-4 rounded-xl border border-slate-200">
+            <label className="text-xs font-bold uppercase text-slate-600 tracking-widest block mb-2">Code</label>
+            <input type="text" className="w-full border border-rose-200 rounded-lg px-4 py-3 text-sm font-medium bg-white outline-none focus:border-rose-500 focus:ring-2 focus:ring-rose-500/20 shadow-sm hover:shadow-md transition-all" style={{height: '46px'}} value={form.itemCode} onChange={e => setForm({ ...form, itemCode: e.target.value })} placeholder="Enter item code" data-enter-index="1" />
           </div>
-          <div><label className="text-xs font-semibold uppercase text-slate-600 tracking-wide block mb-1.5">Product Name</label><input type="text" className="w-full border border-slate-300 rounded-sm px-3 py-2.5 text-sm font-medium outline-none focus:border-primary-500 focus:ring-2 focus:ring-primary-50 transition-all" style={{height: '42px'}} value={form.itemName} onChange={e => setForm({...form, itemName: e.target.value})} placeholder="Enter product name" data-enter-index="2" /></div>
-          <button data-action="primary" onClick={onSave} className="w-full bg-emerald-600 text-white py-3 font-semibold uppercase text-sm shadow-md hover:bg-emerald-700 rounded-sm transition-all" style={{height: '44px'}} data-enter-index="3">Add to Inventory</button>
+          <div className="bg-slate-50/50 p-4 rounded-xl border border-slate-200">
+            <label className="text-xs font-bold uppercase text-slate-600 tracking-widest block mb-2">Product Name</label>
+            <input type="text" className="w-full border border-rose-200 rounded-lg px-4 py-3 text-sm font-medium bg-white outline-none focus:border-rose-500 focus:ring-2 focus:ring-rose-500/20 shadow-sm hover:shadow-md transition-all" style={{height: '46px'}} value={form.itemName} onChange={e => setForm({...form, itemName: e.target.value})} placeholder="Enter product name" data-enter-index="2" />
+          </div>
+          <button data-action="primary" onClick={onSave} className="w-full bg-gradient-to-r from-[#5B55E6] to-[#4A44D0] text-white py-3 font-bold uppercase text-sm shadow-lg hover:from-[#4A44D0] hover:to-[#3A34C0] rounded-xl transition-all hover:shadow-xl active:translate-y-0.5" style={{height: '48px'}} data-enter-index="3">Add to Inventory</button>
         </div>
       </div>
     </div>
@@ -457,25 +469,28 @@ function VehicleView({ vehicles, setVehicles, onCancel }) {
     }
   };
   return (
-    <div className="flex-1 flex flex-col h-full bg-slate-100 overflow-hidden">
-      <div className="bg-slate-800 px-5 py-3 flex justify-between items-center text-white shrink-0 shadow-lg"><h1 className="text-base font-bold uppercase flex items-center gap-2.5 tracking-wide"><Truck className="w-5 h-5 text-primary-400" /> EXTRA VEHICLE MANAGEMENT</h1><button data-action="secondary" onClick={onCancel} className="p-1.5 rounded hover:bg-white/10 transition-colors"><X className="w-5 h-5" /></button></div>
-      <div className="flex-1 flex p-5 gap-5 overflow-hidden">
-        <div className="w-80 bg-white border border-slate-200 p-5 shadow-card rounded-sm h-fit">
-          <h3 className="text-sm font-semibold uppercase text-slate-600 mb-5 tracking-wide flex items-center gap-2"><Truck className="w-4 h-4 text-slate-400" /> Add Vehicle</h3>
+    <div className="flex-1 flex flex-col h-full bg-gradient-to-br from-slate-50 to-slate-100 overflow-hidden">
+      <div className="bg-gradient-to-r from-[#5B55E6] to-[#4A44D0] px-5 py-3 flex justify-between items-center text-white shrink-0 shadow-xl rounded-b-xl"><h1 className="text-base font-bold uppercase flex items-center gap-2.5 tracking-wider"><Truck className="w-5 h-5 text-white" /> EXTRA VEHICLE MANAGEMENT</h1><button data-action="secondary" onClick={onCancel} className="p-1.5 rounded-lg hover:bg-white/20 transition-all"><X className="w-5 h-5" /></button></div>
+      <div className="flex-1 flex p-6 gap-6 overflow-hidden">
+        <div className="w-80 bg-white border border-slate-200 shadow-lg rounded-2xl p-5 h-fit">
+          <h3 className="text-sm font-bold uppercase text-slate-600 mb-5 tracking-widest flex items-center gap-2"><Truck className="w-4 h-4 text-slate-400" /> Add Vehicle</h3>
           <div className="space-y-5">
-            <div><label className="text-xs font-semibold uppercase text-slate-500 tracking-wide block mb-1.5">Vehicle Name / Plate</label><input type="text" className="w-full border border-slate-300 rounded-sm px-3 py-2.5 text-sm font-medium outline-none focus:border-primary-500 focus:ring-2 focus:ring-primary-50 transition-all" style={{height: '42px'}} value={newVehicle} onChange={e => setNewVehicle(e.target.value)} placeholder="Enter vehicle name or plate" data-enter-index="1" /></div>
-            <button data-action="primary" onClick={handleAdd} className="w-full bg-slate-800 text-white py-3 font-semibold uppercase text-sm hover:bg-primary-600 transition-all rounded-sm shadow-sm" style={{height: '44px'}} data-enter-index="2">Register</button>
+            <div>
+              <label className="text-xs font-bold uppercase text-slate-600 tracking-widest block mb-2">Vehicle Name / Plate</label>
+              <input type="text" className="w-full border border-rose-200 rounded-lg px-4 py-3 text-sm font-medium bg-white outline-none focus:border-rose-500 focus:ring-2 focus:ring-rose-500/20 shadow-sm hover:shadow-md transition-all" style={{height: '46px'}} value={newVehicle} onChange={e => setNewVehicle(e.target.value)} placeholder="Enter vehicle name or plate" data-enter-index="1" />
+            </div>
+            <button data-action="primary" onClick={handleAdd} className="w-full bg-gradient-to-r from-[#5B55E6] to-[#4A44D0] text-white py-3 font-bold uppercase text-sm shadow-lg hover:from-[#4A44D0] hover:to-[#3A34C0] rounded-xl transition-all hover:shadow-xl active:translate-y-0.5" style={{height: '48px'}} data-enter-index="2">Register</button>
           </div>
         </div>
-        <div className="flex-1 bg-white border border-slate-200 shadow-card rounded-sm overflow-hidden flex flex-col">
-          <div className="bg-slate-50 px-4 py-3 border-b border-slate-200 font-semibold text-sm uppercase text-slate-600 tracking-wide">Registry List</div>
-          <div className="flex-1 overflow-auto"><table className="w-full text-left text-sm">
-              <thead className="bg-slate-50 sticky top-0 uppercase text-xs font-semibold border-b border-slate-200"><tr><th className="px-4 py-3.5 text-slate-600">Vehicle Description</th><th className="px-4 py-3.5 text-right text-slate-600">Action</th></tr></thead>
+        <div className="flex-1 bg-white border border-slate-200 shadow-lg rounded-2xl overflow-hidden flex flex-col">
+          <div className="bg-gradient-to-r from-slate-50 to-slate-100 px-5 py-3.5 border-b border-slate-200 font-bold text-sm uppercase text-slate-700 tracking-wider">Registry List</div>
+          <div className="flex-1 overflow-auto"><table className="w-full text-left text-sm border-collapse">
+              <thead className="bg-gradient-to-r from-[#5B55E6] to-[#4A44D0] sticky top-0 uppercase font-bold text-xs text-white border-b-2 border-black/20 shadow-lg"><tr><th className="px-5 py-4 border-r border-black/10">Vehicle Description</th><th className="px-5 py-4 text-right border-r border-black/10">Action</th></tr></thead>
               <tbody>{vehicles.map(v => (
-                <tr key={v.id} className="border-b border-slate-100 hover:bg-slate-50 transition-colors group">
-                  <td className="px-4 py-3.5 font-semibold text-slate-800">{String(v.name)}</td>
-                  <td className="px-4 py-3.5 text-right">
-                    <button onClick={async () => { await api.deleteVehicle(v.id); setVehicles(vehicles.filter(x => x.id !== v.id)); }} className="text-slate-300 hover:text-red-500 opacity-0 group-hover:opacity-100 transition-all p-1" data-enter-index={3 + v.id}><Trash2 className="w-4 h-4"/></button>
+                <tr key={v.id} className="border-b border-black/10 hover:bg-slate-50 transition-colors group">
+                  <td className="px-5 py-4 font-semibold text-slate-800 border-r border-black/5">{String(v.name)}</td>
+                  <td className="px-5 py-4 text-right">
+                    <button onClick={async () => { await api.deleteVehicle(v.id); setVehicles(vehicles.filter(x => x.id !== v.id)); }} className="text-slate-400 hover:text-red-500 opacity-0 group-hover:opacity-100 transition-all p-1.5 rounded-lg hover:bg-red-50" data-enter-index={3 + v.id}><Trash2 className="w-4 h-4"/></button>
                   </td>
                 </tr>
               ))}</tbody>
@@ -1047,39 +1062,48 @@ export default function App() {
   };
 
   const GroupPattiPrintingPage = () => (
-    <div className="flex-1 flex flex-col h-full bg-slate-50 overflow-hidden">
-      <div className="bg-slate-800 px-5 py-3 flex justify-between items-center text-white shrink-0 shadow-lg">
-        <h1 className="text-base font-semibold flex items-center gap-2"><Printer className="w-5 h-5 text-primary-400" /> Group Patti Printing</h1>
-        <button onClick={() => setActiveSection('daily')} className="p-1.5 hover:bg-slate-700 rounded transition-colors"><X className="w-4 h-4" /></button>
+    <div className="flex-1 flex flex-col h-full bg-gradient-to-br from-slate-50 to-slate-100 overflow-hidden">
+      <div className="bg-gradient-to-r from-[#5B55E6] to-[#4A44D0] px-5 py-3 flex justify-between items-center text-white shrink-0 shadow-xl rounded-b-xl">
+        <h1 className="text-base font-bold uppercase flex items-center gap-2.5 tracking-wider"><Printer className="w-5 h-5 text-white" /> GROUP PATTI PRINTING</h1>
+        <button onClick={() => setActiveSection('daily')} className="p-1.5 rounded-lg hover:bg-white/20 transition-all"><X className="w-5 h-5" /></button>
       </div>
 
       <div className="p-6 flex-1 overflow-auto">
-        <div className="max-w-[720px] mx-auto bg-white border border-slate-200 shadow-card rounded-sm p-6 space-y-5">
-          <div className="grid grid-cols-2 gap-4">
+        <div className="max-w-[720px] mx-auto bg-white border border-slate-200 shadow-lg rounded-2xl p-6 space-y-6">
+          <div className="grid grid-cols-2 gap-5">
             <div>
-              <label className="text-xs font-medium text-slate-600 block mb-1">From Date</label>
-              <input type="date" className="w-full border border-slate-300 px-3 text-sm font-medium rounded-sm outline-none focus:border-primary-500 focus:ring-2 focus:ring-primary-50 transition-all" style={{ height: '40px' }} value={groupPattiForm.fromDate} onChange={e => setGroupPattiForm({ ...groupPattiForm, fromDate: e.target.value })} data-enter-index="1" />
+              <label className="text-xs font-bold uppercase text-slate-600 tracking-widest block mb-2">From Date</label>
+              <input type="date" className="w-full border border-rose-200 rounded-lg px-4 py-3 text-sm font-medium bg-white outline-none focus:border-rose-500 focus:ring-2 focus:ring-rose-500/20 shadow-sm hover:shadow-md transition-all" style={{ height: '46px' }} value={groupPattiForm.fromDate} onChange={e => setGroupPattiForm({ ...groupPattiForm, fromDate: e.target.value })} data-enter-index="1" />
             </div>
             <div>
-              <label className="text-xs font-medium text-slate-600 block mb-1">To Date</label>
-              <input type="date" className="w-full border border-slate-300 px-3 text-sm font-medium rounded-sm outline-none focus:border-primary-500 focus:ring-2 focus:ring-primary-50 transition-all" style={{ height: '40px' }} value={groupPattiForm.toDate} onChange={e => setGroupPattiForm({ ...groupPattiForm, toDate: e.target.value })} data-enter-index="2" />
+              <label className="text-xs font-bold uppercase text-slate-600 tracking-widest block mb-2">To Date</label>
+              <input type="date" className="w-full border border-rose-200 rounded-lg px-4 py-3 text-sm font-medium bg-white outline-none focus:border-rose-500 focus:ring-2 focus:ring-rose-500/20 shadow-sm hover:shadow-md transition-all" style={{ height: '46px' }} value={groupPattiForm.toDate} onChange={e => setGroupPattiForm({ ...groupPattiForm, toDate: e.target.value })} data-enter-index="2" />
             </div>
           </div>
 
-          <SearchableSelect label="Group Name" options={groups.map(g => g.name)} value={groupPattiForm.groupName} onChange={(val) => setGroupPattiForm({ ...groupPattiForm, groupName: val })} placeholder="Select group" data-enter-index="3" />
+          <div className="relative">
+            <SearchableSelect label="Group Name" options={groups.map(g => g.name)} value={groupPattiForm.groupName} onChange={(val) => setGroupPattiForm({ ...groupPattiForm, groupName: val })} placeholder="Select group" data-enter-index="3" className="focus:border-rose-500 focus:ring-rose-500/20 rounded-lg shadow-sm hover:shadow-md transition-all border-rose-200" />
+            <div className="absolute right-3 top-8 text-rose-400">
+              <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
+              </svg>
+            </div>
+          </div>
 
           <div>
-            <label className="text-xs font-medium text-slate-600 block mb-1">Commission (%)</label>
-            <input type="number" className="w-full border border-slate-300 px-3 text-sm font-medium rounded-sm outline-none text-right focus:border-primary-500 focus:ring-2 focus:ring-primary-50 transition-all" style={{ height: '40px' }} value={groupPattiForm.commissionPct} onChange={e => setGroupPattiForm({ ...groupPattiForm, commissionPct: e.target.value })} data-enter-index="4" />
+            <label className="text-xs font-bold uppercase text-slate-600 tracking-widest block mb-2">Commission (%)</label>
+            <input type="number" className="w-full border border-rose-200 rounded-lg px-4 py-3 text-sm font-medium bg-white outline-none text-right focus:border-rose-500 focus:ring-2 focus:ring-rose-500/20 shadow-sm hover:shadow-md transition-all" style={{ height: '46px' }} value={groupPattiForm.commissionPct} onChange={e => setGroupPattiForm({ ...groupPattiForm, commissionPct: e.target.value })} data-enter-index="4" />
           </div>
 
-          <div className="flex gap-3 pt-2">
-            <button onClick={handleGroupPattiPrint} disabled={!groupPattiForm.groupName || isGroupPattiPrinting} className="flex-1 bg-primary-600 text-white py-3 font-semibold text-sm rounded-sm shadow-md disabled:opacity-40 hover:bg-primary-700 transition-colors" data-enter-index="5">Print</button>
-            <button onClick={() => { setIsGroupPattiPrinting(false); setActiveSection('daily'); }} className="flex-1 bg-slate-100 text-slate-700 py-3 font-semibold text-sm border border-slate-300 rounded-sm shadow-sm hover:bg-slate-200 transition-colors" data-enter-index="6">Cancel</button>
+          <div className="flex gap-4 pt-3">
+            <button onClick={handleGroupPattiPrint} disabled={!groupPattiForm.groupName || isGroupPattiPrinting} className="flex-1 bg-gradient-to-r from-[#5B55E6] to-[#4A44D0] text-white py-3.5 font-bold uppercase text-sm rounded-xl shadow-lg disabled:opacity-50 hover:from-[#4A44D0] hover:to-[#3A34C0] transition-all hover:shadow-xl active:translate-y-0.5" data-enter-index="5">
+              {isGroupPattiPrinting ? 'Printing...' : 'Print'}
+            </button>
+            <button onClick={() => { setIsGroupPattiPrinting(false); setActiveSection('daily'); }} className="flex-1 bg-gradient-to-r from-slate-100 to-slate-200 text-slate-700 py-3.5 font-bold uppercase text-sm border border-slate-300 rounded-xl shadow-md hover:from-slate-200 hover:to-slate-300 transition-all hover:shadow-lg" data-enter-index="6">Cancel</button>
           </div>
 
-          <div className="text-sm font-medium text-slate-500 min-h-[20px]">
-            {isGroupPattiPrinting ? 'Printing...' : ''}
+          <div className="text-center text-sm font-medium text-slate-500 min-h-[24px]">
+            {isGroupPattiPrinting ? 'Preparing print document...' : ''}
           </div>
         </div>
       </div>
@@ -1087,34 +1111,43 @@ export default function App() {
   );
 
   const GroupTotalReportPage = () => (
-    <div className="flex-1 flex flex-col h-full bg-slate-50 overflow-hidden">
-      <div className="bg-slate-800 px-5 py-3 flex justify-between items-center text-white shrink-0 shadow-lg">
-        <h1 className="text-base font-semibold flex items-center gap-2"><Layers className="w-5 h-5 text-primary-400" /> Group Total Report</h1>
-        <button onClick={() => setActiveSection('daily')} className="p-1.5 hover:bg-slate-700 rounded transition-colors"><X className="w-4 h-4" /></button>
+    <div className="flex-1 flex flex-col h-full bg-gradient-to-br from-slate-50 to-slate-100 overflow-hidden">
+      <div className="bg-gradient-to-r from-[#5B55E6] to-[#4A44D0] px-5 py-3 flex justify-between items-center text-white shrink-0 shadow-xl rounded-b-xl">
+        <h1 className="text-base font-bold uppercase flex items-center gap-2.5 tracking-wider"><Layers className="w-5 h-5 text-white" /> GROUP TOTAL REPORT</h1>
+        <button onClick={() => setActiveSection('daily')} className="p-1.5 rounded-lg hover:bg-white/20 transition-all"><X className="w-5 h-5" /></button>
       </div>
 
       <div className="p-6 flex-1 overflow-auto">
-        <div className="max-w-[720px] mx-auto bg-white border border-slate-200 shadow-card rounded-sm p-6 space-y-5">
-          <div className="grid grid-cols-2 gap-4">
+        <div className="max-w-[720px] mx-auto bg-white border border-slate-200 shadow-lg rounded-2xl p-6 space-y-6">
+          <div className="grid grid-cols-2 gap-5">
             <div>
-              <label className="text-xs font-medium text-slate-600 block mb-1">From Date</label>
-              <input type="date" className="w-full border border-slate-300 px-3 text-sm font-medium rounded-sm outline-none focus:border-primary-500 focus:ring-2 focus:ring-primary-50 transition-all" style={{ height: '40px' }} value={groupTotalForm.fromDate} onChange={e => setGroupTotalForm({ ...groupTotalForm, fromDate: e.target.value })} data-enter-index="1" />
+              <label className="text-xs font-bold uppercase text-slate-600 tracking-widest block mb-2">From Date</label>
+              <input type="date" className="w-full border border-rose-200 rounded-lg px-4 py-3 text-sm font-medium bg-white outline-none focus:border-rose-500 focus:ring-2 focus:ring-rose-500/20 shadow-sm hover:shadow-md transition-all" style={{ height: '46px' }} value={groupTotalForm.fromDate} onChange={e => setGroupTotalForm({ ...groupTotalForm, fromDate: e.target.value })} data-enter-index="1" />
             </div>
             <div>
-              <label className="text-xs font-medium text-slate-600 block mb-1">To Date</label>
-              <input type="date" className="w-full border border-slate-300 px-3 text-sm font-medium rounded-sm outline-none focus:border-primary-500 focus:ring-2 focus:ring-primary-50 transition-all" style={{ height: '40px' }} value={groupTotalForm.toDate} onChange={e => setGroupTotalForm({ ...groupTotalForm, toDate: e.target.value })} data-enter-index="2" />
+              <label className="text-xs font-bold uppercase text-slate-600 tracking-widest block mb-2">To Date</label>
+              <input type="date" className="w-full border border-rose-200 rounded-lg px-4 py-3 text-sm font-medium bg-white outline-none focus:border-rose-500 focus:ring-2 focus:ring-rose-500/20 shadow-sm hover:shadow-md transition-all" style={{ height: '46px' }} value={groupTotalForm.toDate} onChange={e => setGroupTotalForm({ ...groupTotalForm, toDate: e.target.value })} data-enter-index="2" />
             </div>
           </div>
 
-          <SearchableSelect label="Group Name" options={groups.map(g => g.name)} value={groupTotalForm.groupName} onChange={(val) => setGroupTotalForm({ ...groupTotalForm, groupName: val })} placeholder="Select group" data-enter-index="3" />
-
-          <div className="flex gap-3 pt-2">
-            <button onClick={handleGroupTotalPrint} disabled={!groupTotalForm.groupName || isGroupTotalPrinting} className="flex-1 bg-primary-600 text-white py-3 font-semibold text-sm rounded-sm shadow-md disabled:opacity-40 hover:bg-primary-700 transition-colors" data-enter-index="4">Print</button>
-            <button onClick={() => { setIsGroupTotalPrinting(false); setActiveSection('daily'); }} className="flex-1 bg-slate-100 text-slate-700 py-3 font-semibold text-sm border border-slate-300 rounded-sm shadow-sm hover:bg-slate-200 transition-colors" data-enter-index="5">Cancel</button>
+          <div className="relative">
+            <SearchableSelect label="Group Name" options={groups.map(g => g.name)} value={groupTotalForm.groupName} onChange={(val) => setGroupTotalForm({ ...groupTotalForm, groupName: val })} placeholder="Select group" data-enter-index="3" className="focus:border-rose-500 focus:ring-rose-500/20 rounded-lg shadow-sm hover:shadow-md transition-all border-rose-200" />
+            <div className="absolute right-3 top-8 text-rose-400">
+              <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
+              </svg>
+            </div>
           </div>
 
-          <div className="text-sm font-medium text-slate-500 min-h-[20px]">
-            {isGroupTotalPrinting ? 'Printing...' : ''}
+          <div className="flex gap-4 pt-3">
+            <button onClick={handleGroupTotalPrint} disabled={!groupTotalForm.groupName || isGroupTotalPrinting} className="flex-1 bg-gradient-to-r from-[#5B55E6] to-[#4A44D0] text-white py-3.5 font-bold uppercase text-sm rounded-xl shadow-lg disabled:opacity-50 hover:from-[#4A44D0] hover:to-[#3A34C0] transition-all hover:shadow-xl active:translate-y-0.5" data-enter-index="4">
+              {isGroupTotalPrinting ? 'Printing...' : 'Print'}
+            </button>
+            <button onClick={() => { setIsGroupTotalPrinting(false); setActiveSection('daily'); }} className="flex-1 bg-gradient-to-r from-slate-100 to-slate-200 text-slate-700 py-3.5 font-bold uppercase text-sm border border-slate-300 rounded-xl shadow-md hover:from-slate-200 hover:to-slate-300 transition-all hover:shadow-lg" data-enter-index="5">Cancel</button>
+          </div>
+
+          <div className="text-center text-sm font-medium text-slate-500 min-h-[24px]">
+            {isGroupTotalPrinting ? 'Preparing report...' : ''}
           </div>
         </div>
       </div>

@@ -173,170 +173,128 @@ const SmsView = ({ customers, ledgerStore, onCancel, showNotify }) => {
   };
 
   return (
-    <div className="flex-1 flex flex-col h-full bg-[#f1f3f5] overflow-hidden">
+    <div className="flex-1 flex flex-col h-full bg-gradient-to-br from-slate-50 to-slate-100 overflow-hidden">
+      
       {/* Header */}
-      <div className="bg-slate-800 px-4 py-2 flex justify-between items-center text-white shrink-0 shadow-lg">
-        <h1 className="text-[14px] font-black uppercase flex items-center gap-2">
-          <Smartphone className="w-4 h-4 text-rose-500" /> CUSTOMER SMS BROADCAST
+      <div className="bg-gradient-to-r from-[#5B55E6] to-[#4A44D0] px-5 py-3 flex justify-between items-center text-white shrink-0 shadow-xl rounded-b-xl">
+        <h1 className="text-base font-bold uppercase flex items-center gap-2.5 tracking-wider">
+          <Smartphone className="w-5 h-5 text-white" /> CUSTOMER SMS BROADCAST
         </h1>
-        <button onClick={onCancel} className="p-1 hover:bg-rose-600">
-          <X className="w-4 h-4" />
+        <button onClick={onCancel} className="p-1.5 rounded-lg hover:bg-white/20 transition-all">
+          <X className="w-5 h-5" />
         </button>
       </div>
 
-      <div className="p-4 flex-1 flex flex-col gap-3 overflow-hidden">
+      <div className="p-5 flex-1 flex flex-col gap-4 overflow-hidden">
         
         {/* Controls Section */}
-        <div className="bg-white border border-slate-300 p-3 shadow-sm shrink-0">
+        <div className="bg-white rounded-xl border border-slate-200 p-4 shadow-lg shrink-0 backdrop-blur-sm">
           <div className="grid grid-cols-12 gap-3 items-end">
             
-            {/* Date Range */}
-            <div className="col-span-3">
-              <label className="text-[9px] font-black uppercase text-slate-500">From Date</label>
+            {/* Date Range - Combined in one section */}
+            <div className="col-span-2">
+              <label className="text-[9px] font-black uppercase text-slate-600 mb-1 block tracking-wider">From Date</label>
               <input 
                 type="date" 
                 value={fromDate}
                 onChange={(e) => setFromDate(e.target.value)}
-                className="w-full border p-2 text-[11px] font-bold outline-none" 
+                className="w-full bg-rose-50 border-2 border-rose-200 rounded-lg p-2 text-xs font-bold text-slate-800 outline-none transition-all duration-200 hover:border-rose-300 focus:border-rose-400 focus:ring-2 focus:ring-rose-100" 
                 data-enter-index="1"
               />
             </div>
 
-            <div className="col-span-3">
-              <label className="text-[9px] font-black uppercase text-slate-500">To Date</label>
+            <div className="col-span-2">
+              <label className="text-[9px] font-black uppercase text-slate-600 mb-1 block tracking-wider">To Date</label>
               <input 
                 type="date" 
                 value={toDate}
                 onChange={(e) => setToDate(e.target.value)}
-                className="w-full border p-2 text-[11px] font-bold outline-none" 
+                className="w-full bg-rose-50 border-2 border-rose-200 rounded-lg p-2 text-xs font-bold text-slate-800 outline-none transition-all duration-200 hover:border-rose-300 focus:border-rose-400 focus:ring-2 focus:ring-rose-100" 
                 data-enter-index="2"
               />
             </div>
 
             {/* Group Selection */}
-            <div className="col-span-3">
-              <label className="text-[9px] font-black uppercase text-slate-500">Select Group</label>
-              <select 
-                value={selectedGroup}
-                onChange={(e) => setSelectedGroup(e.target.value)}
-                className="w-full border p-2 text-[11px] font-bold outline-none bg-white"
-                data-enter-index="3"
-              >
-                <option value="">All Groups</option>
-                {groups.map(group => (
-                  <option key={group} value={group}>{group}</option>
-                ))}
-              </select>
+            <div className="col-span-2">
+              <label className="text-[9px] font-black uppercase text-slate-600 mb-1 block tracking-wider">Group</label>
+              <div className="relative">
+                <select 
+                  value={selectedGroup}
+                  onChange={(e) => setSelectedGroup(e.target.value)}
+                  className="w-full bg-rose-50 border-2 border-rose-200 rounded-lg p-2 text-xs font-bold text-slate-800 outline-none transition-all duration-200 hover:border-rose-300 focus:border-rose-400 focus:ring-2 focus:ring-rose-100 appearance-none"
+                  data-enter-index="3"
+                >
+                  <option value="">All Groups</option>
+                  {groups.map(group => (
+                    <option key={group} value={group}>{group}</option>
+                  ))}
+                </select>
+                <Filter className="absolute right-2 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-rose-400 pointer-events-none" />
+              </div>
             </div>
 
             {/* Customer Selection */}
             <div className="col-span-3">
-              <label className="text-[9px] font-black uppercase text-slate-500">Select Customer</label>
-              <select 
-                value={selectedCustomer}
-                onChange={(e) => handleCustomerSelect(e.target.value)}
-                className="w-full border p-2 text-[11px] font-bold outline-none bg-white"
-                data-enter-index="4"
-              >
-                <option value="">-- Select Customer --</option>
-                {filteredCustomers.map(customer => (
-                  <option key={customer.id} value={customer.name}>
-                    {customer.name} - {customer.contact || 'No Phone'}
-                  </option>
-                ))}
-              </select>
+              <label className="text-[9px] font-black uppercase text-slate-600 mb-1 block tracking-wider">Customer</label>
+              <div className="relative">
+                <select 
+                  value={selectedCustomer}
+                  onChange={(e) => handleCustomerSelect(e.target.value)}
+                  className="w-full bg-rose-50 border-2 border-rose-200 rounded-lg p-2 text-xs font-bold text-slate-800 outline-none transition-all duration-200 hover:border-rose-300 focus:border-rose-400 focus:ring-2 focus:ring-rose-100 appearance-none"
+                  data-enter-index="4"
+                >
+                  <option value="">-- Select Customer --</option>
+                  {filteredCustomers.map(customer => (
+                    <option key={customer.id} value={customer.name}>
+                      {customer.name}
+                    </option>
+                  ))}
+                </select>
+                <Filter className="absolute right-2 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-rose-400 pointer-events-none" />
+              </div>
             </div>
 
             {/* Phone Number */}
-            <div className="col-span-3">
-              <label className="text-[9px] font-black uppercase text-slate-500">Phone Number</label>
+            <div className="col-span-2">
+              <label className="text-[9px] font-black uppercase text-slate-600 mb-1 block tracking-wider">Phone</label>
               <input 
                 type="tel" 
                 value={phoneNumber}
                 onChange={(e) => setPhoneNumber(e.target.value)}
-                className="w-full border p-2 text-[11px] font-bold outline-none" 
-                placeholder="Enter phone number"
+                className="w-full bg-rose-50 border-2 border-rose-200 rounded-lg p-2 text-xs font-bold text-slate-800 outline-none transition-all duration-200 hover:border-rose-300 focus:border-rose-400 focus:ring-2 focus:ring-rose-100" 
+                placeholder="Phone number"
                 data-enter-index="5"
               />
             </div>
 
             {/* SMS Status */}
-            <div className="col-span-3">
-              <label className="text-[9px] font-black uppercase text-slate-500">SMS Status</label>
+            <div className="col-span-1">
+              <label className="text-[9px] font-black uppercase text-slate-600 mb-1 block tracking-wider">Status</label>
               <input 
                 type="text" 
                 readOnly 
                 value={getSmsStatus(selectedCustomer)}
-                className="w-full bg-slate-100 border p-2 text-[11px] font-bold text-center outline-none" 
+                className="w-full bg-gradient-to-r from-slate-100 to-slate-200 border-2 border-slate-200 rounded-lg p-2 text-xs font-black text-center text-slate-700 outline-none shadow-inner" 
               />
             </div>
           </div>
-
-          {/* Template Selection */}
-          <div className="mt-3">
-            <label className="text-[9px] font-black uppercase text-slate-500">Message Template</label>
-            <div className="flex gap-2 mb-2 flex-wrap">
-              {templates.map(template => (
-                <button
-                  key={template.id}
-                  type="button"
-                  onClick={() => handleTemplateSelect(template.content)}
-                  className={`px-2 py-1 text-[9px] font-bold rounded-sm border ${
-                    messageTemplate === template.content 
-                      ? 'bg-slate-800 text-white border-slate-800' 
-                      : 'bg-white text-slate-600 border-slate-300 hover:bg-slate-100'
-                  }`}
-                  data-enter-index="6"
-                >
-                  {template.name}
-                </button>
-              ))}
-            </div>
-          </div>
-
-
-
-          {/* Live Preview */}
-          <div className="mt-3 bg-slate-50 border border-slate-200 p-3 rounded">
-            <div className="flex justify-between items-center mb-2">
-              <label className="text-[9px] font-black uppercase text-slate-600">Message Preview</label>
-              <span className="text-[8px] text-slate-500">Live preview updates automatically</span>
-            </div>
-            <div className="bg-white border border-slate-300 p-3 rounded min-h-[60px]">
-              <p className="text-[11px] text-slate-800 whitespace-pre-wrap">{previewContent || 'Select a customer and enter a message to see preview'}</p>
-            </div>
-          </div>
-
-          {/* Action Buttons */}
-          <div className="flex gap-2 mt-3">
-            <button 
-              onClick={handleSend}
-              disabled={sending}
-              className="bg-emerald-600 text-white px-4 h-8 font-black uppercase text-[10px] hover:bg-emerald-700 shadow-lg flex items-center gap-2 disabled:opacity-50"
-              data-enter-index="7"
-            >
-              <Send size={12} /> {sending ? 'SENDING...' : 'SEND SMS'}
-            </button>
-          </div>
         </div>
 
-
-
-        {/* Customer List */}
-        <div className="flex-1 bg-white border-2 border-slate-300 overflow-auto">
-          <table className="w-full text-left text-[11px]">
-            <thead className="bg-slate-200 sticky top-0 uppercase font-black text-[9px] z-10 border-b-2 border-slate-400">
+        {/* Customer List - Moved above controls */}
+        <div className="flex-1 bg-white rounded-xl border-2 border-slate-200 overflow-hidden shadow-lg">
+          <table className="w-full text-left text-sm border-collapse">
+            <thead className="bg-gradient-to-r from-[#5B55E6] to-[#4A44D0] sticky top-0 text-white uppercase font-bold text-xs z-10 border-b-2 border-black/20 shadow-lg">
               <tr>
-                <th className="p-3 w-10">Sl.No</th>
-                <th className="p-3">Customer Name</th>
-                <th className="p-3">Phone</th>
-                <th className="p-3 w-32 text-center">SMS Status</th>
+                <th className="p-3.5 w-14 border-r border-black/20">Sl.No</th>
+                <th className="p-3.5 border-r border-black/20">Customer Name</th>
+                <th className="p-3.5 border-r border-black/20">Phone</th>
+                <th className="p-3.5 w-36 text-center">SMS Status</th>
               </tr>
             </thead>
             <tbody>
               {filteredCustomers.length === 0 ? (
                 <tr>
-                  <td colSpan="5" className="p-12 text-center text-slate-500 text-[11px] font-bold">
+                  <td colSpan="4" className="p-16 text-center text-slate-500 text-sm font-bold">
                     No customers available
                   </td>
                 </tr>
@@ -347,19 +305,19 @@ const SmsView = ({ customers, ledgerStore, onCancel, showNotify }) => {
                   return (
                     <tr 
                       key={customer.id} 
-                      className={`border-b hover:bg-slate-50 transition-colors cursor-pointer ${
+                      className={`border-b border-black/10 hover:bg-slate-50 transition-all duration-150 cursor-pointer ${
                         selectedCustomer === customer.name ? 'bg-slate-100' : ''
                       }`}
                       onClick={() => handleCustomerSelect(customer.name)}
                     >
-                      <td className="p-3 font-bold text-slate-700">{idx + 1}</td>
-                      <td className="p-3 font-bold text-slate-800">{customer.name}</td>
-                      <td className="p-3 font-mono text-slate-500">{customer.contact || '--'}</td>
-                      <td className="p-3 text-center">
-                        <span className={`text-[8px] font-semibold uppercase px-2 py-1 rounded ${
-                          status === 'Sent' ? 'bg-emerald-100 text-emerald-700' : 
-                          status === 'Failed' ? 'bg-red-100 text-red-700' : 
-                          'bg-amber-100 text-amber-700'
+                      <td className="p-3.5 font-bold text-slate-700 border-r border-black/10">{idx + 1}</td>
+                      <td className="p-3.5 font-bold text-slate-800 border-r border-black/10">{customer.name}</td>
+                      <td className="p-3.5 font-mono text-slate-500 border-r border-black/10">{customer.contact || '--'}</td>
+                      <td className="p-3.5 text-center">
+                        <span className={`text-xs font-black uppercase px-2.5 py-1 rounded-lg ${
+                          status === 'Sent' ? 'bg-emerald-100 text-emerald-700 border border-emerald-200' : 
+                          status === 'Failed' ? 'bg-red-100 text-red-700 border border-red-200' : 
+                          'bg-amber-100 text-amber-700 border border-amber-200'
                         }`}>
                           {status}
                         </span>
@@ -372,12 +330,20 @@ const SmsView = ({ customers, ledgerStore, onCancel, showNotify }) => {
           </table>
         </div>
 
-        {/* Footer Actions */}
-        <div className="bg-white border border-slate-300 p-3 shadow-sm shrink-0">
-          <div className="flex justify-end gap-3">
+        {/* Action Buttons - Send SMS and Cancel side by side */}
+        <div className="bg-white rounded-xl border border-slate-200 p-4 shadow-lg shrink-0 backdrop-blur-sm">
+          <div className="flex gap-3 justify-between">
+            <button 
+              onClick={handleSend}
+              disabled={sending}
+              className="bg-gradient-to-r from-emerald-500 to-emerald-600 text-white px-5 py-2.5 font-black uppercase text-xs rounded-lg shadow-lg hover:from-emerald-600 hover:to-emerald-700 disabled:opacity-50 disabled:cursor-not-allowed transition-all duration-200 flex items-center gap-2 tracking-wider"
+              data-enter-index="7"
+            >
+              <Send size={16} /> {sending ? 'SENDING...' : 'SEND SMS'}
+            </button>
             <button 
               onClick={onCancel}
-              className="bg-slate-300 text-slate-800 px-6 h-9 font-black uppercase text-[10px] hover:bg-slate-400"
+              className="bg-gradient-to-r from-slate-200 to-slate-300 text-slate-700 px-5 py-2.5 font-black uppercase text-xs rounded-lg shadow-lg hover:from-slate-300 hover:to-slate-400 transition-all duration-200 flex items-center gap-2 tracking-wider border border-slate-300"
               data-enter-index="8"
             >
               CANCEL

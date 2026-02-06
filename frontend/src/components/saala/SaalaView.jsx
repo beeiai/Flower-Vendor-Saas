@@ -56,19 +56,18 @@ function CustomerAdditionTab({ customers, setCustomers, showNotify }) {
   };
 
   return (
-    <div className="flex-1 flex gap-4 p-4 overflow-hidden">
+    <div className="flex-1 flex gap-5 p-5 overflow-hidden">
       {/* Left: Add/Edit Form */}
-      <div className="w-80 bg-white border border-slate-200 p-5 shadow-card rounded-sm h-fit shrink-0">
-        <h3 className="text-sm font-semibold text-slate-700 mb-4 flex items-center gap-2">
-          <UserPlus className="w-4 h-4 text-primary-600" /> {editingId ? 'Edit Customer' : 'Add Customer'}
+      <div className="w-80 bg-white rounded-xl border-2 border-slate-200 p-5 shadow-lg h-fit shrink-0 backdrop-blur-sm">
+        <h3 className="text-base font-bold text-slate-800 mb-5 flex items-center gap-2.5 tracking-wider">
+          <UserPlus className="w-5 h-5 text-rose-500" /> {editingId ? 'EDIT CUSTOMER' : 'ADD CUSTOMER'}
         </h3>
         <div className="space-y-4">
           <div>
-            <label className="text-xs font-medium text-slate-600 block mb-1">Customer Name *</label>
+            <label className="text-[10px] font-black uppercase text-slate-600 mb-1.5 block tracking-wider">Customer Name *</label>
             <input 
               type="text" 
-              className="w-full border border-slate-300 px-3 rounded-sm font-medium outline-none text-sm focus:border-primary-500 focus:ring-2 focus:ring-primary-50 transition-all" 
-              style={{ height: '40px' }}
+              className="w-full bg-rose-50 border-2 border-rose-200 rounded-lg p-2.5 text-sm font-bold text-slate-800 outline-none transition-all duration-200 hover:border-rose-300 focus:border-rose-400 focus:ring-2 focus:ring-rose-100" 
               value={form.name} 
               onChange={e => setForm({ ...form, name: e.target.value })} 
               placeholder="Enter name"
@@ -76,11 +75,10 @@ function CustomerAdditionTab({ customers, setCustomers, showNotify }) {
             />
           </div>
           <div>
-            <label className="text-xs font-medium text-slate-600 block mb-1">Contact Number</label>
+            <label className="text-[10px] font-black uppercase text-slate-600 mb-1.5 block tracking-wider">Contact Number</label>
             <input 
               type="text" 
-              className="w-full border border-slate-300 px-3 rounded-sm font-medium outline-none text-sm focus:border-primary-500 focus:ring-2 focus:ring-primary-50 transition-all" 
-              style={{ height: '40px' }}
+              className="w-full bg-rose-50 border-2 border-rose-200 rounded-lg p-2.5 text-sm font-bold text-slate-800 outline-none transition-all duration-200 hover:border-rose-300 focus:border-rose-400 focus:ring-2 focus:ring-rose-100" 
               value={form.contact} 
               onChange={e => setForm({ ...form, contact: e.target.value })} 
               placeholder="Phone number"
@@ -88,33 +86,32 @@ function CustomerAdditionTab({ customers, setCustomers, showNotify }) {
             />
           </div>
           <div>
-            <label className="text-xs font-medium text-slate-600 block mb-1">Address</label>
+            <label className="text-[10px] font-black uppercase text-slate-600 mb-1.5 block tracking-wider">Address</label>
             <input 
               type="text" 
-              className="w-full border border-slate-300 px-3 rounded-sm font-medium outline-none text-sm focus:border-primary-500 focus:ring-2 focus:ring-primary-50 transition-all" 
-              style={{ height: '40px' }}
+              className="w-full bg-rose-50 border-2 border-rose-200 rounded-lg p-2.5 text-sm font-bold text-slate-800 outline-none transition-all duration-200 hover:border-rose-300 focus:border-rose-400 focus:ring-2 focus:ring-rose-100" 
               value={form.address} 
               onChange={e => setForm({ ...form, address: e.target.value })} 
               placeholder="Address"
               data-enter-index="3"
             />
           </div>
-          <div className="flex gap-2 pt-2">
+          <div className="flex gap-3 pt-2">
             <button 
               data-action="primary"
               onClick={handleSave} 
-              className="flex-1 bg-primary-600 text-white py-3 font-semibold text-sm rounded-sm hover:bg-primary-700 transition-all"
+              className="flex-1 bg-gradient-to-r from-[#5B55E6] to-[#4A44D0] text-white py-2.5 font-black uppercase text-xs rounded-lg shadow-lg hover:from-[#4A44D0] hover:to-[#3A34C0] transition-all duration-200 tracking-wider"
               data-enter-index="4"
             >
-              {editingId ? 'Update' : 'Add Customer'}
+              {editingId ? 'UPDATE' : 'ADD CUSTOMER'}
             </button>
             {editingId && (
               <button 
                 onClick={handleCancel} 
-                className="px-4 bg-slate-100 text-slate-700 py-3 font-semibold text-sm rounded-sm border border-slate-300 hover:bg-slate-200 transition-all"
+                className="px-4 bg-gradient-to-r from-slate-200 to-slate-300 text-slate-700 py-2.5 font-black uppercase text-xs rounded-lg shadow-lg hover:from-slate-300 hover:to-slate-400 transition-all duration-200 border border-slate-300 tracking-wider"
                 data-enter-index="5"
               >
-                Cancel
+                CANCEL
               </button>
             )}
           </div>
@@ -122,38 +119,38 @@ function CustomerAdditionTab({ customers, setCustomers, showNotify }) {
       </div>
 
       {/* Right: Customer List */}
-      <div className="flex-1 bg-white border border-slate-200 shadow-card rounded-sm overflow-hidden flex flex-col">
-        <div className="bg-slate-100 px-4 py-2.5 border-b font-semibold text-xs text-slate-600 flex items-center gap-2">
-          <Users className="w-4 h-4" /> SAALA Customer Registry ({customers.length})
+      <div className="flex-1 bg-white rounded-xl border-2 border-slate-200 shadow-lg overflow-hidden flex flex-col">
+        <div className="bg-gradient-to-r from-slate-100 to-slate-200 px-5 py-3 border-b-2 font-bold text-sm text-slate-700 flex items-center gap-2.5 uppercase tracking-wider">
+          <Users className="w-5 h-5 text-rose-500" /> SAALA Customer Registry ({customers.length})
         </div>
-        <div className="flex-1 overflow-auto custom-table-scroll" style={{ maxHeight: '400px' }}>
-          <table className="w-full text-left text-sm">
-            <thead className="bg-slate-50 sticky top-0 text-xs font-semibold border-b">
+        <div className="flex-1 overflow-auto custom-table-scroll">
+          <table className="w-full text-left text-sm border-collapse">
+            <thead className="bg-gradient-to-r from-[#5B55E6] to-[#4A44D0] sticky top-0 text-white uppercase font-bold text-xs z-10 border-b-2 border-black/20 shadow-lg">
               <tr>
-                <th className="px-4 py-3">Customer Name</th>
-                <th className="px-4 py-3">Contact</th>
-                <th className="px-4 py-3">Address</th>
-                <th className="px-4 py-3 text-right w-24">Action</th>
+                <th className="px-4 py-3.5 border-r border-black/20">Customer Name</th>
+                <th className="px-4 py-3.5 border-r border-black/20">Contact</th>
+                <th className="px-4 py-3.5 border-r border-black/20">Address</th>
+                <th className="px-4 py-3.5 text-right w-28">Action</th>
               </tr>
             </thead>
             <tbody>
               {customers.length === 0 ? (
                 <tr>
-                  <td colSpan="4" className="p-12 text-center text-slate-400 italic font-medium text-sm">
+                  <td colSpan="4" className="p-16 text-center text-slate-500 text-sm font-bold">
                     No SAALA customers added yet
                   </td>
                 </tr>
               ) : (
                 customers.map(c => (
-                  <tr key={c.id} className="border-b border-slate-100 hover:bg-slate-50 group">
-                    <td className="px-4 py-3 font-semibold text-slate-800">{String(c.name)}</td>
-                    <td className="px-4 py-3 font-mono text-slate-600">{String(c.contact || '--')}</td>
-                    <td className="px-4 py-3 text-slate-600">{String(c.address || '--')}</td>
-                    <td className="px-4 py-3 text-right space-x-1">
-                      <button onClick={() => handleEdit(c)} className="p-1.5 text-blue-600 opacity-0 group-hover:opacity-100 transition-all hover:bg-blue-50 rounded">
+                  <tr key={c.id} className="border-b border-slate-100 hover:bg-slate-50 transition-all duration-150 group">
+                    <td className="px-4 py-3.5 font-bold text-slate-800 border-r border-slate-100">{String(c.name)}</td>
+                    <td className="px-4 py-3.5 font-mono text-slate-600 border-r border-slate-100">{String(c.contact || '--')}</td>
+                    <td className="px-4 py-3.5 text-slate-600 border-r border-slate-100">{String(c.address || '--')}</td>
+                    <td className="px-4 py-3.5 text-right space-x-1">
+                      <button onClick={() => handleEdit(c)} className="p-1.5 text-blue-600 opacity-0 group-hover:opacity-100 transition-all hover:bg-blue-50 rounded-lg">
                         <Edit2 className="w-4 h-4" />
                       </button>
-                      <button onClick={() => handleDelete(c.id)} className="p-1.5 text-red-600 opacity-0 group-hover:opacity-100 transition-all hover:bg-red-50 rounded">
+                      <button onClick={() => handleDelete(c.id)} className="p-1.5 text-red-600 opacity-0 group-hover:opacity-100 transition-all hover:bg-red-50 rounded-lg">
                         <Trash2 className="w-4 h-4" />
                       </button>
                     </td>
@@ -303,17 +300,17 @@ function DateRangeReportTab({ customers, showNotify }) {
       )}
 
       {/* Report Results */}
-      <section className="flex-1 bg-white border border-slate-200 shadow-card rounded-sm overflow-hidden flex flex-col">
-        <div className="bg-slate-100 px-4 py-2.5 border-b font-semibold text-xs text-slate-600 flex items-center justify-between">
-          <div className="flex items-center gap-2">
-            <Users className="w-4 h-4" /> SAALA Transactions Report
+      <section className="flex-1 bg-white rounded-xl border-2 border-slate-200 shadow-lg overflow-hidden flex flex-col">
+        <div className="bg-gradient-to-r from-slate-100 to-slate-200 px-5 py-3 border-b-2 font-bold text-sm text-slate-700 flex items-center justify-between uppercase tracking-wider">
+          <div className="flex items-center gap-2.5">
+            <Users className="w-5 h-5 text-rose-500" /> SAALA TRANSACTIONS REPORT
             {reportData.length > 0 && (
-              <span className="bg-primary-100 text-primary-800 px-2 py-0.5 rounded-full text-xs">
+              <span className="bg-gradient-to-r from-rose-100 to-rose-200 text-rose-800 px-3 py-1 rounded-full text-xs font-black uppercase tracking-wider">
                 {reportData.length} Customer{reportData.length !== 1 ? 's' : ''}
               </span>
             )}
           </div>
-          <div className="text-xs text-slate-500">
+          <div className="text-xs text-slate-600 font-bold">
             {dateRange.fromDate && dateRange.toDate && (
               `Period: ${new Date(dateRange.fromDate).toLocaleDateString()} - ${new Date(dateRange.toDate).toLocaleDateString()}`
             )}
@@ -322,7 +319,7 @@ function DateRangeReportTab({ customers, showNotify }) {
         
         <div className="flex-1 overflow-auto custom-table-scroll">
           {reportData.length === 0 ? (
-            <div className="p-12 text-center text-slate-400 italic font-medium text-sm">
+            <div className="p-16 text-center text-slate-500 text-sm font-bold">
               {loading ? 'Generating report...' : 'Select a date range and click Generate Report to view transactions'}
             </div>
           ) : (
@@ -501,14 +498,14 @@ function SaalaPaymentTab({ customers, showNotify, setDropdownOpen }) {
   return (
     <div className="flex-1 flex flex-col gap-3 p-3 overflow-hidden">
       {/* Customer Selection & Summary */}
-      <section className="bg-white border border-slate-200 p-4 shadow-card rounded-sm shrink-0">
-        <div className="flex items-center gap-2 mb-3 text-primary-600 font-semibold text-xs border-b pb-2">
-          <Users className="w-4 h-4" /> SAALA Customer Selection
+      <section className="bg-white rounded-xl border-2 border-slate-200 p-5 shadow-lg shrink-0 backdrop-blur-sm">
+        <div className="bg-gradient-to-r from-slate-100 to-slate-200 px-5 py-3 border-b-2 font-bold text-sm text-slate-700 flex items-center gap-2.5 mb-4 uppercase tracking-wider">
+          <Users className="w-5 h-5 text-rose-500" /> SAALA CUSTOMER SELECTION
         </div>
         <div className="grid grid-cols-5 gap-4">
           <div className="col-span-2">
             <SearchableSelect 
-              label="Select SAALA Customer" 
+              label="SELECT SAALA CUSTOMER" 
               options={customers.map(c => c.name)} 
               value={selectedCustomer?.name || ''} 
               onChange={handleCustomerSelect} 
@@ -518,32 +515,29 @@ function SaalaPaymentTab({ customers, showNotify, setDropdownOpen }) {
             />
           </div>
           <div>
-            <label className="text-xs font-medium text-slate-600 block mb-1">Contact</label>
+            <label className="text-[10px] font-black uppercase text-slate-600 mb-1.5 block tracking-wider">Contact</label>
             <input 
               type="text" 
               readOnly 
-              className="w-full bg-slate-50 border border-slate-200 px-3 text-sm text-slate-600 rounded-sm cursor-not-allowed" 
-              style={{ height: '36px' }}
+              className="w-full bg-slate-50 border-2 border-slate-200 rounded-lg p-2.5 text-sm font-bold text-slate-600 cursor-not-allowed" 
               value={String(selectedCustomer?.contact || '--')} 
             />
           </div>
           <div>
-            <label className="text-xs font-medium text-slate-600 block mb-1">Address</label>
+            <label className="text-[10px] font-black uppercase text-slate-600 mb-1.5 block tracking-wider">Address</label>
             <input 
               type="text" 
               readOnly 
-              className="w-full bg-slate-50 border border-slate-200 px-3 text-sm text-slate-600 rounded-sm cursor-not-allowed" 
-              style={{ height: '36px' }}
+              className="w-full bg-slate-50 border-2 border-slate-200 rounded-lg p-2.5 text-sm font-bold text-slate-600 cursor-not-allowed" 
               value={String(selectedCustomer?.address || '--')} 
             />
           </div>
           <div>
-            <label className="text-xs font-medium text-primary-600 block mb-1">Remaining Balance</label>
+            <label className="text-[10px] font-black uppercase text-rose-600 mb-1.5 block tracking-wider">Remaining Balance</label>
             <input 
               type="text" 
               readOnly 
-              className="w-full bg-primary-50 border border-primary-200 text-primary-600 px-3 text-sm font-semibold rounded-sm cursor-not-allowed" 
-              style={{ height: '36px' }}
+              className="w-full bg-gradient-to-r from-rose-50 to-rose-100 border-2 border-rose-200 text-rose-700 rounded-lg p-2.5 text-sm font-black cursor-not-allowed" 
               value={`₹ ${Number(summary.balance || 0).toLocaleString()}`} 
             />
           </div>
@@ -551,29 +545,27 @@ function SaalaPaymentTab({ customers, showNotify, setDropdownOpen }) {
       </section>
 
       {/* Payment Entry Form */}
-      <section className="bg-white border border-slate-200 shadow-card rounded-sm flex flex-col relative z-30 shrink-0">
-        <div className="bg-slate-100 px-4 py-2 border-b text-slate-600 font-semibold text-xs flex items-center gap-2">
-          <PackagePlus className="w-4 h-4" /> Record Customer Payment
+      <section className="bg-white rounded-xl border-2 border-slate-200 shadow-lg flex flex-col relative z-30 shrink-0 backdrop-blur-sm">
+        <div className="bg-gradient-to-r from-slate-100 to-slate-200 px-5 py-3 border-b-2 font-bold text-sm text-slate-700 flex items-center gap-2.5 uppercase tracking-wider">
+          <PackagePlus className="w-5 h-5 text-rose-500" /> RECORD CUSTOMER PAYMENT
         </div>
-        <div className="p-4">
+        <div className="p-5">
           <div className="grid grid-cols-4 gap-4 max-w-2xl">
             <div>
-              <label className="text-xs font-medium text-slate-600 block mb-1">Payment Date</label>
+              <label className="text-[10px] font-black uppercase text-slate-600 mb-1.5 block tracking-wider">Payment Date</label>
               <input 
                 type="date" 
-                className="w-full text-sm border border-slate-300 px-3 rounded-sm outline-none focus:border-primary-500 focus:ring-2 focus:ring-primary-50 transition-all" 
-                style={{ height: '36px' }}
+                className="w-full bg-rose-50 border-2 border-rose-200 rounded-lg p-2.5 text-sm font-bold text-slate-800 outline-none transition-all duration-200 hover:border-rose-300 focus:border-rose-400 focus:ring-2 focus:ring-rose-100" 
                 value={paymentForm.date} 
                 onChange={e => setPaymentForm({...paymentForm, date: e.target.value})} 
                 data-enter-index="19"
               />
             </div>
             <div>
-              <label className="text-xs font-medium text-emerald-600 block mb-1">Payment Amount *</label>
+              <label className="text-[10px] font-black uppercase text-emerald-600 mb-1.5 block tracking-wider">Payment Amount *</label>
               <input 
                 type="number" 
-                className="w-full border border-emerald-300 px-3 text-right text-sm rounded-sm outline-none focus:border-emerald-500 focus:ring-2 focus:ring-emerald-50 bg-emerald-50 transition-all" 
-                style={{ height: '36px' }}
+                className="w-full bg-gradient-to-r from-emerald-50 to-emerald-100 border-2 border-emerald-200 rounded-lg p-2.5 text-sm font-black text-emerald-700 outline-none transition-all duration-200 hover:border-emerald-300 focus:border-emerald-400 focus:ring-2 focus:ring-emerald-100 text-right" 
                 value={paymentForm.amount} 
                 onChange={e => setPaymentForm({...paymentForm, amount: e.target.value})} 
                 placeholder="0.00"
@@ -583,11 +575,10 @@ function SaalaPaymentTab({ customers, showNotify, setDropdownOpen }) {
               />
             </div>
             <div className="col-span-2">
-              <label className="text-xs font-medium text-slate-600 block mb-1">Description</label>
+              <label className="text-[10px] font-black uppercase text-slate-600 mb-1.5 block tracking-wider">Description</label>
               <input 
                 type="text" 
-                className="w-full border border-slate-300 px-3 text-sm rounded-sm outline-none focus:border-primary-500 focus:ring-2 focus:ring-primary-50 transition-all" 
-                style={{ height: '36px' }}
+                className="w-full bg-rose-50 border-2 border-rose-200 rounded-lg p-2.5 text-sm font-bold text-slate-800 outline-none transition-all duration-200 hover:border-rose-300 focus:border-rose-400 focus:ring-2 focus:ring-rose-100" 
                 value={paymentForm.description} 
                 onChange={e => setPaymentForm({...paymentForm, description: e.target.value})} 
                 placeholder="Payment description (optional)"
@@ -595,21 +586,21 @@ function SaalaPaymentTab({ customers, showNotify, setDropdownOpen }) {
               />
             </div>
           </div>
-          <div className="flex justify-end mt-4">
+          <div className="flex justify-end mt-5">
             <button 
               onClick={handlePaymentSubmit} 
               disabled={!selectedCustomerId || !paymentForm.amount}
-              className="bg-emerald-600 text-white px-6 py-2 text-sm font-semibold rounded-sm hover:bg-emerald-700 shadow-md transition-all active:translate-y-px disabled:opacity-40 flex items-center gap-2"
+              className="bg-gradient-to-r from-emerald-500 to-emerald-600 text-white px-6 py-2.5 font-black uppercase text-xs rounded-lg shadow-lg hover:from-emerald-600 hover:to-emerald-700 transition-all duration-200 tracking-wider flex items-center gap-2 disabled:opacity-40"
               data-enter-index="22"
             >
               <Save className="w-4 h-4" />
-              Record Payment
+              RECORD PAYMENT
             </button>
           </div>
         </div>
       </section>
 
-      <div className="text-xs text-slate-500 mt-2">
+      <div className="text-xs text-slate-500 mt-3 font-bold tracking-wide">
         <p>Recording a payment will reduce the customer's outstanding balance.</p>
       </div>
     </div>
@@ -1040,25 +1031,25 @@ function SaalaTransactionTab({ customers, catalog, showNotify, setDropdownOpen }
         {/* Transaction Table */}
         <div className="flex-1 overflow-auto bg-white custom-table-scroll" style={{ minHeight: '300px', maxHeight: '500px' }}>
           <table className="w-full text-left text-sm border-collapse relative min-w-full">
-            <thead className="sticky top-0 bg-slate-700 text-white z-20 border-b-2 font-semibold uppercase text-xs shadow-md">
+            <thead className="bg-gradient-to-r from-[#5B55E6] to-[#4A44D0] sticky top-0 text-white uppercase font-bold text-xs z-10 border-b-2 border-black/20 shadow-lg">
               <tr>
-                <th className="px-3 py-3 w-14 text-center">Sl.No.</th>
-                <th className="px-3 py-3 w-24">Date</th>
-                <th className="px-3 py-3 w-20">Item Code</th>
-                <th className="px-3 py-3 w-32">Item Name</th>
-                <th className="px-3 py-3 text-right w-16">Qty</th>
-                <th className="px-3 py-3 text-right w-16">Rate</th>
-                <th className="px-3 py-3 text-right w-24">Total Amount</th>
-                <th className="px-3 py-3 text-right w-24">Paid Amount</th>
-                <th className="px-3 py-3 text-right w-24">Remaining</th>
-                <th className="px-3 py-3 w-28">Remarks</th>
-                <th className="px-3 py-3 text-center w-20">Action</th>
+                <th className="px-3 py-3.5 w-14 text-center border-r border-black/20">Sl.No.</th>
+                <th className="px-3 py-3.5 w-24 border-r border-black/20">Date</th>
+                <th className="px-3 py-3.5 w-20 border-r border-black/20">Item Code</th>
+                <th className="px-3 py-3.5 w-32 border-r border-black/20">Item Name</th>
+                <th className="px-3 py-3.5 text-right w-16 border-r border-black/20">Qty</th>
+                <th className="px-3 py-3.5 text-right w-16 border-r border-black/20">Rate</th>
+                <th className="px-3 py-3.5 text-right w-24 border-r border-black/20">Total Amount</th>
+                <th className="px-3 py-3.5 text-right w-24 border-r border-black/20">Paid Amount</th>
+                <th className="px-3 py-3.5 text-right w-24 border-r border-black/20">Remaining</th>
+                <th className="px-3 py-3.5 w-28 border-r border-black/20">Remarks</th>
+                <th className="px-3 py-3.5 text-center w-20">Action</th>
               </tr>
             </thead>
             <tbody>
               {!selectedCustomerId ? (
                 <tr>
-                  <td colSpan="11" className="p-12 text-center text-slate-400 italic font-medium text-sm">
+                  <td colSpan="11" className="p-16 text-center text-slate-500 text-sm font-bold">
                     Select a SAALA customer to view transactions
                   </td>
                 </tr>
@@ -1189,24 +1180,23 @@ export default function SaalaView({ catalog, onCancel, showNotify }) {
   };
 
   return (
-    <div ref={saalaContainerRef} className="flex-1 flex flex-col h-full bg-slate-50 overflow-hidden">
+    <div ref={saalaContainerRef} className="flex-1 flex flex-col h-full bg-gradient-to-br from-slate-50 to-slate-100 overflow-hidden">
       {/* Header */}
-      <div className="bg-slate-800 px-5 py-3 flex justify-between items-center text-white shrink-0 shadow-lg">
-        <h1 className="text-base font-semibold flex items-center gap-2">
-          <Database className="w-5 h-5 text-primary-400" /> SAALA Management
+      <div className="bg-gradient-to-r from-[#5B55E6] to-[#4A44D0] px-5 py-3 flex justify-between items-center text-white shrink-0 shadow-xl rounded-b-xl">
+        <h1 className="text-base font-bold uppercase flex items-center gap-2.5 tracking-wider">
+          <Database className="w-5 h-5 text-white" /> SAALA MANAGEMENT
         </h1>
-        <button onClick={handleCancel} className="p-1.5 hover:bg-slate-700 rounded transition-colors" data-enter-index="6">
-          <X className="w-4 h-4" />
+        <button onClick={handleCancel} className="p-1.5 rounded-lg hover:bg-white/20 transition-all" data-enter-index="6">
+          <X className="w-5 h-5" />
         </button>
       </div>
 
       {/* Tabs */}
-      <div className="bg-white border-b border-slate-200 px-4 py-3 flex gap-2 shrink-0">
+      <div className="bg-white border-b-2 border-slate-200 px-5 py-3 flex gap-3 shrink-0 shadow-sm">
         <button 
           type="button" 
           onClick={() => setTab('customers')} 
-          className={`px-5 text-sm font-semibold rounded-sm border transition-colors ${tab === 'customers' ? 'bg-slate-800 text-white border-slate-800' : 'bg-slate-50 text-slate-600 border-slate-300 hover:bg-slate-100'}`}
-          style={{ height: '36px' }}
+          className={`px-5 py-2 text-sm font-black uppercase rounded-lg border-2 transition-all duration-200 tracking-wider ${tab === 'customers' ? 'bg-gradient-to-r from-[#5B55E6] to-[#4A44D0] text-white border-[#4A44D0] shadow-md' : 'bg-white text-slate-600 border-slate-200 hover:border-rose-300 hover:bg-rose-50 hover:text-rose-700 shadow-sm'}`}
           data-enter-index="7"
         >
           Customer Addition
@@ -1214,8 +1204,7 @@ export default function SaalaView({ catalog, onCancel, showNotify }) {
         <button 
           type="button" 
           onClick={() => setTab('transactions')} 
-          className={`px-5 text-sm font-semibold rounded-sm border transition-colors ${tab === 'transactions' ? 'bg-slate-800 text-white border-slate-800' : 'bg-slate-50 text-slate-600 border-slate-300 hover:bg-slate-100'}`}
-          style={{ height: '36px' }}
+          className={`px-5 py-2 text-sm font-black uppercase rounded-lg border-2 transition-all duration-200 tracking-wider ${tab === 'transactions' ? 'bg-gradient-to-r from-[#5B55E6] to-[#4A44D0] text-white border-[#4A44D0] shadow-md' : 'bg-white text-slate-600 border-slate-200 hover:border-rose-300 hover:bg-rose-50 hover:text-rose-700 shadow-sm'}`}
           data-enter-index="8"
         >
           SAALA Transaction
@@ -1223,8 +1212,7 @@ export default function SaalaView({ catalog, onCancel, showNotify }) {
         <button 
           type="button" 
           onClick={() => setTab('payments')} 
-          className={`px-5 text-sm font-semibold rounded-sm border transition-colors ${tab === 'payments' ? 'bg-slate-800 text-white border-slate-800' : 'bg-slate-50 text-slate-600 border-slate-300 hover:bg-slate-100'}`}
-          style={{ height: '36px' }}
+          className={`px-5 py-2 text-sm font-black uppercase rounded-lg border-2 transition-all duration-200 tracking-wider ${tab === 'payments' ? 'bg-gradient-to-r from-[#5B55E6] to-[#4A44D0] text-white border-[#4A44D0] shadow-md' : 'bg-white text-slate-600 border-slate-200 hover:border-rose-300 hover:bg-rose-50 hover:text-rose-700 shadow-sm'}`}
           data-enter-index="9"
         >
           Record Payment
@@ -1232,8 +1220,7 @@ export default function SaalaView({ catalog, onCancel, showNotify }) {
         <button 
           type="button" 
           onClick={() => setTab('dateRangeReport')} 
-          className={`px-5 text-sm font-semibold rounded-sm border transition-colors ${tab === 'dateRangeReport' ? 'bg-slate-800 text-white border-slate-800' : 'bg-slate-50 text-slate-600 border-slate-300 hover:bg-slate-100'}`}
-          style={{ height: '36px' }}
+          className={`px-5 py-2 text-sm font-black uppercase rounded-lg border-2 transition-all duration-200 tracking-wider ${tab === 'dateRangeReport' ? 'bg-gradient-to-r from-[#5B55E6] to-[#4A44D0] text-white border-[#4A44D0] shadow-md' : 'bg-white text-slate-600 border-slate-200 hover:border-rose-300 hover:bg-rose-50 hover:text-rose-700 shadow-sm'}`}
           data-enter-index="10"
         >
           Date Range Report

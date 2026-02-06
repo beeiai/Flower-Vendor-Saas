@@ -108,39 +108,46 @@ export default function PartyDetailsView({ customers = [], onCancel, showNotify 
   };
 
   return (
-    <div className="flex-1 flex flex-col h-full bg-[#f1f3f5] overflow-hidden">
-      <div className="bg-slate-800 px-4 py-2 flex justify-between items-center text-white shrink-0 shadow-lg">
-        <h1 className="text-[14px] font-black uppercase flex items-center gap-2"><Users className="w-4 h-4 text-rose-500" /> PARTY DETAILS</h1>
-        <button onClick={handleCancel} className="p-1 hover:bg-rose-600"><X className="w-4 h-4" /></button>
+    <div className="flex-1 flex flex-col h-full bg-gradient-to-br from-slate-50 to-slate-100 overflow-hidden">
+      <div className="bg-gradient-to-r from-[#5B55E6] to-[#4A44D0] px-5 py-3 flex justify-between items-center text-white shrink-0 shadow-xl rounded-b-xl">
+        <h1 className="text-base font-bold uppercase flex items-center gap-2.5 tracking-wider"><Users className="w-5 h-5 text-white" /> PARTY DETAILS</h1>
+        <button onClick={handleCancel} className="p-1.5 rounded-lg hover:bg-white/20 transition-all"><X className="w-5 h-5" /></button>
       </div>
 
-      <div className="p-4 flex-1 flex flex-col gap-3 overflow-hidden">
-        <div className="bg-white border border-slate-300 p-3 shrink-0">
-          <div className="max-w-[360px]">
-            <label className="text-[9px] font-black uppercase text-slate-500">Group</label>
-            <select
-              className="w-full border p-2 text-[11px] font-bold outline-none bg-white"
-              value={selectedGroup}
-              onChange={(e) => setSelectedGroup(e.target.value)}
-              data-enter-index="1"
-            >
-              {groupOptions.map(g => (
-                <option key={String(g)} value={String(g)}>{String(g)}</option>
-              ))}
-            </select>
+      <div className="p-6 flex-1 flex flex-col gap-4 overflow-hidden">
+        <div className="bg-white border border-slate-200 shadow-lg rounded-2xl p-4 shrink-0 max-w-md">
+          <div>
+            <label className="text-xs font-bold uppercase text-slate-600 tracking-widest block mb-2">Group</label>
+            <div className="relative">
+              <select
+                className="w-full border border-rose-200 rounded-lg px-4 py-3 text-sm font-medium bg-white outline-none focus:border-rose-500 focus:ring-2 focus:ring-rose-500/20 shadow-sm hover:shadow-md transition-all appearance-none"
+                value={selectedGroup}
+                onChange={(e) => setSelectedGroup(e.target.value)}
+                data-enter-index="1"
+              >
+                {groupOptions.map(g => (
+                  <option key={String(g)} value={String(g)}>{String(g)}</option>
+                ))}
+              </select>
+              <div className="absolute right-3 top-4 text-rose-400 pointer-events-none">
+                <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
+                </svg>
+              </div>
+            </div>
           </div>
         </div>
 
-        <div className="flex-1 bg-white border-2 border-slate-300 overflow-auto">
-          <table className="w-full text-left text-[11px]">
-            <thead className="bg-slate-200 sticky top-0 uppercase font-black text-[9px] z-10 border-b-2 border-slate-400">
+        <div className="flex-1 bg-white border border-slate-200 shadow-lg rounded-2xl overflow-hidden">
+          <table className="w-full text-left text-sm">
+            <thead className="bg-gradient-to-r from-[#5B55E6] to-[#4A44D0] sticky top-0 text-white uppercase font-bold text-xs z-10 border-b-2 shadow-lg">
               <tr>
-                <th className="p-3 w-10 text-center">✓</th>
-                <th className="p-3 w-14">Sl No</th>
-                <th className="p-3">Party Name</th>
-                <th className="p-3 w-44">Phone No</th>
-                <th className="p-3 w-24 text-center">SMS</th>
-                <th className="p-3 w-24 text-center">Ledger</th>
+                <th className="px-4 py-3 w-12 text-center">✓</th>
+                <th className="px-4 py-3 w-16">Sl No</th>
+                <th className="px-4 py-3">Party Name</th>
+                <th className="px-4 py-3 w-48">Phone No</th>
+                <th className="px-4 py-3 w-28 text-center">SMS</th>
+                <th className="px-4 py-3 w-28 text-center">Ledger</th>
               </tr>
             </thead>
             <tbody>
@@ -150,30 +157,30 @@ export default function PartyDetailsView({ customers = [], onCancel, showNotify 
                 const smsEnabled = Boolean(smsByKey[key] ?? true);
 
                 return (
-                  <tr key={key || idx} className="border-b hover:bg-slate-50 transition-colors" data-enter-index={4 + idx}>
-                    <td className="p-3 text-center">
+                  <tr key={key || idx} className="border-b border-slate-100 hover:bg-slate-50 transition-colors group" data-enter-index={4 + idx}>
+                    <td className="px-4 py-3 text-center">
                       <input
                         type="checkbox"
                         checked={checked}
                         onChange={() => toggleRowSelected(key)}
-                        className="h-4 w-4"
+                        className="h-4 w-4 rounded border-slate-300 text-[#5B55E6] focus:ring-[#5B55E6]/20"
                         data-enter-index={4 + idx}
                       />
                     </td>
-                    <td className="p-3 font-bold text-slate-700">{idx + 1}</td>
-                    <td className="p-3 font-bold text-slate-800">{String(c?.name || '')}</td>
-                    <td className="p-3 font-mono text-slate-600">{String(c?.contact || '')}</td>
-                    <td className="p-3 text-center">
+                    <td className="px-4 py-3 font-bold text-slate-700">{idx + 1}</td>
+                    <td className="px-4 py-3 font-semibold text-slate-800">{String(c?.name || '')}</td>
+                    <td className="px-4 py-3 font-mono text-slate-600">{String(c?.contact || '')}</td>
+                    <td className="px-4 py-3 text-center">
                       <button
                         type="button"
                         onClick={() => toggleSms(key)}
-                        className={`px-3 py-1 text-[9px] font-black uppercase border ${smsEnabled ? 'bg-emerald-600 text-white border-emerald-700' : 'bg-slate-100 text-slate-600 border-slate-300 hover:bg-slate-200'}`}
+                        className={`px-3 py-1.5 text-xs font-bold uppercase rounded-lg border transition-all ${smsEnabled ? 'bg-gradient-to-r from-emerald-500 to-emerald-600 text-white border-emerald-600 shadow-md hover:from-emerald-600 hover:to-emerald-700' : 'bg-slate-100 text-slate-600 border-slate-300 hover:bg-slate-200 hover:shadow-sm'}`}
                       >
                         {smsEnabled ? 'YES' : 'NO'}
                       </button>
                     </td>
-                    <td className="p-3 text-center">
-                      <span className="text-[9px] font-black uppercase text-slate-600">YES</span>
+                    <td className="px-4 py-3 text-center">
+                      <span className="text-xs font-bold uppercase text-emerald-600 bg-emerald-50 px-2 py-1 rounded-full">YES</span>
                     </td>
                   </tr>
                 );
@@ -181,21 +188,21 @@ export default function PartyDetailsView({ customers = [], onCancel, showNotify 
 
               {!visibleCustomers.length && (
                 <tr>
-                  <td colSpan={6} className="p-6 text-center text-slate-500 text-[11px] font-bold">No parties found</td>
+                  <td colSpan={6} className="p-12 text-center text-slate-400 text-sm font-medium italic tracking-wide">No parties found</td>
                 </tr>
               )}
             </tbody>
           </table>
         </div>
 
-        <div className="flex items-center justify-between bg-white border border-slate-300 p-3">
-          <label className="flex items-center gap-2 text-[10px] font-black uppercase text-slate-600">
-            <input type="checkbox" checked={allSelected} onChange={toggleSelectAll} className="h-4 w-4" data-enter-index="2" />
+        <div className="flex items-center justify-between bg-white border border-slate-200 shadow-lg rounded-2xl p-4">
+          <label className="flex items-center gap-3 text-xs font-bold uppercase text-slate-600 tracking-wider">
+            <input type="checkbox" checked={allSelected} onChange={toggleSelectAll} className="h-4 w-4 rounded border-slate-300 text-[#5B55E6] focus:ring-[#5B55E6]/20" data-enter-index="2" />
             Select All
           </label>
 
-          <button onClick={handleSave} className="bg-emerald-600 text-white px-6 py-2 rounded-none font-black uppercase text-[10px] flex items-center gap-2 hover:bg-emerald-700 shadow-lg" data-enter-index="3">
-            <Save className="w-3.5 h-3.5" /> SAVE
+          <button onClick={handleSave} className="bg-gradient-to-r from-[#5B55E6] to-[#4A44D0] text-white px-6 py-2.5 rounded-xl font-bold uppercase text-sm flex items-center gap-2 shadow-lg hover:from-[#4A44D0] hover:to-[#3A34C0] transition-all hover:shadow-xl active:translate-y-0.5" data-enter-index="3">
+            <Save className="w-4 h-4" /> SAVE
           </button>
         </div>
       </div>
