@@ -199,22 +199,30 @@ export default function ReportsView({ groups, customers, vehicles, advanceStore 
 		
 		try {
 			// Generate the ledger report from backend
-			const response = await api.getLedgerReport(
+			const response = await api.getLedgerReportPreview(
 				selectedCustomer.id,
 				fromDate || todayISO(),
 				toDate || todayISO(),
 				commissionPct
 			);
 			
-			// Handle DOCX file download
+			// Handle PDF preview (open in new tab for print preview)
 			const blob = response.data;
 			const url = window.URL.createObjectURL(blob);
-			const a = document.createElement('a');
-			a.href = url;
-			a.download = `ledger_report_${selectedCustomer.name}_${new Date().toISOString().slice(0, 10)}.docx`;
-			document.body.appendChild(a);
-			a.click();
-			document.body.removeChild(a);
+			
+			// Open in new tab for preview and print
+			const previewWindow = window.open(url, '_blank');
+			if (!previewWindow) {
+				// Fallback to download if popup blocked
+				const a = document.createElement('a');
+				a.href = url;
+				a.download = `ledger_report_${selectedCustomer.name}_${new Date().toISOString().slice(0, 10)}.pdf`;
+				document.body.appendChild(a);
+				a.click();
+				document.body.removeChild(a);
+			}
+			
+			// Clean up the URL object
 			window.URL.revokeObjectURL(url);
 			
 		} catch (error) {

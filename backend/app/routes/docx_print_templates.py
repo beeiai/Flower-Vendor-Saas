@@ -18,6 +18,101 @@ router = APIRouter(
 )
 
 
+# PDF Preview Endpoints
+@router.get("/ledger-report-preview")
+def get_ledger_report_pdf(
+    farmer_id: int = Query(..., description="Farmer ID"),
+    from_date: date = Query(..., description="Start date"),
+    to_date: date = Query(..., description="End date"),
+    commission_pct: float = Query(12.0, description="Commission percentage"),
+    db: Session = Depends(get_db),
+    user = Depends(get_current_user)
+):
+    """
+    Generate PDF preview of ledger report for a specific farmer
+    """
+    try:
+        # Fetch farmer details
+        farmer = db.query(Farmer).filter(
+            Farmer.id == farmer_id,
+            Farmer.vendor_id == user.vendor_id
+        ).first()
+        
+        if not farmer:
+            raise HTTPException(status_code=404, detail="Farmer not found")
+        
+        # Fetch group name
+        group = db.query(FarmerGroup).filter(FarmerGroup.id == farmer.group_id).first()
+        group_name = group.name if group else "N/A"
+        
+        # Fetch collection items for the date range
+        items = db.query(CollectionItem).filter(
+            CollectionItem.farmer_id == farmer_id,
+            CollectionItem.date >= from_date,
+            CollectionItem.date <= to_date,
+            CollectionItem.vendor_id == user.vendor_id
+        ).all()
+        
+        # Transform data for template
+        rows = []
+        total_qty = 0
+        total_amount = 0
+        total_luggage = 0
+        total_paid = 0
+        
+        for item in items:
+            qty = float(item.qty_kg or 0)
+            rate = float(item.rate_per_kg or 0)
+            luggage = float(item.transport_cost or 0)
+            paid = float(item.paid_amount or 0)
+            total = qty * rate
+            
+            rows.append({
+                "date": item.date.strftime("%d-%m-%Y"),
+                "qty": f"{qty:.2f}",
+                "price": f"{rate:.2f}",
+                "total": f"{total:.2f}",
+                "luggage": f"{luggage:.2f}",
+                "paid_amount": f"{paid:.2f}",
+                "amount": f"{(total + luggage - paid):.2f}"
+            })
+            
+            total_qty += qty
+            total_amount += total
+            total_luggage += luggage
+            total_paid += paid
+        
+        # Calculate summary
+        commission_rate = commission_pct / 100
+        commission = total_amount * commission_rate
+        net_amount = total_amount - commission
+        final_total = net_amount + total_luggage - total_paid
+        
+        # Generate and return PDF preview
+        return DocxReportService.generate_ledger_pdf_preview(
+            farmer_name=farmer.name,
+            ledger_name=farmer.farmer_code or "N/A",
+            address=farmer.address or "N/A",
+            group_name=group_name,
+            balance=final_total,
+            commission_pct=commission_pct,
+            from_date=from_date.strftime("%d-%m-%Y"),
+            to_date=to_date.strftime("%d-%m-%Y"),
+            rows=rows,
+            total_qty=total_qty,
+            total_amount=total_amount,
+            commission=commission,
+            luggage_total=total_luggage,
+            coolie=0.0,
+            net_amount=net_amount,
+            paid_amount=total_paid,
+            final_total=final_total,
+        )
+        
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"Failed to generate report: {str(e)}")
+
+
 @router.get("/ledger-report")
 def get_ledger_report_docx(
     farmer_id: int = Query(..., description="Farmer ID"),

@@ -70,7 +70,7 @@ async function request(path, options = {}) {
   try {
     const axiosOptions = { url, method };
     
-    // Handle response type for DOCX files
+    // Handle response type for DOCX files - default to blob for download
     if (path.includes('print-docx')) {
       axiosOptions.responseType = 'blob';
     }
@@ -84,7 +84,7 @@ async function request(path, options = {}) {
     const res = await axiosInstance.request(axiosOptions);
     console.log('[API CALL] Response received:', { status: res.status, data: res.data });
     
-    // Return blob for DOCX files
+    // Return response object for DOCX files to access both data and headers
     if (path.includes('print-docx')) {
       return res;
     }
@@ -372,5 +372,11 @@ export const api = {
     const params = { from_date: fromDate, to_date: toDate };
     if (itemName) params.item_name = itemName;
     return request('/print-docx/daily-sales-report', { params });
-  }
+  },
+  
+  // Preview APIs (for direct browser viewing)
+  getLedgerReportPreview: async (farmerId, fromDate, toDate, commissionPct = 12.0) => {
+    const params = { farmer_id: farmerId, from_date: fromDate, to_date: toDate, commission_pct: commissionPct };
+    return request('/print-docx/ledger-report-preview', { params });
+  },
 };

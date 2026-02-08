@@ -363,15 +363,23 @@ function GroupPrintingView({ groups, customers, ledgerStore, onCancel }) {
         commissionPct
       );
       
-      // Handle DOCX file download
+      // Handle PDF preview (open in new tab for print preview)
       const blob = response.data;
       const url = window.URL.createObjectURL(blob);
-      const a = document.createElement('a');
-      a.href = url;
-      a.download = `group_patti_report_${selGroup}_${new Date().toISOString().slice(0, 10)}.docx`;
-      document.body.appendChild(a);
-      a.click();
-      document.body.removeChild(a);
+      
+      // Open in new tab for preview and print
+      const previewWindow = window.open(url, '_blank');
+      if (!previewWindow) {
+        // Fallback to download if popup blocked
+        const a = document.createElement('a');
+        a.href = url;
+        a.download = `group_patti_report_${selGroup}_${new Date().toISOString().slice(0, 10)}.pdf`;
+        document.body.appendChild(a);
+        a.click();
+        document.body.removeChild(a);
+      }
+      
+      // Clean up the URL object
       window.URL.revokeObjectURL(url);
       
     } catch (error) {
@@ -810,15 +818,23 @@ export default function App() {
         groupPattiForm.commissionPct
       );
       
-      // Handle DOCX file download
+      // Handle PDF preview (open in new tab for print preview)
       const blob = response.data;
       const url = window.URL.createObjectURL(blob);
-      const a = document.createElement('a');
-      a.href = url;
-      a.download = `group_patti_report_${group}_${new Date().toISOString().slice(0, 10)}.docx`;
-      document.body.appendChild(a);
-      a.click();
-      document.body.removeChild(a);
+      
+      // Open in new tab for preview and print
+      const previewWindow = window.open(url, '_blank');
+      if (!previewWindow) {
+        // Fallback to download if popup blocked
+        const a = document.createElement('a');
+        a.href = url;
+        a.download = `group_patti_report_${group}_${new Date().toISOString().slice(0, 10)}.pdf`;
+        document.body.appendChild(a);
+        a.click();
+        document.body.removeChild(a);
+      }
+      
+      // Clean up the URL object
       window.URL.revokeObjectURL(url);
     } catch (error) {
       console.error('Print error:', error);
@@ -845,15 +861,23 @@ export default function App() {
         groupTotalForm.toDate
       );
       
-      // Handle DOCX file download
+      // Handle PDF preview (open in new tab for print preview)
       const blob = response.data;
       const url = window.URL.createObjectURL(blob);
-      const a = document.createElement('a');
-      a.href = url;
-      a.download = `group_total_report_${group}_${new Date().toISOString().slice(0, 10)}.docx`;
-      document.body.appendChild(a);
-      a.click();
-      document.body.removeChild(a);
+      
+      // Open in new tab for preview and print
+      const previewWindow = window.open(url, '_blank');
+      if (!previewWindow) {
+        // Fallback to download if popup blocked
+        const a = document.createElement('a');
+        a.href = url;
+        a.download = `group_total_report_${group}_${new Date().toISOString().slice(0, 10)}.pdf`;
+        document.body.appendChild(a);
+        a.click();
+        document.body.removeChild(a);
+      }
+      
+      // Clean up the URL object
       window.URL.revokeObjectURL(url);
     } catch (error) {
       console.error('Print error:', error);

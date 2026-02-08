@@ -141,15 +141,23 @@ const DailySaleReport = ({ onCancel }) => {
       // Generate the print report from backend
       const response = await api.getDailySalesReport(fromDate, toDate);
       
-      // Handle DOCX file download
+      // Handle PDF preview (open in new tab for print preview)
       const blob = response.data;
       const url = window.URL.createObjectURL(blob);
-      const a = document.createElement('a');
-      a.href = url;
-      a.download = `daily_sales_report_${fromDate}_to_${toDate}_${new Date().toISOString().slice(0, 10)}.docx`;
-      document.body.appendChild(a);
-      a.click();
-      document.body.removeChild(a);
+      
+      // Open in new tab for preview and print
+      const previewWindow = window.open(url, '_blank');
+      if (!previewWindow) {
+        // Fallback to download if popup blocked
+        const a = document.createElement('a');
+        a.href = url;
+        a.download = `daily_sales_report_${fromDate}_to_${toDate}_${new Date().toISOString().slice(0, 10)}.pdf`;
+        document.body.appendChild(a);
+        a.click();
+        document.body.removeChild(a);
+      }
+      
+      // Clean up the URL object
       window.URL.revokeObjectURL(url);
       
     } catch (error) {

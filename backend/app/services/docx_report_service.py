@@ -5,6 +5,14 @@ from docxtpl import DocxTemplate
 import tempfile
 from fastapi import HTTPException
 from fastapi.responses import Response
+import io
+from docx import Document
+from reportlab.pdfgen import canvas
+from reportlab.lib.pagesizes import letter, A4
+from reportlab.platypus import SimpleDocTemplate, Paragraph, Table, TableStyle, Spacer
+from reportlab.lib.styles import getSampleStyleSheet, ParagraphStyle
+from reportlab.lib import colors
+from reportlab.lib.units import inch
 
 # Get the base directory of the project
 BASE_DIR = os.path.dirname(os.path.dirname(os.path.dirname(__file__)))
@@ -309,3 +317,123 @@ class DocxReportService:
             )
         except Exception as e:
             raise HTTPException(status_code=500, detail=f"Failed to generate daily sales report: {str(e)}")
+
+    @staticmethod
+    def generate_ledger_pdf_preview(
+        farmer_name: str,
+        ledger_name: str,
+        address: str,
+        group_name: str,
+        balance: float,
+        commission_pct: float,
+        from_date: str,
+        to_date: str,
+        rows: List[Dict[str, Any]],
+        total_qty: float,
+        total_amount: float,
+        commission: float,
+        luggage_total: float,
+        coolie: float,
+        net_amount: float,
+        paid_amount: float,
+        final_total: float
+    ):
+        """Generate PDF preview of ledger report"""
+        from reportlab.lib.pagesizes import A4
+        from reportlab.platypus import SimpleDocTemplate, Paragraph, Table, TableStyle, Spacer
+        from reportlab.lib.styles import getSampleStyleSheet, ParagraphStyle
+        from reportlab.lib import colors
+        from reportlab.lib.units import inch
+        import io
+        
+        buffer = io.BytesIO()
+        doc = SimpleDocTemplate(buffer, pagesize=A4)
+        styles = getSampleStyleSheet()
+        
+        # Elements to add to PDF
+        elements = []
+        
+        # Header
+        header_style = ParagraphStyle(
+            'CustomTitle',
+            parent=styles['Heading1'],
+            fontSize=16,
+            spaceAfter=6,
+            alignment=1,  # Center alignment
+        )
+        elements.append(Paragraph("SREE KRISHNA FLOWER STALL", header_style))
+        elements.append(Paragraph("PH: 8147848760", styles['Normal']))
+        elements.append(Paragraph("Proprietor: K.C.N & SONS | Mob: 9972878307", styles['Normal']))
+        elements.append(Paragraph("FLOWER MERCHANTS – 7795018307", styles['Normal']))
+        elements.append(Paragraph("Shop No: B-32, S.K.R Market, Bangalore - 560002", styles['Normal']))
+        elements.append(Paragraph("Trade Mark: S.K.F.S", styles['Normal']))
+        elements.append(Spacer(1, 12))
+        
+        # Customer info
+        elements.append(Paragraph(f"Name: {farmer_name}", styles['Normal']))
+        elements.append(Paragraph(f"Ledger: {ledger_name}", styles['Normal']))
+        elements.append(Paragraph(f"Address: {address}", styles['Normal']))
+        elements.append(Paragraph(f"Group: {group_name}", styles['Normal']))
+        elements.append(Paragraph(f"Balance: ₹ {balance:,.2f}", styles['Normal']))
+        elements.append(Paragraph(f"Period: {from_date} to {to_date}", styles['Normal']))
+        elements.append(Paragraph(f"Date: {datetime.now().strftime('%d-%m-%Y')}", styles['Normal']))
+        elements.append(Spacer(1, 12))
+        
+        # Table
+        if rows:
+            # Table headers
+            data = [["Date", "Qty", "Price", "Total", "Luggage", "Paid Amt", "Amount"]]
+            
+            # Add rows
+            for row in rows:
+                data.append([
+                    row.get('date', ''),
+                    row.get('qty', ''),
+                    row.get('price', ''),
+                    row.get('total', ''),
+                    row.get('luggage', ''),
+                    row.get('paid_amount', ''),
+                    row.get('amount', '')
+                ])
+            
+            # Create table
+            table = Table(data)
+            table.setStyle(TableStyle([
+                ('BACKGROUND', (0, 0), (-1, 0), colors.grey),
+                ('TEXTCOLOR', (0, 0), (-1, 0), colors.whitesmoke),
+                ('ALIGN', (0, 0), (-1, -1), 'CENTER'),
+                ('FONTNAME', (0, 0), (-1, 0), 'Helvetica-Bold'),
+                ('FONTSIZE', (0, 0), (-1, 0), 8),
+                ('BOTTOMPADDING', (0, 0), (-1, 0), 8),
+                ('BACKGROUND', (0, 1), (-1, -1), colors.beige),
+                ('FONTNAME', (0, 1), (-1, -1), 'Helvetica'),
+                ('FONTSIZE', (0, 1), (-1, -1), 8),
+                ('TOPPADDING', (0, 0), (-1, -1), 4),
+                ('BOTTOMPADDING', (0, 0), (-1, -1), 4),
+                ('GRID', (0, 0), (-1, -1), 1, colors.black)
+            ]))
+            
+            elements.append(table)
+            elements.append(Spacer(1, 12))
+        
+        # Totals
+        elements.append(Paragraph(f"Total Quantity: {total_qty:,.2f}", styles['Normal']))
+        elements.append(Paragraph(f"Total Amount: ₹ {total_amount:,.2f}", styles['Normal']))
+        elements.append(Paragraph(f"Commission ({commission_pct}%): ₹ {commission:,.2f}", styles['Normal']))
+        elements.append(Paragraph(f"Total Luggage: {luggage_total:,.2f}", styles['Normal']))
+        elements.append(Paragraph(f"Coolie Charges: ₹ {coolie:,.2f}", styles['Normal']))
+        elements.append(Paragraph(f"Net Amount: ₹ {net_amount:,.2f}", styles['Normal']))
+        elements.append(Paragraph(f"Paid Amount: ₹ {paid_amount:,.2f}", styles['Normal']))
+        elements.append(Paragraph(f"Final Balance: ₹ {final_total:,.2f}", styles['Normal']))
+        
+        # Build PDF
+        doc.build(elements)
+        buffer.seek(0)
+        
+        return Response(
+            content=buffer.getvalue(),
+            media_type='application/pdf',
+            headers={
+                'Content-Disposition': f'inline; filename="ledger_report_preview_{farmer_name}_{datetime.now().strftime("%Y%m%d")}.pdf"'
+            }
+        )
