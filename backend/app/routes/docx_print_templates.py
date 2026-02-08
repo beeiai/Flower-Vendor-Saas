@@ -227,7 +227,156 @@ def get_group_patti_report_docx(
         raise HTTPException(status_code=500, detail=f"Failed to generate group patti report: {str(e)}")
 
 
-# Additional endpoints can be added here for other report types
-# - group-total-report
-# - daily-sales-report
-# etc.
+@router.get("/group-total-report")
+def get_group_total_report_docx(
+    group_id: int = Query(..., description="Group ID"),
+    from_date: date = Query(..., description="Start date"),
+    to_date: date = Query(..., description="End date"),
+    db: Session = Depends(get_db),
+    user = Depends(get_current_user)
+):
+    """
+    Generate DOCX group total report and return as downloadable file
+    """
+    try:
+        # Fetch group details
+        group = db.query(FarmerGroup).filter(
+            FarmerGroup.id == group_id,
+            FarmerGroup.vendor_id == user.vendor_id
+        ).first()
+        
+        if not group:
+            raise HTTPException(status_code=404, detail="Group not found")
+        
+        # Fetch all farmers in the group
+        farmers = db.query(Farmer).filter(
+            Farmer.group_id == group_id,
+            Farmer.vendor_id == user.vendor_id
+        ).all()
+        
+        if not farmers:
+            raise HTTPException(status_code=404, detail="No farmers found in group")
+        
+        # Fetch all collection items for all farmers in one query
+        farmer_ids = [f.id for f in farmers]
+        all_items = db.query(CollectionItem).filter(
+            CollectionItem.farmer_id.in_(farmer_ids),
+            CollectionItem.date >= from_date,
+            CollectionItem.date <= to_date,
+            CollectionItem.vendor_id == user.vendor_id
+        ).order_by(CollectionItem.date).all()
+        
+        # Create farmer lookup for customer names
+        farmer_lookup = {f.id: f for f in farmers}
+        
+        # Transform data for template
+        rows = []
+        total_qty = 0
+        total_amount = 0
+        total_paid = 0
+        total_luggage = 0
+        
+        for item in all_items:
+            qty = float(item.qty_kg or 0)
+            rate = float(item.rate_per_kg or 0)
+            total = qty * rate
+            paid = float(item.paid_amount or 0)
+            luggage = float(item.transport_cost or 0)
+            
+            # Get farmer name from lookup
+            farmer_obj = farmer_lookup.get(item.farmer_id)
+            customer_name = farmer_obj.name if farmer_obj else "Unknown"
+            
+            rows.append({
+                "date": item.date.strftime("%d-%m-%Y"),
+                "customer_name": customer_name,
+                "item_name": item.item_name or "N/A",
+                "qty": f"{qty:.2f}",
+                "rate": f"{rate:.2f}",
+                "total": f"{total:.2f}",
+                "paid": f"{paid:.2f}",
+                "luggage": f"{luggage:.2f}"
+            })
+            
+            total_qty += qty
+            total_amount += total
+            total_paid += paid
+            total_luggage += luggage
+        
+        # Calculate group total
+        group_total = total_amount - total_paid
+        
+        # Generate and return DOCX report
+        return DocxReportService.generate_group_total_pdf(
+            group_name=group.name,
+            from_date=from_date.strftime("%d-%m-%Y"),
+            to_date=to_date.strftime("%d-%m-%Y"),
+            rows=rows,
+            total_qty=total_qty,
+            total_amount=total_amount,
+            total_paid=total_paid,
+            total_luggage=total_luggage,
+            group_total=group_total,
+        )
+        
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"Failed to generate group total report: {str(e)}")
+
+
+@router.get("/daily-sales-report")
+def get_daily_sales_report_docx(
+    from_date: date = Query(..., description="Start date"),
+    to_date: date = Query(..., description="End date"),
+    item_name: Optional[str] = Query(None, description="Filter by item name"),
+    db: Session = Depends(get_db),
+    user = Depends(get_current_user)
+):
+    """
+    Generate DOCX daily sales report and return as downloadable file
+    """
+    try:
+        # Base query for collection items
+        query = db.query(CollectionItem).filter(
+            CollectionItem.date >= from_date,
+            CollectionItem.date <= to_date,
+            CollectionItem.vendor_id == user.vendor_id
+        )
+        
+        if item_name:
+            query = query.filter(CollectionItem.item_name.ilike(f"%{item_name}%"))
+        
+        items = query.order_by(CollectionItem.date).all()
+        
+        # Transform data for template
+        rows = []
+        total_qty = 0
+        total_amount = 0
+        
+        for item in items:
+            qty = float(item.qty_kg or 0)
+            rate = float(item.rate_per_kg or 0)
+            total = qty * rate
+            
+            rows.append({
+                "date": item.date.strftime("%d-%m-%Y"),
+                "item_name": item.item_name or "N/A",
+                "qty": f"{qty:.2f}",
+                "rate": f"{rate:.2f}",
+                "total": f"{total:.2f}"
+            })
+            
+            total_qty += qty
+            total_amount += total
+        
+        # Generate and return DOCX report
+        return DocxReportService.generate_daily_sales_pdf(
+            from_date=from_date.strftime("%d-%m-%Y"),
+            to_date=to_date.strftime("%d-%m-%Y"),
+            item_name=item_name or "All Items",
+            rows=rows,
+            total_qty=total_qty,
+            total_amount=total_amount,
+        )
+        
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"Failed to generate daily sales report: {str(e)}")

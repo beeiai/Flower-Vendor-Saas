@@ -4,8 +4,8 @@ from jinja2 import Environment, FileSystemLoader
 from fastapi.responses import HTMLResponse
 
 # Get the base directory of the project
-BASE_DIR = os.path.dirname(os.path.dirname(os.path.dirname(__file__)))
-TEMPLATE_DIR = os.path.join(BASE_DIR, "app", "templates", "print")
+BASE_DIR = os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
+TEMPLATE_DIR = os.path.join(BASE_DIR, "templates")
 STATIC_DIR = os.path.join(BASE_DIR, "static", "print")
 
 # Initialize Jinja2 environment

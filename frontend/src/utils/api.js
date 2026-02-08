@@ -69,6 +69,12 @@ async function request(path, options = {}) {
   
   try {
     const axiosOptions = { url, method };
+    
+    // Handle response type for DOCX files
+    if (path.includes('print-docx')) {
+      axiosOptions.responseType = 'blob';
+    }
+    
     if (options.body) {
       // if body is a string (old usage), try parse, otherwise pass through
       axiosOptions.data = typeof options.body === 'string' ? JSON.parse(options.body) : options.body;
@@ -77,6 +83,12 @@ async function request(path, options = {}) {
 
     const res = await axiosInstance.request(axiosOptions);
     console.log('[API CALL] Response received:', { status: res.status, data: res.data });
+    
+    // Return blob for DOCX files
+    if (path.includes('print-docx')) {
+      return res;
+    }
+    
     if (res.status === 204) return null;
     return res.data;
   } catch (err) {
@@ -331,10 +343,10 @@ export const api = {
     return response;
   },
   
-  // Print Template APIs
+  // Print Template APIs (DOCX-based)
   getLedgerReport: async (farmerId, fromDate, toDate) => {
     const params = { farmer_id: farmerId, from_date: fromDate, to_date: toDate };
-    return request('/print/ledger-report', { params });
+    return request('/print-docx/ledger-report', { params });
   },
   
   getGroupPattiReport: async (groupId, fromDate, toDate, commissionPct = 12.0) => {
@@ -344,7 +356,7 @@ export const api = {
       to_date: toDate, 
       commission_pct: commissionPct 
     };
-    return request('/print/group-patti-report', { params });
+    return request('/print-docx/group-patti-report', { params });
   },
   
   getGroupTotalReport: async (groupId, fromDate, toDate) => {
@@ -353,12 +365,12 @@ export const api = {
       from_date: fromDate, 
       to_date: toDate 
     };
-    return request('/print/group-total-report', { params });
+    return request('/print-docx/group-total-report', { params });
   },
   
   getDailySalesReport: async (fromDate, toDate, itemName = null) => {
     const params = { from_date: fromDate, to_date: toDate };
     if (itemName) params.item_name = itemName;
-    return request('/print/daily-sales-report', { params });
+    return request('/print-docx/daily-sales-report', { params });
   }
 };

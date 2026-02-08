@@ -363,15 +363,16 @@ function GroupPrintingView({ groups, customers, ledgerStore, onCancel }) {
         commissionPct
       );
       
-      // Create a new window/tab for printing
-      const printWindow = window.open('', '_blank');
-      printWindow.document.write(response);
-      printWindow.document.close();
-      
-      // Trigger print after content loads
-      printWindow.onload = () => {
-        printWindow.print();
-      };
+      // Handle DOCX file download
+      const blob = response.data;
+      const url = window.URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = `group_patti_report_${selGroup}_${new Date().toISOString().slice(0, 10)}.docx`;
+      document.body.appendChild(a);
+      a.click();
+      document.body.removeChild(a);
+      window.URL.revokeObjectURL(url);
       
     } catch (error) {
       console.error('Print error:', error);
@@ -809,15 +810,16 @@ export default function App() {
         groupPattiForm.commissionPct
       );
       
-      // Create a new window/tab for printing
-      const printWindow = window.open('', '_blank');
-      printWindow.document.write(response);
-      printWindow.document.close();
-      
-      // Trigger print after content loads
-      printWindow.onload = () => {
-        printWindow.print();
-      };
+      // Handle DOCX file download
+      const blob = response.data;
+      const url = window.URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = `group_patti_report_${group}_${new Date().toISOString().slice(0, 10)}.docx`;
+      document.body.appendChild(a);
+      a.click();
+      document.body.removeChild(a);
+      window.URL.revokeObjectURL(url);
     } catch (error) {
       console.error('Print error:', error);
       alert(`Print failed: ${error.message}`);
@@ -843,15 +845,16 @@ export default function App() {
         groupTotalForm.toDate
       );
       
-      // Create a new window/tab for printing
-      const printWindow = window.open('', '_blank');
-      printWindow.document.write(response);
-      printWindow.document.close();
-      
-      // Trigger print after content loads
-      printWindow.onload = () => {
-        printWindow.print();
-      };
+      // Handle DOCX file download
+      const blob = response.data;
+      const url = window.URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = `group_total_report_${group}_${new Date().toISOString().slice(0, 10)}.docx`;
+      document.body.appendChild(a);
+      a.click();
+      document.body.removeChild(a);
+      window.URL.revokeObjectURL(url);
     } catch (error) {
       console.error('Print error:', error);
       alert(`Print failed: ${error.message}`);

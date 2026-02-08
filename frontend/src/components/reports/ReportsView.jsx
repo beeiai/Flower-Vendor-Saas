@@ -206,15 +206,16 @@ export default function ReportsView({ groups, customers, vehicles, advanceStore 
 				commissionPct
 			);
 			
-			// Create a new window/tab for printing
-			const printWindow = window.open('', '_blank');
-			printWindow.document.write(response);
-			printWindow.document.close();
-			
-			// Trigger print after content loads
-			printWindow.onload = () => {
-				printWindow.print();
-			};
+			// Handle DOCX file download
+			const blob = response.data;
+			const url = window.URL.createObjectURL(blob);
+			const a = document.createElement('a');
+			a.href = url;
+			a.download = `ledger_report_${selectedCustomer.name}_${new Date().toISOString().slice(0, 10)}.docx`;
+			document.body.appendChild(a);
+			a.click();
+			document.body.removeChild(a);
+			window.URL.revokeObjectURL(url);
 			
 		} catch (error) {
 			console.error('Print error:', error);

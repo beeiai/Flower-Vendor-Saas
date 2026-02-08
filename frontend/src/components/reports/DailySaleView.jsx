@@ -141,15 +141,16 @@ const DailySaleReport = ({ onCancel }) => {
       // Generate the print report from backend
       const response = await api.getDailySalesReport(fromDate, toDate);
       
-      // Create a new window/tab for printing
-      const printWindow = window.open('', '_blank');
-      printWindow.document.write(response);
-      printWindow.document.close();
-      
-      // Trigger print after content loads
-      printWindow.onload = () => {
-        printWindow.print();
-      };
+      // Handle DOCX file download
+      const blob = response.data;
+      const url = window.URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = `daily_sales_report_${fromDate}_to_${toDate}_${new Date().toISOString().slice(0, 10)}.docx`;
+      document.body.appendChild(a);
+      a.click();
+      document.body.removeChild(a);
+      window.URL.revokeObjectURL(url);
       
     } catch (error) {
       console.error('Print error:', error);
