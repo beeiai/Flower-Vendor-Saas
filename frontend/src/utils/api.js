@@ -344,8 +344,8 @@ export const api = {
   },
   
   // Print Template APIs (DOCX-based)
-  getLedgerReport: async (farmerId, fromDate, toDate) => {
-    const params = { farmer_id: farmerId, from_date: fromDate, to_date: toDate };
+  getLedgerReport: async (farmerId, fromDate, toDate, commissionPct = 12.0) => {
+    const params = { farmer_id: farmerId, from_date: fromDate, to_date: toDate, commission_pct: commissionPct };
     return request('/print-docx/ledger-report', { params });
   },
   

@@ -8,7 +8,7 @@ from fastapi.responses import Response
 
 # Get the base directory of the project
 BASE_DIR = os.path.dirname(os.path.dirname(os.path.dirname(__file__)))
-TEMPLATE_DIR = os.path.join(BASE_DIR, "app", "templates")
+TEMPLATE_DIR = os.path.join(BASE_DIR, "templates")
 CUSTOM_TEMPLATE_PATH = os.path.join(TEMPLATE_DIR, "Report_template.docx")
 
 
