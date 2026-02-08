@@ -16,6 +16,7 @@ from app.routes import reports
 from app.routes import sms
 from app.routes import saala
 from app.routes import print_templates
+from app.routes import docx_print_templates
 from app.routes import health  # Health check endpoints
 from app.routes.admin import router as admin_router
 from fastapi.middleware.cors import CORSMiddleware
@@ -113,6 +114,7 @@ app.include_router(reports.router, prefix="/api")
 app.include_router(sms.router, prefix="/api")
 app.include_router(saala.router, prefix="/api")
 app.include_router(print_templates.router, prefix="/api")
+app.include_router(docx_print_templates.router, prefix="/api")
 app.include_router(health.router, prefix="/api")
 app.include_router(admin_router, prefix="/api")
 
