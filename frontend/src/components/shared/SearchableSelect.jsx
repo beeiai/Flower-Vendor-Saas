@@ -170,7 +170,7 @@ export function SearchableSelect({ label, options, value, onChange, placeholder,
 			{label && <label className="text-xs font-semibold text-slate-600 uppercase tracking-wide mb-1 ml-0.5 whitespace-nowrap">{String(label)}</label>}
 			<div className="relative group" ref={inputWrapperRef} data-open={open ? "true" : "false"}>
 				<input ref={actualInputRef} type="text" disabled={disabled} placeholder={placeholder} className={`w-full bg-white border ${error ? 'border-red-400 ring-2 ring-red-50' : 'border-slate-300'} rounded-sm px-3 py-2 text-sm font-medium outline-none focus:border-primary-500 focus:ring-2 focus:ring-primary-50 transition-all`} style={{ height: '36px' }} value={searchTerm} onFocus={handleFocus} onKeyDown={handleKeyDown} onBlur={() => setTimeout(() => {!document.activeElement?.closest('[data-searchable-select]') && setOpen(false);}, 150)}  onChange={(e) => { setSearchTerm(e.target.value); onChange(e.target.value); }} />
-				<button type="button" className="absolute right-1 top-1/2 -translate-y-1/2 p-1.5 text-slate-700 hover:text-slate-900 transition-colors" onClick={() => !disabled && setOpen(!open)}><ChevronDown className="w-4 h-4" /></button>
+				<button type="button" className="absolute right-3 top-1/2 -translate-y-1/2 p-1.5 text-slate-700 hover:text-slate-900 transition-colors" onClick={() => !disabled && setOpen(!open)}><ChevronDown className="w-4 h-4" /></button>
 			</div>
 			{dropdownList}
 		</div>
