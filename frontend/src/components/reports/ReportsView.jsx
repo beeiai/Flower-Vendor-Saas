@@ -458,46 +458,46 @@ export default function ReportsView({ groups, customers, vehicles, advanceStore 
 						<h3 className="text-sm font-bold text-white uppercase tracking-wider">Financial Summary</h3>
 					</div>
 					<div className="space-y-2 flex-1 text-white pb-2">
-						<div className="bg-slate-700/30 backdrop-blur-sm rounded-xl p-3 border border-slate-600/50 shadow-lg">
+						<div className="bg-slate-700/30 backdrop-blur-sm rounded-xl p-2 border border-slate-600/50 shadow-lg">
 							<label className="text-xs font-bold text-slate-300 uppercase tracking-widest mb-1 block">Total Quantity</label>
-							<input type="text" readOnly className="w-full bg-gradient-to-r from-slate-800 to-slate-700 px-3 py-2 text-xl font-black text-right rounded-lg border border-slate-600/50 outline-none text-cyan-400 shadow-inner" value={String(summary.qty)} style={{ colorScheme: 'dark' }} />
+							<input type="text" readOnly className="w-full bg-gradient-to-r from-slate-800 to-slate-700 px-2 py-1.5 text-base font-black text-right rounded-lg border border-slate-600/50 outline-none text-cyan-400 shadow-inner" value={String(summary.qty)} style={{ colorScheme: 'dark' }} />
 						</div>
 						
-						<div className="bg-slate-700/30 backdrop-blur-sm rounded-xl p-3 border border-slate-600/50 shadow-lg">
+						<div className="bg-slate-700/30 backdrop-blur-sm rounded-xl p-2 border border-slate-600/50 shadow-lg">
 							<label className="text-xs font-bold text-slate-300 uppercase tracking-widest mb-1 block">Handling Charges</label>
-							<input type="text" readOnly className="w-full bg-gradient-to-r from-slate-800 to-slate-700 px-3 py-2 text-lg font-bold text-right rounded-lg border border-slate-600/50 outline-none text-amber-400 shadow-inner" value={summary.coolie.toFixed(2)} style={{ colorScheme: 'dark' }} />
+							<input type="text" readOnly className="w-full bg-gradient-to-r from-slate-800 to-slate-700 px-2 py-1.5 text-base font-bold text-right rounded-lg border border-slate-600/50 outline-none text-amber-400 shadow-inner" value={summary.coolie.toFixed(2)} style={{ colorScheme: 'dark' }} />
 						</div>
 						
-						<div className="bg-slate-700/30 backdrop-blur-sm rounded-xl p-3 border border-slate-600/50 shadow-lg">
+						<div className="bg-slate-700/30 backdrop-blur-sm rounded-xl p-2 border border-slate-600/50 shadow-lg">
 							<label className="text-xs font-bold text-slate-300 uppercase tracking-widest mb-1 block">Luggage Costs</label>
-							<input type="text" readOnly className="w-full bg-gradient-to-r from-slate-800 to-slate-700 px-3 py-2 text-lg font-bold text-right rounded-lg border border-slate-600/50 outline-none text-rose-400 shadow-inner" value={summary.luggageTotal.toFixed(2)} style={{ colorScheme: 'dark' }} />
+							<input type="text" readOnly className="w-full bg-gradient-to-r from-slate-800 to-slate-700 px-2 py-1.5 text-base font-bold text-right rounded-lg border border-slate-600/50 outline-none text-rose-400 shadow-inner" value={summary.luggageTotal.toFixed(2)} style={{ colorScheme: 'dark' }} />
 						</div>
-						<div className="bg-gradient-to-br from-slate-800/50 to-slate-900/50 backdrop-blur-sm rounded-xl p-4 border border-[#5B55E6]/30 shadow-lg">
-							<h4 className="text-xs font-bold text-[#5B55E6] uppercase tracking-widest mb-3 flex items-center gap-2">
-								<svg xmlns="http://www.w3.org/2000/svg" className="h-3 w-3" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+						<div className="bg-gradient-to-br from-slate-800/50 to-slate-900/50 backdrop-blur-sm rounded-xl p-3 border border-[#5B55E6]/30 shadow-lg">
+							<h4 className="text-xs font-bold text-[#5B55E6] uppercase tracking-widest mb-2 flex items-center gap-2">
+								<svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
 									<path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8c-1.657 0-3 .895-3 2s1.343 2 3 2 3 .895 3 2-1.343 2-3 2m0-8c1.11 0 2.08.402 2.599 1M12 8V7m0 1v8m0 0v1m0-1c-1.11 0-2.08-.402-2.599-1M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
 								</svg>
 								Commission Details
 							</h4>
-							<div className="grid grid-cols-2 gap-3">
-								<div className="flex flex-col gap-1.5">
+							<div className="grid grid-cols-2 gap-2">
+								<div className="flex flex-col gap-1">
 									<label className="text-xs font-bold text-slate-300 uppercase tracking-wider">Commission %</label>
-									<input type="number" className="bg-gradient-to-r from-slate-800 to-slate-700 px-3 py-2.5 font-bold text-right rounded-lg border border-slate-600/50 outline-none focus:border-[#5B55E6] focus:ring-2 focus:ring-[#5B55E6]/20 text-white shadow-inner" value={String(commissionPct)} onChange={e => setCommissionPct(e.target.value)} style={{ colorScheme: 'dark' }} />
+									<input type="number" className="bg-gradient-to-r from-slate-800 to-slate-700 px-2 py-1.5 font-bold text-right rounded-lg border border-slate-600/50 outline-none focus:border-[#5B55E6] focus:ring-2 focus:ring-[#5B55E6]/20 text-white shadow-inner" value={String(commissionPct)} onChange={e => setCommissionPct(e.target.value)} style={{ colorScheme: 'dark' }} />
 								</div>
-								<div className="flex flex-col gap-1.5">
+								<div className="flex flex-col gap-1">
 									<label className="text-xs font-bold text-slate-300 uppercase tracking-wider">Total Commission</label>
-									<input type="text" readOnly className="bg-gradient-to-r from-slate-800/50 to-slate-700/50 px-3 py-2.5 text-right rounded-lg border border-slate-600/30 outline-none text-rose-400 font-bold shadow-inner" value={summary.totalCommission.toFixed(2)} style={{ colorScheme: 'dark' }} />
+									<input type="text" readOnly className="bg-gradient-to-r from-slate-800/50 to-slate-700/50 px-2 py-1.5 text-right rounded-lg border border-slate-600/30 outline-none text-rose-400 font-bold shadow-inner" value={summary.totalCommission.toFixed(2)} style={{ colorScheme: 'dark' }} />
 								</div>
 							</div>
 						</div>
-						<div className="bg-slate-700/30 backdrop-blur-sm rounded-xl p-3 border border-slate-600/50 shadow-lg">
+						<div className="bg-slate-700/30 backdrop-blur-sm rounded-xl p-2 border border-slate-600/50 shadow-lg">
 							<label className="text-xs font-bold text-slate-300 uppercase tracking-widest mb-1 block">Gross Total</label>
-							<input type="text" readOnly className="w-full bg-gradient-to-r from-slate-800 to-slate-700 px-3 py-2 text-xl font-black text-right rounded-lg border border-slate-600/50 outline-none text-emerald-400 shadow-inner" value={summary.total.toFixed(2)} style={{ colorScheme: 'dark' }} />
+							<input type="text" readOnly className="w-full bg-gradient-to-r from-slate-800 to-slate-700 px-2 py-1.5 text-lg font-black text-right rounded-lg border border-slate-600/50 outline-none text-emerald-400 shadow-inner" value={summary.total.toFixed(2)} style={{ colorScheme: 'dark' }} />
 						</div>
 						
-						<div className="bg-slate-700/30 backdrop-blur-sm rounded-xl p-3 border border-slate-600/50 shadow-lg">
+						<div className="bg-slate-700/30 backdrop-blur-sm rounded-xl p-2 border border-slate-600/50 shadow-lg">
 							<label className="text-xs font-bold text-slate-300 uppercase tracking-widest mb-1 block">Amount Paid</label>
-							<input type="text" readOnly className="w-full bg-gradient-to-r from-slate-800 to-slate-700 px-3 py-2 text-lg font-bold text-right rounded-lg border border-slate-600/50 outline-none text-green-400 shadow-inner" value={summary.paid.toFixed(2)} style={{ colorScheme: 'dark' }} />
+							<input type="text" readOnly className="w-full bg-gradient-to-r from-slate-800 to-slate-700 px-2 py-1.5 text-base font-bold text-right rounded-lg border border-slate-600/50 outline-none text-green-400 shadow-inner" value={summary.paid.toFixed(2)} style={{ colorScheme: 'dark' }} />
 						</div>
 						<div className="mt-4 pt-4 border-t border-white/20 text-center">
 							<div className="inline-flex items-center gap-2 mb-3 px-4 py-2 bg-gradient-to-r from-[#5B55E6]/20 to-[#4A44D0]/20 rounded-full border border-[#5B55E6]/30">
