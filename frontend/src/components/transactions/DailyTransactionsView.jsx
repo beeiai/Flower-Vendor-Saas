@@ -56,6 +56,28 @@ export default function DailyTransactionsView({
     else setCustomerInfo({ ...customerInfo, customerName: name }); 
   };
   
+  // After saving a record, reset only the entry fields but keep the group selected
+  const handleSaveRecord = async () => {
+    await onSaveRecord();
+    // Reset entry form but preserve group selection
+    setCurrentEntry({ 
+      date: new Date().toISOString().split('T')[0], 
+      vehicle: '', 
+      itemCode: '', 
+      itemName: '', 
+      qty: '', 
+      rate: '', 
+      laguage: '', 
+      coolie: '', 
+      paidAmt: '', 
+      remarks: '' 
+    });
+    // Return focus to group field for next transaction
+    setTimeout(() => {
+      groupRef.current?.focus();
+    }, 100);
+  };
+  
   // Enter key handling is managed by SearchableSelect components
   
   // Keyboard navigation is handled directly in SearchableSelect components
@@ -78,6 +100,7 @@ export default function DailyTransactionsView({
                 onSelectionComplete={() => setTimeout(() => cRef.current?.focus(), 0)}
                 placeholder="Filter Group" 
                 className="focus:border-rose-500 focus:ring-rose-500/20 rounded-lg shadow-sm hover:shadow-md transition-all border-rose-200 w-full"
+                autoFocus
               />
               <div className="absolute right-3 top-8 text-slate-700">
                 <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
@@ -455,6 +478,16 @@ export default function DailyTransactionsView({
             </div>
             <div className="bg-gradient-to-r from-[#5B55E6] to-[#4A44D0] p-5 rounded-2xl shadow-2xl border border-white/10">
               <p className="text-4xl font-black text-white tabular-nums drop-shadow-2xl">₹ {Number((summary.itemTotal || 0) - (summary.totalCommission || 0) - (summary.laguageTotal || 0) - (summary.coolieTotal || 0)).toFixed(2)}</p>
+            </div>
+            
+            <div className="mt-4">
+              <button 
+                type="button" 
+                onClick={handleSaveRecord} 
+                className="bg-gradient-to-r from-emerald-600 to-emerald-700 text-white px-6 py-2.5 font-bold uppercase text-xs shadow-lg hover:from-emerald-500 hover:to-emerald-600 rounded-lg transition-all active:translate-y-px w-full"
+              >
+                Save Record
+              </button>
             </div>
           </div>
         </div>

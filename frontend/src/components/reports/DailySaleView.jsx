@@ -24,6 +24,9 @@ const DailySaleReport = ({ onCancel }) => {
     error
   } = state;
   
+  // Commission percentage state
+  const [commissionPct, setCommissionPct] = useState(12); // Default to 12%
+  
   // Functions to update individual state properties
   const setFromDate = useCallback((value) => {
     setState(prev => ({ ...prev, fromDate: value }));
@@ -362,24 +365,90 @@ const DailySaleReport = ({ onCancel }) => {
             </div>
 
             {/* Totals Section */}
-            <div className="col-span-6 grid grid-cols-2 gap-4">
-              <div className="bg-gradient-to-br from-slate-50 to-slate-100 rounded-lg p-3 border border-slate-200 shadow-sm">
-                <label className="text-[10px] font-black uppercase text-slate-600 mb-2 block tracking-wider">Total Quantity</label>
-                <input 
-                  type="text" 
-                  readOnly 
-                  className="w-full bg-white border-2 border-slate-200 rounded-lg p-2.5 text-sm font-black text-right text-slate-800 outline-none shadow-inner" 
-                  value={totals.qty.toFixed(2)}
-                />
+            <div className="col-span-6">
+              <div className="grid grid-cols-2 gap-4">
+                <div className="bg-gradient-to-br from-slate-50 to-slate-100 rounded-lg p-3 border border-slate-200 shadow-sm">
+                  <label className="text-[10px] font-black uppercase text-slate-600 mb-2 block tracking-wider">Total Quantity</label>
+                  <input 
+                    type="text" 
+                    readOnly 
+                    className="w-full bg-white border-2 border-slate-200 rounded-lg p-2.5 text-sm font-black text-right text-slate-800 outline-none shadow-inner" 
+                    value={totals.qty.toFixed(2)}
+                  />
+                </div>
+                <div className="bg-gradient-to-br from-rose-50 to-rose-100 rounded-lg p-3 border-2 border-rose-200 shadow-sm">
+                  <label className="text-[10px] font-black uppercase text-rose-700 mb-2 block tracking-wider">Amount Total</label>
+                  <input 
+                    type="text" 
+                    readOnly 
+                    className="w-full bg-gradient-to-r from-rose-500 to-rose-600 text-white border-2 border-rose-600 rounded-lg p-2.5 text-sm font-black text-right outline-none shadow-lg" 
+                    value={`₹ ${totals.amount.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`}
+                  />
+                </div>
               </div>
-              <div className="bg-gradient-to-br from-rose-50 to-rose-100 rounded-lg p-3 border-2 border-rose-200 shadow-sm">
-                <label className="text-[10px] font-black uppercase text-rose-700 mb-2 block tracking-wider">Amount Total</label>
-                <input 
-                  type="text" 
-                  readOnly 
-                  className="w-full bg-gradient-to-r from-rose-500 to-rose-600 text-white border-2 border-rose-600 rounded-lg p-2.5 text-sm font-black text-right outline-none shadow-lg" 
-                  value={`₹ ${totals.amount.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`}
-                />
+              
+              {/* Enhanced Financial Summary - Similar to Daily Transaction */}
+              <div className="mt-4 bg-gradient-to-b from-slate-800 to-slate-900 p-4 rounded-lg border border-slate-700 shadow-xl">
+                <div className="flex items-center gap-2 mb-3">
+                  <div className="w-6 h-6 rounded-md bg-gradient-to-br from-[#5B55E6] to-[#4A44D0] flex items-center justify-center">
+                    <svg xmlns="http://www.w3.org/2000/svg" className="h-3 w-3 text-white" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z" />
+                    </svg>
+                  </div>
+                  <h4 className="text-xs font-bold text-white uppercase tracking-wider">Financial Summary</h4>
+                </div>
+                <div className="space-y-2 text-white">
+                  <div className="bg-slate-700/30 backdrop-blur-sm rounded-lg p-2 border border-slate-600/50">
+                    <label className="text-[8px] font-bold text-slate-300 uppercase tracking-wider mb-1 block">Gross Total</label>
+                    <input type="text" readOnly className="w-full bg-gradient-to-r from-slate-800 to-slate-700 px-2 py-1 text-xs font-black text-right rounded border border-slate-600/50 outline-none text-emerald-400" value={totals.amount.toFixed(2)} style={{ colorScheme: 'dark' }} />
+                  </div>
+                  
+                  <div className="bg-slate-700/30 backdrop-blur-sm rounded-lg p-2 border border-slate-600/50">
+                    <label className="text-[8px] font-bold text-slate-300 uppercase tracking-wider mb-1 block">Handling Charges</label>
+                    <input type="text" readOnly className="w-full bg-gradient-to-r from-slate-800 to-slate-700 px-2 py-1 text-xs font-bold text-right rounded border border-slate-600/50 outline-none text-amber-400" value="0.00" style={{ colorScheme: 'dark' }} />
+                  </div>
+                  
+                  <div className="bg-slate-700/30 backdrop-blur-sm rounded-lg p-2 border border-slate-600/50">
+                    <label className="text-[8px] font-bold text-slate-300 uppercase tracking-wider mb-1 block">Luggage Costs</label>
+                    <input type="text" readOnly className="w-full bg-gradient-to-r from-slate-800 to-slate-700 px-2 py-1 text-xs font-bold text-right rounded border border-slate-600/50 outline-none text-rose-400" value="0.00" style={{ colorScheme: 'dark' }} />
+                  </div>
+                  
+                  <div className="bg-gradient-to-br from-slate-800/50 to-slate-900/50 backdrop-blur-sm rounded-lg p-2.5 border border-[#5B55E6]/30">
+                    <h5 className="text-[8px] font-bold text-[#5B55E6] uppercase tracking-wider mb-1 flex items-center gap-1">
+                      <svg xmlns="http://www.w3.org/2000/svg" className="h-2.5 w-2.5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8c-1.657 0-3 .895-3 2s1.343 2 3 2 3 .895 3 2-1.343 2-3 2m0-8c1.11 0 2.08.402 2.599 1M12 8V7m0 1v8m0 0v1m0-1c-1.11 0-2.08-.402-2.599-1M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+                      </svg>
+                      Commission
+                    </h5>
+                    <div className="grid grid-cols-2 gap-1">
+                      <div className="flex flex-col gap-0.5">
+                        <label className="text-[7px] font-bold text-slate-300 uppercase tracking-wider">%</label>
+                        <input type="number" className="bg-gradient-to-r from-slate-800 to-slate-700 px-1.5 py-1 text-xs font-bold text-right rounded border border-slate-600/50 outline-none focus:border-[#5B55E6] focus:ring-2 focus:ring-[#5B55E6]/20 text-white" style={{ colorScheme: 'dark' }} value={commissionPct} onChange={(e) => setCommissionPct(Number(e.target.value) || 0)} />
+                      </div>
+                      <div className="flex flex-col gap-0.5">
+                        <label className="text-[7px] font-bold text-slate-300 uppercase tracking-wider">Total</label>
+                        <input type="text" readOnly className="bg-gradient-to-r from-slate-800/50 to-slate-700/50 px-1.5 py-1 text-xs text-right rounded border border-slate-600/30 outline-none text-rose-400 font-bold" style={{ colorScheme: 'dark' }} value={(totals.amount * commissionPct / 100).toFixed(2)} />
+                      </div>
+                    </div>
+                  </div>
+                  
+                  <div className="bg-slate-700/30 backdrop-blur-sm rounded-lg p-2 border border-slate-600/50">
+                    <label className="text-[8px] font-bold text-slate-300 uppercase tracking-wider mb-1 block">Amount Paid</label>
+                    <input type="text" readOnly className="w-full bg-gradient-to-r from-slate-800 to-slate-700 px-2 py-1 text-xs font-bold text-right rounded border border-slate-600/50 outline-none text-green-400" value="0.00" style={{ colorScheme: 'dark' }} />
+                  </div>
+                  
+                  <div className="mt-2 pt-2 border-t border-white/20 text-center">
+                    <div className="inline-flex items-center gap-1 mb-1 px-2 py-1 bg-gradient-to-r from-[#5B55E6]/20 to-[#4A44D0]/20 rounded-full border border-[#5B55E6]/30">
+                      <svg xmlns="http://www.w3.org/2000/svg" className="h-2.5 w-2.5 text-[#5B55E6]" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8c-1.657 0-3 .895-3 2s1.343 2 3 2 3 .895 3 2-1.343 2-3 2m0-8c1.11 0 2.08.402 2.599 1M12 8V7m0 1v8m0 0v1m0-1c-1.11 0-2.08-.402-2.599-1M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+                      </svg>
+                      <span className="text-[7px] font-bold text-[#5B55E6] uppercase tracking-wider">Net Total</span>
+                    </div>
+                    <div className="bg-gradient-to-r from-[#5B55E6] to-[#4A44D0] p-2.5 rounded-lg shadow-lg">
+                      <p className="text-sm font-black text-white tabular-nums">₹ {(totals.amount - (totals.amount * commissionPct / 100)).toFixed(2)}</p>
+                    </div>
+                  </div>
+                </div>
               </div>
             </div>
           </div>

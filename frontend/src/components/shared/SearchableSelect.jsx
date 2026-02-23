@@ -75,9 +75,14 @@ export function SearchableSelect({ label, options, value, onChange, placeholder,
 	}, []);
 
 	const filteredOptions = useMemo(() => {
-		// Show all options from database regardless of search term
-		return options || [];
-	}, [options]);
+		// Filter options based on search term (case-insensitive, starts with or contains)
+		if (!searchTerm) return options || [];
+		const lowerSearchTerm = String(searchTerm).toLowerCase();
+		return (options || []).filter(option => 
+			String(option).toLowerCase().startsWith(lowerSearchTerm) ||
+			String(option).toLowerCase().includes(lowerSearchTerm)
+		);
+	}, [options, searchTerm]);
 
 	const handleFocus = () => {
 		// Open dropdown when input gains focus
