@@ -448,7 +448,7 @@ export default function ReportsView({ groups, customers, vehicles, advanceStore 
 					</div>
 				</div>
 
-				<aside className="w-[340px] bg-gradient-to-b from-slate-800 to-slate-900 flex flex-col p-4 shrink-0 shadow-2xl rounded-r-lg border-l-2 border-[#5B55E6]/30">
+				<aside className="w-[380px] bg-gradient-to-b from-slate-800 to-slate-900 flex flex-col p-4 shrink-0 shadow-2xl rounded-r-lg border-l-2 border-[#5B55E6]/30">
 					<div className="flex items-center gap-2 mb-6">
 						<div className="w-8 h-8 rounded-lg bg-gradient-to-br from-[#5B55E6] to-[#4A44D0] flex items-center justify-center shadow-lg">
 							<svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4 text-white" fill="none" viewBox="0 0 24 24" stroke="currentColor">
@@ -514,7 +514,7 @@ export default function ReportsView({ groups, customers, vehicles, advanceStore 
 				</aside>
 			</div>
 
-			<div className="shrink-0 border-t border-slate-200 bg-gradient-to-r from-slate-50 to-white p-5 flex justify-end gap-4">
+			<div className="shrink-0 border-t border-slate-200 bg-gradient-to-r from-slate-50 to-white p-5 flex justify-start gap-4">
 				<button
 					type="button"
 					className="px-6 bg-gradient-to-r from-emerald-600 to-emerald-700 text-white text-sm font-bold rounded-lg hover:from-emerald-500 hover:to-emerald-600 transition-all shadow-md hover:shadow-lg flex items-center gap-2"
