@@ -254,19 +254,19 @@ export default function ReportsView({ groups, customers, vehicles, advanceStore 
 										<label className="text-xs font-medium text-slate-600 block mb-1.5">From Date</label>
 										<input
 											type="date"
-											className="w-full border border-rose-200 rounded-lg px-3 text-sm font-medium bg-white focus:border-rose-500 focus:ring-2 focus:ring-rose-500/20 outline-none transition-all shadow-sm hover:shadow-md"
+											className="w-full border-2 border-indigo-300 rounded-lg px-3 text-sm font-medium bg-gradient-to-r from-indigo-50 to-blue-50 focus:border-indigo-500 focus:ring-2 focus:ring-indigo-500/20 outline-none transition-all shadow-md hover:shadow-lg cursor-pointer"
 											style={{ height: '40px' }}
 											value={fromDate}
 											onChange={e => setFromDate(e.target.value)}
 											data-enter-index="1"
 										/>
 									</div>
-
+																		
 									<div className="col-span-3">
 										<label className="text-xs font-medium text-slate-600 block mb-1.5">To Date</label>
 										<input
 											type="date"
-											className="w-full border border-rose-200 rounded-lg px-3 text-sm font-medium bg-white focus:border-rose-500 focus:ring-2 focus:ring-rose-500/20 outline-none transition-all shadow-sm hover:shadow-md"
+											className="w-full border-2 border-indigo-300 rounded-lg px-3 text-sm font-medium bg-gradient-to-r from-indigo-50 to-blue-50 focus:border-indigo-500 focus:ring-2 focus:ring-indigo-500/20 outline-none transition-all shadow-md hover:shadow-lg cursor-pointer"
 											style={{ height: '36px' }}
 											value={toDate}
 											onChange={e => setToDate(e.target.value)}
@@ -499,15 +499,15 @@ export default function ReportsView({ groups, customers, vehicles, advanceStore 
 							<label className="text-xs font-bold text-slate-300 uppercase tracking-widest mb-1 block">Amount Paid</label>
 							<input type="text" readOnly className="w-full bg-gradient-to-r from-slate-800 to-slate-700 px-2 py-1.5 text-base font-bold text-right rounded-lg border border-slate-600/50 outline-none text-green-400 shadow-inner" value={summary.paid.toFixed(2)} style={{ colorScheme: 'dark' }} />
 						</div>
-						<div className="mt-4 pt-4 border-t border-white/20 text-center">
-							<div className="inline-flex items-center gap-1.5 mb-2 px-3 py-1.5 bg-gradient-to-r from-[#5B55E6]/20 to-[#4A44D0]/20 rounded-full border border-[#5B55E6]/30">
-								<svg xmlns="http://www.w3.org/2000/svg" className="h-3.5 w-3.5 text-[#5B55E6]" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+						<div className="mt-2 pt-3 border-t border-white/20 text-center">
+							<div className="inline-flex items-center gap-1 mb-1.5 px-2.5 py-1 bg-gradient-to-r from-[#5B55E6]/20 to-[#4A44D0]/20 rounded-full border border-[#5B55E6]/30">
+								<svg xmlns="http://www.w3.org/2000/svg" className="h-3 w-3 text-[#5B55E6]" fill="none" viewBox="0 0 24 24" stroke="currentColor">
 									<path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8c-1.657 0-3 .895-3 2s1.343 2 3 2 3 .895 3 2-1.343 2-3 2m0-8c1.11 0 2.08.402 2.599 1M12 8V7m0 1v8m0 0v1m0-1c-1.11 0-2.08-.402-2.599-1M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
 								</svg>
-								<span className="text-[10px] font-bold text-[#5B55E6] uppercase tracking-wider">Net Total</span>
+								<span className="text-[9px] font-bold text-[#5B55E6] uppercase tracking-wider">Net Total</span>
 							</div>
-							<div className="bg-gradient-to-r from-[#5B55E6] to-[#4A44D0] p-4 rounded-xl shadow-2xl border border-white/10">
-								<p className="text-2xl font-black text-white tabular-nums drop-shadow-xl">₹ {summary.netTotal.toFixed(2)}</p>
+							<div className="bg-gradient-to-r from-[#5B55E6] to-[#4A44D0] p-3 rounded-lg shadow-xl border border-white/10">
+								<p className="text-xl font-black text-white tabular-nums drop-shadow-lg">₹ {summary.netTotal.toFixed(2)}</p>
 							</div>
 						</div>
 					</div>
