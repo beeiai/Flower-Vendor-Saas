@@ -500,14 +500,14 @@ export default function ReportsView({ groups, customers, vehicles, advanceStore 
 							<input type="text" readOnly className="w-full bg-gradient-to-r from-slate-800 to-slate-700 px-2 py-1.5 text-base font-bold text-right rounded-lg border border-slate-600/50 outline-none text-green-400 shadow-inner" value={summary.paid.toFixed(2)} style={{ colorScheme: 'dark' }} />
 						</div>
 						<div className="mt-4 pt-4 border-t border-white/20 text-center">
-							<div className="inline-flex items-center gap-2 mb-3 px-4 py-2 bg-gradient-to-r from-[#5B55E6]/20 to-[#4A44D0]/20 rounded-full border border-[#5B55E6]/30">
-								<svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4 text-[#5B55E6]" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+							<div className="inline-flex items-center gap-1.5 mb-2 px-3 py-1.5 bg-gradient-to-r from-[#5B55E6]/20 to-[#4A44D0]/20 rounded-full border border-[#5B55E6]/30">
+								<svg xmlns="http://www.w3.org/2000/svg" className="h-3.5 w-3.5 text-[#5B55E6]" fill="none" viewBox="0 0 24 24" stroke="currentColor">
 									<path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8c-1.657 0-3 .895-3 2s1.343 2 3 2 3 .895 3 2-1.343 2-3 2m0-8c1.11 0 2.08.402 2.599 1M12 8V7m0 1v8m0 0v1m0-1c-1.11 0-2.08-.402-2.599-1M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
 								</svg>
-								<span className="text-xs font-bold text-[#5B55E6] uppercase tracking-wider">Net Total</span>
+								<span className="text-[10px] font-bold text-[#5B55E6] uppercase tracking-wider">Net Total</span>
 							</div>
-							<div className="bg-gradient-to-r from-[#5B55E6] to-[#4A44D0] p-5 rounded-2xl shadow-2xl border border-white/10">
-								<p className="text-4xl font-black text-white tabular-nums drop-shadow-2xl">₹ {summary.netTotal.toFixed(2)}</p>
+							<div className="bg-gradient-to-r from-[#5B55E6] to-[#4A44D0] p-4 rounded-xl shadow-2xl border border-white/10">
+								<p className="text-2xl font-black text-white tabular-nums drop-shadow-xl">₹ {summary.netTotal.toFixed(2)}</p>
 							</div>
 						</div>
 					</div>
