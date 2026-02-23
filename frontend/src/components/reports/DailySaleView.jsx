@@ -229,7 +229,7 @@ const DailySaleReport = ({ onCancel }) => {
                   <option value="">-- Select Group --</option>
                   {groups.map(group => <option key={group.id} value={group.name}>{group.name}</option>)}
                 </select>
-                <ChevronDown className="absolute right-3 top-1/2 -translate-y-1/2 w-4 h-4 text-rose-400 pointer-events-none" />
+                <ChevronDown className="absolute right-3 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-700 pointer-events-none" />
               </div>
             </div>
 

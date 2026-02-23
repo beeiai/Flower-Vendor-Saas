@@ -107,7 +107,7 @@ function GroupCustomerRegistryForm({ title = 'ADD GROUP', initialTab = 'group', 
             <div className="bg-slate-50/50 p-4 rounded-xl border border-slate-200">
               <div className="relative">
                 <SearchableSelect label="Target Group" options={groups.map(g => g.name)} value={custForm.groupName} onChange={(val) => setCustForm({ ...custForm, groupName: val })} placeholder="Select group" data-enter-index="1" className="focus:border-rose-500 focus:ring-rose-500/20 rounded-lg shadow-sm hover:shadow-md transition-all border-rose-200" />
-                <div className="absolute right-3 top-8 text-rose-400">
+                <div className="absolute right-3 top-8 text-slate-700">
                   <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                     <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
                   </svg>
@@ -1110,7 +1110,7 @@ export default function App() {
 
           <div className="relative">
             <SearchableSelect label="Group Name" options={groups.map(g => g.name)} value={groupPattiForm.groupName} onChange={(val) => setGroupPattiForm({ ...groupPattiForm, groupName: val })} placeholder="Select group" data-enter-index="3" className="focus:border-rose-500 focus:ring-rose-500/20 rounded-lg shadow-sm hover:shadow-md transition-all border-rose-200" />
-            <div className="absolute right-3 top-8 text-rose-400">
+            <div className="absolute right-3 top-8 text-slate-700">
               <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
               </svg>
@@ -1159,7 +1159,7 @@ export default function App() {
 
           <div className="relative">
             <SearchableSelect label="Group Name" options={groups.map(g => g.name)} value={groupTotalForm.groupName} onChange={(val) => setGroupTotalForm({ ...groupTotalForm, groupName: val })} placeholder="Select group" data-enter-index="3" className="focus:border-rose-500 focus:ring-rose-500/20 rounded-lg shadow-sm hover:shadow-md transition-all border-rose-200" />
-            <div className="absolute right-3 top-8 text-rose-400">
+            <div className="absolute right-3 top-8 text-slate-700">
               <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
               </svg>
@@ -1188,7 +1188,7 @@ export default function App() {
         <div className="flex items-center gap-6 h-full">
           <div ref={navRefs.logo} className="flex items-center gap-2 pr-6 border-r border-slate-700 cursor-pointer h-full navbar-element" onClick={() => setActiveSection('daily')} data-navbar-element><Flower2 className="w-5 h-5 text-primary-400" /><span className="text-sm font-bold text-white tracking-wide">SKFS ERP</span><span className="text-xs text-slate-400 font-medium">v5.0.4</span></div>
           
-          <div className="relative h-full flex items-center"><button ref={navRefs.transactionMenu} onClick={() => setShowTMenu(!showTMenu)} className={`flex items-center gap-2 px-4 h-full text-xs font-semibold transition-all ${showTMenu ? 'bg-white text-slate-900 shadow-xl' : 'text-slate-300 hover:text-white'} navbar-element`} data-navbar-element>Transaction <ChevronDown className="w-3.5 h-3.5" /></button>
+          <div className="relative h-full flex items-center"><button ref={navRefs.transactionMenu} onClick={() => setShowTMenu(!showTMenu)} className={`flex items-center gap-2 px-4 h-full text-xs font-semibold transition-all ${showTMenu ? 'bg-white text-slate-900 shadow-xl' : 'text-slate-300 hover:text-white'} navbar-element`} data-navbar-element>Transaction <ChevronDown className={`w-3.5 h-3.5 ${showTMenu ? 'text-slate-900' : 'text-slate-300'}`} /></button>
             {showTMenu && <div className="absolute top-12 left-0 w-56 bg-white border border-slate-200 shadow-dropdown py-1 animate-in slide-in-from-top-2 duration-150 rounded-sm overflow-hidden z-[5000]">
               {[ 
                 { id: 'daily', l: 'Daily Transaction', i: Receipt }, 
@@ -1204,7 +1204,7 @@ export default function App() {
 
           <button ref={navRefs.reportsButton} onClick={() => { setShowTMenu(false); setShowUMenu(false); setShowMMenu(false); setActiveSection('reports'); }} className={`flex items-center gap-2 px-4 h-full text-xs font-semibold transition-all ${activeSection === 'reports' ? 'bg-white text-slate-900' : 'text-slate-300 hover:text-white'} navbar-element`} data-navbar-element>Reports</button>
 
-          <div className="relative h-full flex items-center"><button ref={navRefs.utilityMenu} onClick={() => setShowUMenu(!showUMenu)} className={`flex items-center gap-2 px-4 h-full text-xs font-semibold transition-all ${showUMenu ? 'bg-white text-slate-900 shadow-xl' : 'text-slate-300 hover:text-white'} navbar-element`} data-navbar-element>Utility <ChevronDown className="w-3.5 h-3.5" /></button>
+          <div className="relative h-full flex items-center"><button ref={navRefs.utilityMenu} onClick={() => setShowUMenu(!showUMenu)} className={`flex items-center gap-2 px-4 h-full text-xs font-semibold transition-all ${showUMenu ? 'bg-white text-slate-900 shadow-xl' : 'text-slate-300 hover:text-white'} navbar-element`} data-navbar-element>Utility <ChevronDown className={`w-3.5 h-3.5 ${showUMenu ? 'text-slate-900' : 'text-slate-300'}`} /></button>
             {showUMenu && <div className="absolute top-12 left-0 w-64 bg-white border border-slate-200 shadow-dropdown py-1 animate-in slide-in-from-top-2 duration-150 rounded-sm overflow-hidden z-[5000]">
               {[ 
                 { id: 'group-print', l: 'Group Printing', i: Printer },
@@ -1256,7 +1256,7 @@ export default function App() {
             </div>}
           </div>
 
-          <div className="relative h-full flex items-center"><button ref={navRefs.moreMenu} onClick={() => setShowMMenu(!showMMenu)} className={`flex items-center gap-2 px-4 h-full text-xs font-semibold transition-all ${showMMenu ? 'bg-white text-slate-900 shadow-xl' : 'text-slate-300 hover:text-white'} navbar-element`} data-navbar-element>More <ChevronDown className="w-3.5 h-3.5" /></button>
+          <div className="relative h-full flex items-center"><button ref={navRefs.moreMenu} onClick={() => setShowMMenu(!showMMenu)} className={`flex items-center gap-2 px-4 h-full text-xs font-semibold transition-all ${showMMenu ? 'bg-white text-slate-900 shadow-xl' : 'text-slate-300 hover:text-white'} navbar-element`} data-navbar-element>More <ChevronDown className={`w-3.5 h-3.5 ${showMMenu ? 'text-slate-900' : 'text-slate-300'}`} /></button>
             {showMMenu && <div className="absolute top-12 left-0 w-52 bg-white border border-slate-200 shadow-dropdown py-1 animate-in slide-in-from-top-2 duration-150 rounded-sm overflow-hidden z-[5000]">
               {[ { id: 'advance', l: 'Advance', i: WalletCards }, { id: 'saala', l: 'Saala (Credit)', i: Landmark }, { id: 'silk', l: 'Silk', i: Layers } ].map(item => (
                 <button key={item.id} onClick={() => { setShowMMenu(false); setActiveSection(item.id); }} className={`w-full text-left px-4 py-2.5 text-sm font-medium flex items-center gap-3 transition-colors ${activeSection === item.id ? 'bg-primary-50 text-primary-700' : 'text-slate-700 hover:bg-slate-50'} navbar-element`} data-navbar-element><item.i className="w-4 h-4" /> {item.l}</button>

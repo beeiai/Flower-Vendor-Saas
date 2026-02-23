@@ -79,7 +79,7 @@ export default function DailyTransactionsView({
                 placeholder="Filter Group" 
                 className="focus:border-rose-500 focus:ring-rose-500/20 rounded-lg shadow-sm hover:shadow-md transition-all border-rose-200 w-full"
               />
-              <div className="absolute right-3 top-8 text-rose-400">
+              <div className="absolute right-3 top-8 text-slate-700">
                 <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                   <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
                 </svg>
@@ -97,7 +97,7 @@ export default function DailyTransactionsView({
                   placeholder="Search Party" 
                   className="focus:border-rose-500 focus:ring-rose-500/20 rounded-lg shadow-sm hover:shadow-md transition-all border-rose-200 w-full"
                 />
-                <div className="absolute right-3 top-8 text-rose-400">
+                <div className="absolute right-3 top-8 text-slate-700">
                   <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                     <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
                   </svg>
@@ -172,7 +172,7 @@ export default function DailyTransactionsView({
                       onSelectionComplete={() => setTimeout(() => icRef.current?.focus(), 0)}
                       className="focus:border-rose-500 focus:ring-rose-500/20 rounded-lg shadow-sm hover:shadow-md transition-all border-rose-200 w-full"
                     />
-                    <div className="absolute right-3 top-8 text-rose-400">
+                    <div className="absolute right-3 top-8 text-slate-700">
                       <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                         <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
                       </svg>
@@ -197,7 +197,7 @@ export default function DailyTransactionsView({
                       onSelectionComplete={() => setTimeout(() => nRef.current?.focus(), 0)}
                       className="focus:border-rose-500 focus:ring-rose-500/20 rounded-lg shadow-sm hover:shadow-md transition-all border-rose-200 w-full"
                     />
-                    <div className="absolute right-3 top-8 text-rose-400">
+                    <div className="absolute right-3 top-8 text-slate-700">
                       <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                         <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
                       </svg>
@@ -225,7 +225,7 @@ export default function DailyTransactionsView({
                       onSelectionComplete={() => setTimeout(() => qRef.current?.focus(), 0)}
                       className="focus:border-rose-500 focus:ring-rose-500/20 rounded-lg shadow-sm hover:shadow-md transition-all border-rose-200 w-full"
                     />
-                    <div className="absolute right-3 top-8 text-rose-400">
+                    <div className="absolute right-3 top-8 text-slate-700">
                       <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                         <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
                       </svg>
@@ -307,7 +307,7 @@ export default function DailyTransactionsView({
                       }, 0)}
                       className="focus:border-rose-500 focus:ring-rose-500/20 rounded-lg shadow-sm hover:shadow-md transition-all border-rose-200 w-full"
                     />
-                    <div className="absolute right-3 top-8 text-rose-400">
+                    <div className="absolute right-3 top-8 text-slate-700">
                       <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                         <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
                       </svg>

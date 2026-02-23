@@ -229,7 +229,7 @@ const SmsView = ({ customers, ledgerStore, onCancel, showNotify }) => {
                     <option key={group} value={group}>{group}</option>
                   ))}
                 </select>
-                <Filter className="absolute right-2 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-rose-400 pointer-events-none" />
+                <Filter className="absolute right-2 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-slate-700 pointer-events-none" />
               </div>
             </div>
 
@@ -250,7 +250,7 @@ const SmsView = ({ customers, ledgerStore, onCancel, showNotify }) => {
                     </option>
                   ))}
                 </select>
-                <Filter className="absolute right-2 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-rose-400 pointer-events-none" />
+                <Filter className="absolute right-2 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-slate-700 pointer-events-none" />
               </div>
             </div>
 
