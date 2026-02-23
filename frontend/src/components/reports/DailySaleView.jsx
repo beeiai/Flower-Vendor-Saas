@@ -405,12 +405,12 @@ const DailySaleReport = ({ onCancel }) => {
                   
                   <div className="bg-slate-700/30 backdrop-blur-sm rounded-lg p-2 border border-slate-600/50">
                     <label className="text-[8px] font-bold text-slate-300 uppercase tracking-wider mb-1 block">Handling Charges</label>
-                    <input type="text" readOnly className="w-full bg-gradient-to-r from-slate-800 to-slate-700 px-2 py-1 text-xs font-bold text-right rounded border border-slate-600/50 outline-none text-amber-400" value="0.00" style={{ colorScheme: 'dark' }} />
+                    <input type="text" readOnly className="w-full bg-gradient-to-r from-slate-800 to-slate-700 px-2 py-1 text-xs font-bold text-right rounded border border-slate-600/50 outline-none text-amber-400" value={totals.coolieTotal.toFixed(2)} style={{ colorScheme: 'dark' }} />
                   </div>
                   
                   <div className="bg-slate-700/30 backdrop-blur-sm rounded-lg p-2 border border-slate-600/50">
                     <label className="text-[8px] font-bold text-slate-300 uppercase tracking-wider mb-1 block">Luggage Costs</label>
-                    <input type="text" readOnly className="w-full bg-gradient-to-r from-slate-800 to-slate-700 px-2 py-1 text-xs font-bold text-right rounded border border-slate-600/50 outline-none text-rose-400" value="0.00" style={{ colorScheme: 'dark' }} />
+                    <input type="text" readOnly className="w-full bg-gradient-to-r from-slate-800 to-slate-700 px-2 py-1 text-xs font-bold text-right rounded border border-slate-600/50 outline-none text-rose-400" value={totals.laguageTotal.toFixed(2)} style={{ colorScheme: 'dark' }} />
                   </div>
                   
                   <div className="bg-gradient-to-br from-slate-800/50 to-slate-900/50 backdrop-blur-sm rounded-lg p-2.5 border border-[#5B55E6]/30">
@@ -434,7 +434,7 @@ const DailySaleReport = ({ onCancel }) => {
                   
                   <div className="bg-slate-700/30 backdrop-blur-sm rounded-lg p-2 border border-slate-600/50">
                     <label className="text-[8px] font-bold text-slate-300 uppercase tracking-wider mb-1 block">Amount Paid</label>
-                    <input type="text" readOnly className="w-full bg-gradient-to-r from-slate-800 to-slate-700 px-2 py-1 text-xs font-bold text-right rounded border border-slate-600/50 outline-none text-green-400" value="0.00" style={{ colorScheme: 'dark' }} />
+                    <input type="text" readOnly className="w-full bg-gradient-to-r from-slate-800 to-slate-700 px-2 py-1 text-xs font-bold text-right rounded border border-slate-600/50 outline-none text-green-400" value={totals.paidTotal.toFixed(2)} style={{ colorScheme: 'dark' }} />
                   </div>
                   
                   <div className="mt-2 pt-2 border-t border-white/20 text-center">
@@ -445,7 +445,7 @@ const DailySaleReport = ({ onCancel }) => {
                       <span className="text-[7px] font-bold text-[#5B55E6] uppercase tracking-wider">Net Total</span>
                     </div>
                     <div className="bg-gradient-to-r from-[#5B55E6] to-[#4A44D0] p-2.5 rounded-lg shadow-lg">
-                      <p className="text-sm font-black text-white tabular-nums">₹ {(totals.amount - (totals.amount * commissionPct / 100)).toFixed(2)}</p>
+                      <p className="text-sm font-black text-white tabular-nums">₹ {(totals.amount - (totals.amount * commissionPct / 100) - totals.laguageTotal - totals.coolieTotal).toFixed(2)}</p>
                     </div>
                   </div>
                 </div>
