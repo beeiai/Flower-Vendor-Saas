@@ -258,7 +258,7 @@ export default function ReportsView({ groups, customers, vehicles, advanceStore 
 											style={{ height: '40px' }}
 											value={fromDate}
 											onChange={e => setFromDate(e.target.value)}
-											data-enter-index="1"
+											data-enter-index="6"
 										/>
 									</div>
 																		
@@ -270,7 +270,7 @@ export default function ReportsView({ groups, customers, vehicles, advanceStore 
 											style={{ height: '36px' }}
 											value={toDate}
 											onChange={e => setToDate(e.target.value)}
-											data-enter-index="2"
+											data-enter-index="7"
 										/>
 									</div>
 
@@ -282,7 +282,7 @@ export default function ReportsView({ groups, customers, vehicles, advanceStore 
 												value={groupName}
 												onChange={setGroupName}
 												placeholder="Select group"
-												data-enter-index="3"
+												data-enter-index="1"
 												className="focus:border-rose-500 focus:ring-rose-500/20 rounded-lg shadow-sm hover:shadow-md transition-all border-rose-200"
 											/>
 											<div className="absolute right-3 top-8 text-slate-700">
@@ -301,7 +301,7 @@ export default function ReportsView({ groups, customers, vehicles, advanceStore 
 												value={vehicle}
 												onChange={setVehicle}
 												placeholder="(Opt)"
-												data-enter-index="7"
+												data-enter-index="2"
 												className="focus:border-rose-500 focus:ring-rose-500/20 rounded-lg shadow-sm hover:shadow-md transition-all border-rose-200"
 											/>
 											<div className="absolute right-3 top-8 text-slate-700">
@@ -325,12 +325,12 @@ export default function ReportsView({ groups, customers, vehicles, advanceStore 
 													value={customerName}
 													onChange={setCustomerName}
 													placeholder="Select customer"
-													data-enter-index="4"
+													data-enter-index="3"
 													className="focus:border-rose-500 focus:ring-rose-500/20 rounded-lg shadow-sm hover:shadow-md transition-all border-rose-200"
 												/>
 											</div>
-											<button type="button" className="w-8 border border-slate-300 bg-slate-100 font-semibold text-sm rounded-sm hover:bg-slate-200 transition-colors" style={{ height: '36px' }} onClick={goPrevCustomer} aria-label="Previous customer" data-enter-index="5">{'<'}</button>
-											<button type="button" className="w-8 border border-slate-300 bg-slate-100 font-semibold text-sm rounded-sm hover:bg-slate-200 transition-colors" style={{ height: '36px' }} onClick={goNextCustomer} aria-label="Next customer" data-enter-index="6">{'>'}</button>
+											<button type="button" className="w-8 border border-slate-300 bg-slate-100 font-semibold text-sm rounded-sm hover:bg-slate-200 transition-colors" style={{ height: '36px' }} onClick={goPrevCustomer} aria-label="Previous customer" data-enter-index="8">{'<'}</button>
+											<button type="button" className="w-8 border border-slate-300 bg-slate-100 font-semibold text-sm rounded-sm hover:bg-slate-200 transition-colors" style={{ height: '36px' }} onClick={goNextCustomer} aria-label="Next customer" data-enter-index="9">{'>'}</button>
 										</div>
 									</div>
 
@@ -520,7 +520,7 @@ export default function ReportsView({ groups, customers, vehicles, advanceStore 
 					className="px-6 bg-gradient-to-r from-emerald-600 to-emerald-700 text-white text-sm font-bold rounded-lg hover:from-emerald-500 hover:to-emerald-600 transition-all shadow-md hover:shadow-lg flex items-center gap-2"
 					style={{ height: '44px' }}
 					onClick={handlePrint}
-					data-enter-index="9"
+					data-enter-index="4"
 				>
 					<svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
 						<path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17 17h2a2 2 0 002-2v-4a2 2 0 00-2-2H5a2 2 0 00-2 2v4a2 2 0 002 2h2m2 4h6a2 2 0 002-2v-4a2 2 0 00-2-2H9a2 2 0 00-2 2v4a2 2 0 002 2zm8-12V5a2 2 0 00-2-2H9a2 2 0 00-2 2v4h10z" />
@@ -532,7 +532,7 @@ export default function ReportsView({ groups, customers, vehicles, advanceStore 
 					className="px-6 border-2 border-rose-300 bg-white text-rose-700 text-sm font-bold rounded-lg hover:bg-rose-50 hover:border-rose-400 transition-all shadow-sm hover:shadow-md flex items-center gap-2"
 					style={{ height: '44px' }}
 					onClick={onCancel}
-					data-enter-index="10"
+					data-enter-index="5"
 				>
 					<svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
 						<path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
