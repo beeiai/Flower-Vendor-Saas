@@ -631,6 +631,7 @@ export default function App() {
   // Refs for keyboard navigation in Group Patti form
   const groupPattiFromDateRef = useRef(null);
   const groupPattiToDateRef = useRef(null);
+  const groupPattiGroupContainerRef = useRef(null);
   const groupPattiGroupRef = useRef(null);
   const groupPattiCommissionRef = useRef(null);
   const groupPattiPrintBtnRef = useRef(null);
@@ -1234,7 +1235,7 @@ export default function App() {
             </div>
           </div>
 
-          <div className="relative" ref={groupPattiGroupRef}>
+          <div className="relative" ref={groupPattiGroupContainerRef}>
             <SearchableSelect 
               label="Group Name" 
               options={groups.map(g => g.name)} 
@@ -1252,7 +1253,7 @@ export default function App() {
                 if (e.key === 'Enter') {
                   // Check if dropdown is open, then let it handle Enter
                   // If dropdown is closed, move to next field
-                  const dropdownOpen = groupPattiGroupRef.current?.closest('[data-open="true"]');
+                  const dropdownOpen = groupPattiGroupContainerRef.current?.closest('[data-open="true"]');
                   if (!dropdownOpen) {
                     e.preventDefault();
                     groupPattiCommissionRef.current?.focus();
