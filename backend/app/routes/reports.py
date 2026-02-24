@@ -28,7 +28,6 @@ router = APIRouter(
 def render_template(template_name: str, data: dict, template_dir: str = "templates") -> str:
     """
     Render Jinja2 template with provided data and add print button.
-    Handles logo path resolution for both development and production environments.
     
     Args:
         template_name: Name of template file (e.g., 'ledger_report.html')
@@ -60,21 +59,15 @@ def render_template(template_name: str, data: dict, template_dir: str = "templat
     # Insert print button before </body> tag
     html = html.replace('</body>', print_button_html + '</body>')
     
-    # Fix logo path resolution for production-safe absolute paths
-    # Check if logo file exists before replacing
-    logo_path = os.path.join(template_dir, "SKFS_logo.png")
-    if os.path.exists(logo_path):
-        # Use absolute path that works in both development and production
-        html = html.replace('src="SKFS_logo.png"', 'src="/templates/SKFS_logo.png"')
-        html = html.replace("src='SKFS_logo.png'", 'src="/templates/SKFS_logo.png"')
+    # Fix logo path: use absolute path from templates directory
+    import os
+    from pathlib import Path
+    BASE_DIR = Path(__file__).resolve().parent.parent
+    logo_path = BASE_DIR / "templates" / "SKFS_logo.png"
+    if logo_path.exists():
+        html = html.replace('src="SKFS_logo.png"', f'src="file:///{logo_path.as_posix()}"')
     else:
-        # Log warning if logo is missing
-        import logging
-        logger = logging.getLogger(__name__)
-        logger.warning(f"Logo file not found at: {logo_path}")
-        # Replace with placeholder or remove broken image
-        html = html.replace('src="SKFS_logo.png"', '')
-        html = html.replace("src='SKFS_logo.png'", '')
+        html = html.replace('src="SKFS_logo.png"', 'src="/templates/SKFS_logo.png"')
     
     return html
 
@@ -130,42 +123,23 @@ def get_ledger_report(
     generated_at = datetime.now().isoformat()
     current_date = datetime.now().strftime("%d-%m-%Y")
     
-    # Transform data for template - ensure date and vehicle fields are properly mapped
+    # Default commission is 12% (as requested)
+    commission_pct = 12.0
     rows = []
     gross_total = 0
     commission_total = 0
     net_total = 0
     paid_total = 0
     balance_total = 0
-    
     for entry in ledger_data.get("entries", []):
-        # Get amount from qty * rate calculation
-        qty = float(entry.get("qty", 0))
-        rate = float(entry.get("rate", 0))
-        gross = qty * rate
-        
+        gross = float(entry.get("amount", 0))
         commission = gross * (commission_pct / 100)
         net = gross - commission
         paid = float(entry.get("paid", 0)) if entry.get("paid") is not None else 0.0
         balance = net - paid
-        
-        # Properly extract date and vehicle information
-        # Date should be formatted as DD-MM-YYYY
+        # Date and vehicle are already properly formatted in the data
         date_val = entry.get("date", "N/A")
-        if date_val != "N/A" and isinstance(date_val, str):
-            # If it's already formatted, keep it
-            # If it's in YYYY-MM-DD format, convert it
-            if len(date_val) == 10 and date_val[4] == '-' and date_val[7] == '-':
-                try:
-                    from datetime import datetime
-                    date_obj = datetime.strptime(date_val, "%Y-%m-%d")
-                    date_val = date_obj.strftime("%d-%m-%Y")
-                except ValueError:
-                    pass  # Keep original if parsing fails
-        
-        # Vehicle information - try multiple field names
-        vehicle_val = entry.get("vehicle", entry.get("vehicle_name", entry.get("vehicle_number", "N/A")))
-        
+        vehicle_val = entry.get("vehicle", "N/A")
         rows.append({
             "date": date_val,
             "vehicle": vehicle_val,
@@ -271,64 +245,92 @@ def get_group_total_report(
     generated_at = datetime.now().isoformat()
     current_date = datetime.now().strftime("%d-%m-%Y")
     
-    # Transform groups to match template expectations with proper grouping
+    # Transform groups to match template expectations - implement proper grouping
+    from collections import defaultdict
+    
+    # Group data properly by group_id
+    grouped_data = defaultdict(list)
+    for entry in group_data.get("entries", []):
+        group_id = entry.get("group_id")
+        if group_id:
+            grouped_data[group_id].append(entry)
+    
     rows = []
     overall_qty = 0
     overall_amount = 0
     overall_paid = 0
     overall_balance = 0
     
-    # Use defaultdict to group data properly
-    from collections import defaultdict
-    grouped_data = defaultdict(list)
-    
-    # Group entries by group_id
-    for group in group_data.get("groups", []):
-        group_id = group.get("id")
-        if group_id:
-            grouped_data[group_id].append(group)
-    
     # Process each group
     for group_id, group_entries in grouped_data.items():
-        # Get group details (assuming all entries in same group have same details)
-        first_entry = group_entries[0]
-        group_name = first_entry.get("name", "N/A")
+        if not group_entries:
+            continue
+            
+        # Get group name from first entry
+        group_name = group_entries[0].get("group_name", "N/A")
         
-        # Calculate totals for this group
-        group_qty = sum(float(g.get("total_qty", 0)) for g in group_entries)
-        group_amount = sum(float(g.get("total_amount", 0)) for g in group_entries)
+        # Calculate group totals
+        group_qty = 0
+        group_amount = 0
+        group_paid = 0
         
-        # Get number of farmers in this group for customer_count
-        farmer_count = db.query(Farmer).filter(
-            Farmer.group_id == group_id,
-            Farmer.vendor_id == user.vendor_id
-        ).count()
+        # Add customer breakdown for this group
+        for entry in group_entries:
+            qty = float(entry.get("qty", 0))
+            amount = float(entry.get("amount", 0))
+            paid = float(entry.get("paid", 0)) if entry.get("paid") is not None else 0.0
+            
+            # Add customer row
+            rows.append({
+                "date": entry.get("date", "N/A"),
+                "customer_name": entry.get("customer_name", "N/A"),
+                "item_name": entry.get("item_name", "N/A"),
+                "qty": f"{qty:.2f}",
+                "rate": entry.get("rate", "N/A"),
+                "total": f"{amount:.2f}",
+                "paid": f"{paid:.2f}",
+                "luggage": entry.get("luggage", "0.00"),
+                "is_group_detail": True,
+                "group_name": group_name
+            })
+            
+            group_qty += qty
+            group_amount += amount
+            group_paid += paid
         
-        balance = group_amount  # No paid_amount in group_data, total_amount is the balance
-        
+        # Add group summary row
+        group_balance = group_amount - group_paid
         rows.append({
+            "date": "GROUP TOTAL",
+            "customer_name": group_name,
+            "item_name": f"{len(group_entries)} customers",
+            "qty": f"{group_qty:.2f}",
+            "rate": "",
+            "total": f"{group_amount:.2f}",
+            "paid": f"{group_paid:.2f}",
+            "luggage": "0.00",
+            "is_group_detail": False,
             "group_name": group_name,
-            "customer_count": farmer_count,
-            "total_qty": f"{group_qty:.2f}",
-            "total_amount": f"{group_amount:.2f}"
+            "is_group_summary": True
         })
         
         overall_qty += group_qty
         overall_amount += group_amount
-        overall_balance += balance
+        overall_paid += group_paid
+        overall_balance += group_balance
     
     # Prepare template data
     template_data = {
         "rows": rows,
         "overall_qty": f"{overall_qty:.2f}",
         "overall_amount": f"{overall_amount:.2f}",
-        "overall_paid": "0.00",
+        "overall_paid": f"{overall_paid:.2f}",
         "overall_balance": f"{overall_balance:.2f}",
         "from_date": from_date.strftime("%d-%m-%Y"),
         "to_date": to_date.strftime("%d-%m-%Y"),
         "current_date": current_date,
         "generated_at": generated_at,
-        "group_count": group_count
+        "group_count": len(grouped_data)
     }
     
     # Render HTML
@@ -420,7 +422,7 @@ def get_group_patti_report(
     current_date = datetime.now().strftime("%d-%m-%Y")
     group_name = patti_data.get("group", {}).get("name", "Unknown Group")
     
-    # Transform farmers data to match template expectations with proper grouping
+    # Transform farmers data to match template expectations
     customers = []
     grand_total_qty = 0
     grand_total_amount = 0
@@ -434,43 +436,25 @@ def get_group_patti_report(
     summary_paid = 0
     summary_balance = 0
     
-    # Group data by farmer for proper display
-    from collections import defaultdict
-    farmer_data = defaultdict(list)
-    
     for farmer in patti_data.get("farmers", []):
-        farmer_id = farmer.get("id")
-        if farmer_id:
-            farmer_data[farmer_id].append(farmer)
-    
-    # Process each farmer
-    for farmer_id, farmer_entries in farmer_data.items():
-        # Get farmer details (assuming all entries for same farmer have same details)
-        first_entry = farmer_entries[0]
-        farmer_name = first_entry.get("name", "Unknown")
-        farmer_address = first_entry.get("phone", "N/A")
-        farmer_code = first_entry.get("code", "N/A")
-        
-        # Aggregate all entries for this farmer
-        all_entries = []
-        farmer_total_qty = 0
-        farmer_total_amount = 0
-        farmer_total_paid = 0
-        
-        for entry in farmer_entries:
-            all_entries.extend(entry.get("entries", []))
-        
-        # Process all transactions for this farmer
+        farmer_name = farmer.get("name", "Unknown")
+        farmer_id = farmer.get("id", 0)
+        # Use phone as address if available
+        farmer_address = farmer.get("phone", "N/A")
+        # Transform entries (from reports_db) to transactions (for template)
         transactions = []
-        for entry in all_entries:
+        farmer_qty = 0
+        farmer_amount = 0
+        farmer_paid = 0
+        farmer_balance = 0
+        for entry in farmer.get("entries", []):
             qty = float(entry.get("qty", 0))
             rate = float(entry.get("rate", 0))
             total = qty * rate
-            # Get vehicle info - try multiple field names
+            # Get vehicle info - entries from get_group_patti_data now have proper date/vehicle fields
             vehicle = entry.get("vehicle_name", entry.get("vehicle", "N/A"))
             # Date is already formatted as DD-MM-YYYY from reports_db
             date_val = entry.get("date", "N/A")
-            
             transactions.append({
                 "date": date_val,
                 "vehicle": vehicle,
@@ -481,45 +465,33 @@ def get_group_patti_report(
                 "paid": "0.00",
                 "amount": f"{total:.2f}"
             })
-            
-            farmer_total_qty += qty
-            farmer_total_amount += total
-        
-        # Add farmer to customers list (for individual ledger pages)
+            farmer_qty += qty
+            farmer_amount += total
+            # paid and luggage not available in current data
         customers.append({
             "id": farmer_id,
             "name": farmer_name,
             "address": farmer_address,
-            "ledger_name": farmer_code,
-            "balance": f"{farmer_total_amount:.2f}",
-            "transactions": transactions,
-            "total_qty": f"{farmer_total_qty:.2f}",
-            "total_amount": f"{farmer_total_amount:.2f}",
-            "commission": f"{farmer_total_amount * 0.12:.2f}",  # 12% commission
-            "net_amount": f"{farmer_total_amount * 0.88:.2f}",   # 88% net
-            "luggage_total": "0.00",
-            "paid_amount": "0.00",
-            "coolie": "0.00",
-            "final_total": f"{farmer_total_amount:.2f}"
+            "ledger_name": farmer.get("code", "N/A"),
+            "balance": f"{farmer_amount:.2f}",
+            "transactions": transactions
         })
-        
-        # Add to summary rows (for group summary table)
         summary_rows.append({
             "customer": farmer_name,
             "address": farmer_address,
-            "qty": f"{farmer_total_qty:.2f}",
-            "total": f"{farmer_total_amount:.2f}",
-            "paid": "0.00",
-            "balance": f"{farmer_total_amount:.2f}"
+            "qty": f"{farmer_qty:.2f}",
+            "total": f"{farmer_amount:.2f}",
+            "paid": f"{farmer_paid:.2f}",
+            "balance": f"{farmer_balance:.2f}"
         })
-        
-        grand_total_qty += farmer_total_qty
-        grand_total_amount += farmer_total_amount
-        grand_total_balance += farmer_total_amount
-        
-        summary_qty += farmer_total_qty
-        summary_amount += farmer_total_amount
-        summary_balance += farmer_total_amount
+        grand_total_qty += farmer_qty
+        grand_total_amount += farmer_amount
+        grand_total_paid += farmer_paid
+        grand_total_balance += farmer_balance
+        summary_qty += farmer_qty
+        summary_amount += farmer_amount
+        summary_paid += farmer_paid
+        summary_balance += farmer_balance
     
     # Prepare template data
     template_data = {
@@ -633,7 +605,7 @@ def get_daily_sales_report(
         
         rows.append({
             "date": entry_date,
-            "vehicle": entry.get("vehicle", "N/A"),
+            "vehicle": entry.get("vehicle", "N/A") if entry.get("vehicle") else (entry.get("vehicle_number", "N/A") if entry.get("vehicle_number") else "N/A"),
             "party": entry.get("party", "N/A"),
             "itemName": entry.get("item", "N/A"),
             "qty": f"{qty:.2f}",

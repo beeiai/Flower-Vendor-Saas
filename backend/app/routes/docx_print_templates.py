@@ -18,7 +18,7 @@ router = APIRouter(
 
 
 # PDF Preview Endpoints
-@router.get("/ledger-report-preview")
+@router.get("/ledger-report-preview/")
 def get_ledger_report_pdf(
     farmer_id: int = Query(..., description="Farmer ID"),
     from_date: date = Query(..., description="Start date"),
@@ -60,7 +60,7 @@ def get_ledger_report_pdf(
             CollectionItem.vendor_id == user.vendor_id
         ).all()
         
-        # Transform data for template - ensure proper date and vehicle mapping
+        # Transform data for template
         rows = []
         total_qty = 0
         total_amount = 0
@@ -74,15 +74,9 @@ def get_ledger_report_pdf(
             paid = float(item.paid_amount or 0)
             total = qty * rate
             
-            # Format date properly as DD-MM-YYYY
-            date_str = item.date.strftime("%d-%m-%Y") if item.date else "N/A"
-            
-            # Get vehicle information - try multiple field names
-            vehicle_info = item.vehicle_name or item.vehicle_number or item.vehicle or "N/A"
-            
             rows.append({
-                "date": date_str,
-                "vehicle": vehicle_info,
+                "date": item.date.strftime("%d-%m-%Y") if item.date else "N/A",
+                "vehicle": getattr(item, 'vehicle', 'N/A') if hasattr(item, 'vehicle') else "N/A",
                 "qty": f"{qty:.2f}",
                 "price": f"{rate:.2f}",
                 "total": f"{total:.2f}",
@@ -164,19 +158,15 @@ def get_ledger_report_pdf(
         # Insert print button before </body> tag
         html_content = html_content.replace('</body>', print_button_html + '</body>')
         
-        # Fix logo path with proper error handling
+        # Fix logo path - use absolute path from templates directory
         import os
-        import logging
-        logo_path = os.path.join("templates", "SKFS_logo.png")
-        if os.path.exists(logo_path):
-            html_content = html_content.replace('src="SKFS_logo.png"', 'src="/templates/SKFS_logo.png"')
-            html_content = html_content.replace("src='SKFS_logo.png'", 'src="/templates/SKFS_logo.png"')
+        from pathlib import Path
+        BASE_DIR = Path(__file__).resolve().parent.parent
+        logo_path = BASE_DIR / "templates" / "SKFS_logo.png"
+        if logo_path.exists():
+            html_content = html_content.replace('src="SKFS_logo.png"', f'src="file:///{logo_path.as_posix()}"')
         else:
-            logger = logging.getLogger(__name__)
-            logger.warning(f"Logo file not found at: {logo_path}")
-            # Remove broken image references
-            html_content = html_content.replace('src="SKFS_logo.png"', '')
-            html_content = html_content.replace("src='SKFS_logo.png'", '')
+            html_content = html_content.replace('src="SKFS_logo.png"', 'src="/templates/SKFS_logo.png"')
         
         return HTMLResponse(content=html_content)
         
@@ -186,7 +176,7 @@ def get_ledger_report_pdf(
         raise HTTPException(status_code=500, detail=f"Failed to generate report: {str(e)}")
 
 
-@router.get("/ledger-report")
+@router.get("/ledger-report/")
 def get_ledger_report_docx(
     farmer_id: int = Query(..., description="Farmer ID"),
     from_date: date = Query(..., description="Start date"),
@@ -243,7 +233,8 @@ def get_ledger_report_docx(
             total = qty * rate
             
             rows.append({
-                "date": item.date.strftime("%d-%m-%Y"),
+                "date": item.date.strftime("%d-%m-%Y") if item.date else "N/A",
+                "vehicle": getattr(item, 'vehicle', 'N/A') if hasattr(item, 'vehicle') else "N/A",
                 "qty": f"{qty:.2f}",
                 "price": f"{rate:.2f}",
                 "total": f"{total:.2f}",
@@ -263,7 +254,7 @@ def get_ledger_report_docx(
         net_amount = total_amount - commission
         final_total = net_amount + total_luggage - total_paid
         
-        # Transform rows to match template structure - include date and vehicle
+        # Transform rows to match template structure
         transformed_rows = []
         for row in rows:
             qty = float(row["qty"])
@@ -278,8 +269,6 @@ def get_ledger_report_docx(
             row_balance = row_net + luggage - paid
             
             transformed_rows.append({
-                "date": row["date"],
-                "vehicle": row["vehicle"],
                 "customer": farmer.name,
                 "address": farmer.address or "N/A",
                 "gross": f"{total:.2f}",
@@ -326,19 +315,15 @@ def get_ledger_report_docx(
         # Insert print button before </body> tag
         html_content = html_content.replace('</body>', print_button_html + '</body>')
         
-        # Fix logo path with proper error handling
+        # Fix logo path - use absolute path from templates directory
         import os
-        import logging
-        logo_path = os.path.join("templates", "SKFS_logo.png")
-        if os.path.exists(logo_path):
-            html_content = html_content.replace('src="SKFS_logo.png"', 'src="/templates/SKFS_logo.png"')
-            html_content = html_content.replace("src='SKFS_logo.png'", 'src="/templates/SKFS_logo.png"')
+        from pathlib import Path
+        BASE_DIR = Path(__file__).resolve().parent.parent
+        logo_path = BASE_DIR / "templates" / "SKFS_logo.png"
+        if logo_path.exists():
+            html_content = html_content.replace('src="SKFS_logo.png"', f'src="file:///{logo_path.as_posix()}"')
         else:
-            logger = logging.getLogger(__name__)
-            logger.warning(f"Logo file not found at: {logo_path}")
-            # Remove broken image references
-            html_content = html_content.replace('src="SKFS_logo.png"', '')
-            html_content = html_content.replace("src='SKFS_logo.png'", '')
+            html_content = html_content.replace('src="SKFS_logo.png"', 'src="/templates/SKFS_logo.png"')
         
         return HTMLResponse(content=html_content)
         
@@ -348,7 +333,7 @@ def get_ledger_report_docx(
         raise HTTPException(status_code=500, detail=f"Failed to generate report: {str(e)}")
 
 
-@router.get("/group-patti-report")
+@router.get("/group-patti-report/")
 def get_group_patti_report_docx(
     group_id: int = Query(..., description="Group ID"),
     from_date: date = Query(..., description="Start date"),
@@ -488,19 +473,15 @@ def get_group_patti_report_docx(
         # Insert print button before </body> tag
         html_content = html_content.replace('</body>', print_button_html + '</body>')
         
-        # Fix logo path with proper error handling
+        # Fix logo path - use absolute path from templates directory
         import os
-        import logging
-        logo_path = os.path.join("templates", "SKFS_logo.png")
-        if os.path.exists(logo_path):
-            html_content = html_content.replace('src="SKFS_logo.png"', 'src="/templates/SKFS_logo.png"')
-            html_content = html_content.replace("src='SKFS_logo.png'", 'src="/templates/SKFS_logo.png"')
+        from pathlib import Path
+        BASE_DIR = Path(__file__).resolve().parent.parent
+        logo_path = BASE_DIR / "templates" / "SKFS_logo.png"
+        if logo_path.exists():
+            html_content = html_content.replace('src="SKFS_logo.png"', f'src="file:///{logo_path.as_posix()}"')
         else:
-            logger = logging.getLogger(__name__)
-            logger.warning(f"Logo file not found at: {logo_path}")
-            # Remove broken image references
-            html_content = html_content.replace('src="SKFS_logo.png"', '')
-            html_content = html_content.replace("src='SKFS_logo.png'", '')
+            html_content = html_content.replace('src="SKFS_logo.png"', 'src="/templates/SKFS_logo.png"')
         
         return HTMLResponse(content=html_content)
         
@@ -510,11 +491,11 @@ def get_group_patti_report_docx(
         raise HTTPException(status_code=500, detail=f"Failed to generate group patti report: {str(e)}")
 
 
-@router.get("/group-total-report")
+@router.get("/group-total-report/")
 def get_group_total_report_docx(
-    group_id: int = Query(..., description="Group ID", gt=0),
-    from_date: date = Query(..., description="Start date"),
-    to_date: date = Query(..., description="End date"),
+    group_id: int = Query(..., description="Group ID"),
+    start_date: date = Query(..., description="Start date"),
+    end_date: date = Query(..., description="End date"),
     db: Session = Depends(get_db),
     user = Depends(get_current_user)
 ):
@@ -524,27 +505,12 @@ def get_group_total_report_docx(
     
     Note: This endpoint now uses the new HTML template system instead of DOCX.
     Use /api/reports/group-total?format=html for future integrations.
-    
-    Query Parameters:
-    - group_id: Group ID (required, must be > 0)
-    - from_date: Start date (required, format: YYYY-MM-DD)
-    - to_date: End date (required, format: YYYY-MM-DD)
     """
     from fastapi.responses import HTMLResponse
     from jinja2 import Template
     import os
-    import logging
-    
-    logger = logging.getLogger(__name__)
     
     try:
-        # Validate date range
-        if from_date > to_date:
-            raise HTTPException(
-                status_code=422, 
-                detail="from_date cannot be later than to_date"
-            )
-        
         # Fetch group details
         group = db.query(FarmerGroup).filter(
             FarmerGroup.id == group_id,
@@ -561,68 +527,120 @@ def get_group_total_report_docx(
         ).all()
         
         if not farmers:
-            logger.warning(f"No farmers found in group {group_id}")
-            # Still generate report but with empty data
-            pass
+            raise HTTPException(status_code=404, detail="No farmers found in group")
         
         # Fetch all collection items for all farmers in one query
-        farmer_ids = [f.id for f in farmers] if farmers else []
-        query = db.query(CollectionItem).filter(
-            CollectionItem.date >= from_date,
-            CollectionItem.date <= to_date,
+        farmer_ids = [f.id for f in farmers]
+        all_items = db.query(CollectionItem).filter(
+            CollectionItem.farmer_id.in_(farmer_ids),
+            CollectionItem.date >= start_date,
+            CollectionItem.date <= end_date,
             CollectionItem.vendor_id == user.vendor_id
-        )
-        
-        if farmer_ids:
-            query = query.filter(CollectionItem.farmer_id.in_(farmer_ids))
-        
-        all_items = query.order_by(CollectionItem.date).all()
+        ).order_by(CollectionItem.date).all()
         
         # Create farmer lookup for customer names
-        farmer_lookup = {f.id: f for f in farmers} if farmers else {}
+        farmer_lookup = {f.id: f for f in farmers}
         
-        # Transform data for template
+        # Transform data for template - implement proper grouping
+        from collections import defaultdict
+        grouped_data = defaultdict(list)
+        
+        # Group items by customer group
+        for item in all_items:
+            # Get farmer and group info
+            farmer_obj = farmer_lookup.get(item.farmer_id)
+            if farmer_obj and farmer_obj.group_id:
+                group_key = farmer_obj.group_id
+                grouped_data[group_key].append({
+                    "item": item,
+                    "farmer": farmer_obj
+                })
+        
+        # Process each group
         rows = []
         total_qty = 0
         total_amount = 0
         total_paid = 0
         total_luggage = 0
         
-        for item in all_items:
-            qty = float(item.qty_kg or 0)
-            rate = float(item.rate_per_kg or 0)
-            total = qty * rate
-            paid = float(item.paid_amount or 0)
-            luggage = float(item.transport_cost or 0)
+        # Get all groups for proper ordering
+        groups = db.query(FarmerGroup).filter(
+            FarmerGroup.id.in_(grouped_data.keys()),
+            FarmerGroup.vendor_id == user.vendor_id
+        ).all()
+        
+        group_lookup = {g.id: g for g in groups}
+        
+        for group_id, group_entries in grouped_data.items():
+            group_obj = group_lookup.get(group_id)
+            if not group_obj:
+                continue
+                
+            # Group header
+            group_name = group_obj.name
+            group_qty = 0
+            group_amount = 0
+            group_paid = 0
+            group_luggage = 0
             
-            # Get farmer name from lookup
-            farmer_obj = farmer_lookup.get(item.farmer_id)
-            customer_name = farmer_obj.name if farmer_obj else "Unknown"
+            # Process each entry in this group
+            for entry in group_entries:
+                item = entry["item"]
+                farmer = entry["farmer"]
+                
+                qty = float(item.qty_kg or 0)
+                rate = float(item.rate_per_kg or 0)
+                total = qty * rate
+                paid = float(item.paid_amount or 0)
+                luggage = float(item.transport_cost or 0)
+                
+                # Add customer breakdown row
+                rows.append({
+                    "date": item.date.strftime("%d-%m-%Y") if item.date else "N/A",
+                    "customer_name": farmer.name,
+                    "item_name": item.item_name or "N/A",
+                    "qty": f"{qty:.2f}",
+                    "rate": f"{rate:.2f}",
+                    "total": f"{total:.2f}",
+                    "paid": f"{paid:.2f}",
+                    "luggage": f"{luggage:.2f}",
+                    "is_group_header": False,
+                    "group_name": group_name
+                })
+                
+                group_qty += qty
+                group_amount += total
+                group_paid += paid
+                group_luggage += luggage
             
+            # Add group summary row
+            group_total = group_amount - group_paid
             rows.append({
-                "date": item.date.strftime("%d-%m-%Y"),
-                "customer_name": customer_name,
-                "item_name": item.item_name or "N/A",
-                "qty": f"{qty:.2f}",
-                "rate": f"{rate:.2f}",
-                "total": f"{total:.2f}",
-                "paid": f"{paid:.2f}",
-                "luggage": f"{luggage:.2f}"
+                "date": "GROUP TOTAL",
+                "customer_name": group_name,
+                "item_name": f"{len(group_entries)} customers",
+                "qty": f"{group_qty:.2f}",
+                "rate": "",
+                "total": f"{group_amount:.2f}",
+                "paid": f"{group_paid:.2f}",
+                "luggage": f"{group_luggage:.2f}",
+                "is_group_header": True,
+                "group_name": group_name
             })
             
-            total_qty += qty
-            total_amount += total
-            total_paid += paid
-            total_luggage += luggage
+            total_qty += group_qty
+            total_amount += group_amount
+            total_paid += group_paid
+            total_luggage += group_luggage
         
-        # Calculate group total
-        group_total = total_amount - total_paid
+        # Calculate final grand total
+        grand_total = total_amount - total_paid
         
         # Aggregate data by group (row structure for group_total_report template)
         # The template expects rows with: group_name, customer_count, total_qty, total_amount
         aggregated_rows = [{
             "group_name": group.name,
-            "customer_count": len(farmers) if farmers else 0,
+            "customer_count": len(farmers),
             "total_qty": f"{total_qty:.2f}",
             "total_amount": f"{total_amount:.2f}",
             "total_paid": f"{total_paid:.2f}",
@@ -651,9 +669,9 @@ def get_group_total_report_docx(
             overall_qty=f"{total_qty:.2f}",
             overall_amount=f"{total_amount:.2f}",
             overall_paid=f"{total_paid:.2f}",
-            overall_balance=f"{group_total:.2f}",
-            from_date=from_date.strftime("%d-%m-%Y"),
-            to_date=to_date.strftime("%d-%m-%Y"),
+            overall_balance=f"{grand_total:.2f}",
+            from_date=start_date.strftime("%d-%m-%Y"),
+            to_date=end_date.strftime("%d-%m-%Y"),
             current_date=__import__('datetime').datetime.now().strftime("%d-%m-%Y"),
             generated_at=__import__('datetime').datetime.now().isoformat()
         )
@@ -661,30 +679,25 @@ def get_group_total_report_docx(
         # Insert print button before </body> tag
         html_content = html_content.replace('</body>', print_button_html + '</body>')
         
-        # Fix logo path with proper error handling
+        # Fix logo path - use absolute path from templates directory
         import os
-        import logging
-        logo_path = os.path.join("templates", "SKFS_logo.png")
-        if os.path.exists(logo_path):
-            html_content = html_content.replace('src="SKFS_logo.png"', 'src="/templates/SKFS_logo.png"')
-            html_content = html_content.replace("src='SKFS_logo.png'", 'src="/templates/SKFS_logo.png"')
+        from pathlib import Path
+        BASE_DIR = Path(__file__).resolve().parent.parent
+        logo_path = BASE_DIR / "templates" / "SKFS_logo.png"
+        if logo_path.exists():
+            html_content = html_content.replace('src="SKFS_logo.png"', f'src="file:///{logo_path.as_posix()}"')
         else:
-            logger = logging.getLogger(__name__)
-            logger.warning(f"Logo file not found at: {logo_path}")
-            # Remove broken image references
-            html_content = html_content.replace('src="SKFS_logo.png"', '')
-            html_content = html_content.replace("src='SKFS_logo.png'", '')
+            html_content = html_content.replace('src="SKFS_logo.png"', 'src="/templates/SKFS_logo.png"')
         
         return HTMLResponse(content=html_content)
         
     except HTTPException:
         raise
     except Exception as e:
-        logger.error(f"Failed to generate group total report: {str(e)}", exc_info=True)
         raise HTTPException(status_code=500, detail=f"Failed to generate group total report: {str(e)}")
 
 
-@router.get("/daily-sales-report")
+@router.get("/daily-sales-report/")
 def get_daily_sales_report_docx(
     from_date: date = Query(..., description="Start date"),
     to_date: date = Query(..., description="End date"),
@@ -727,8 +740,8 @@ def get_daily_sales_report_docx(
             total = qty * rate
             
             rows.append({
-                "date": item.date.strftime("%d-%m-%Y"),
-                "vehicle": item.vehicle or "N/A",  # Assuming vehicle field exists in CollectionItem
+                "date": item.date.strftime("%d-%m-%Y") if item.date else "N/A",
+                "vehicle": getattr(item, 'vehicle', 'N/A') if hasattr(item, 'vehicle') else (item.vehicle_number if hasattr(item, 'vehicle_number') else "N/A"),
                 "party": item.farmer.name if item.farmer else "N/A",  # Get farmer name as party
                 "itemName": item.item_name or "N/A",
                 "qty": f"{qty:.2f}",
@@ -770,19 +783,15 @@ def get_daily_sales_report_docx(
         # Insert print button before </body> tag
         html_content = html_content.replace('</body>', print_button_html + '</body>')
         
-        # Fix logo path with proper error handling
+        # Fix logo path - use absolute path from templates directory
         import os
-        import logging
-        logo_path = os.path.join("templates", "SKFS_logo.png")
-        if os.path.exists(logo_path):
-            html_content = html_content.replace('src="SKFS_logo.png"', 'src="/templates/SKFS_logo.png"')
-            html_content = html_content.replace("src='SKFS_logo.png'", 'src="/templates/SKFS_logo.png"')
+        from pathlib import Path
+        BASE_DIR = Path(__file__).resolve().parent.parent
+        logo_path = BASE_DIR / "templates" / "SKFS_logo.png"
+        if logo_path.exists():
+            html_content = html_content.replace('src="SKFS_logo.png"', f'src="file:///{logo_path.as_posix()}"')
         else:
-            logger = logging.getLogger(__name__)
-            logger.warning(f"Logo file not found at: {logo_path}")
-            # Remove broken image references
-            html_content = html_content.replace('src="SKFS_logo.png"', '')
-            html_content = html_content.replace("src='SKFS_logo.png'", '')
+            html_content = html_content.replace('src="SKFS_logo.png"', 'src="/templates/SKFS_logo.png"')
         
         return HTMLResponse(content=html_content)
         

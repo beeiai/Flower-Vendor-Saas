@@ -346,7 +346,7 @@ export const api = {
   // Print Template APIs (DOCX-based)
   getLedgerReport: async (farmerId, fromDate, toDate, commissionPct = 12.0) => {
     const params = { farmer_id: farmerId, from_date: fromDate, to_date: toDate, commission_pct: commissionPct };
-    return request('/print-docx/ledger-report', { params });
+    return request('/print-docx/ledger-report/', { params });
   },
   
   getGroupPattiReport: async (groupId, fromDate, toDate, commissionPct = 12.0) => {
@@ -356,22 +356,22 @@ export const api = {
       to_date: toDate, 
       commission_pct: commissionPct 
     };
-    return request('/print-docx/group-patti-report', { params });
+    return request('/print-docx/group-patti-report/', { params });
   },
   
-  getGroupTotalReport: async (groupId, fromDate, toDate) => {
+  getGroupTotalReport: async (groupId, startDate, endDate) => {
     const params = { 
       group_id: groupId, 
-      from_date: fromDate, 
-      to_date: toDate 
+      start_date: startDate, 
+      end_date: endDate 
     };
-    return request('/print-docx/group-total-report', { params });
+    return request('/print-docx/group-total-report/', { params });
   },
   
   getDailySalesReport: async (fromDate, toDate, itemName = null) => {
     const params = { from_date: fromDate, to_date: toDate };
     if (itemName) params.item_name = itemName;
-    return request('/print-docx/daily-sales-report', { params });
+    return request('/print-docx/daily-sales-report/', { params });
   },
   
   // Preview APIs (for direct browser viewing)
