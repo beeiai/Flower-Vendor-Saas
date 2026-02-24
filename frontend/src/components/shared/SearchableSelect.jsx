@@ -13,6 +13,7 @@ export function SearchableSelect({ label, options, value, onChange, placeholder,
 	} : setInternalOpen;
 	
 	const [searchTerm, setSearchTerm] = useState(value || "");
+	const [isEditing, setIsEditing] = useState(false);
 	const [coords, setCoords] = useState({ top: 0, left: 0, width: 0 });
 	const containerRef = useRef(null);
 	const inputWrapperRef = useRef(null);
@@ -24,13 +25,13 @@ export function SearchableSelect({ label, options, value, onChange, placeholder,
 	// Dropdown state management
 
 	useEffect(() => {
-		// Only update searchTerm from value prop if the value is different from current searchTerm
+		// Only update searchTerm from value prop if we're not currently editing
 		// This prevents overriding user input with the same value
 		const stringValue = String(value || "");
-		if (searchTerm !== stringValue) {
+		if (searchTerm !== stringValue && !isEditing) {
 			setSearchTerm(stringValue);
 		}
-	}, [value]);
+	}, [value, searchTerm, isEditing]);
 
 	const updateCoords = () => {
 		if (inputWrapperRef.current) {
@@ -214,7 +215,7 @@ export function SearchableSelect({ label, options, value, onChange, placeholder,
 		<div className={`flex flex-col gap-0 w-full relative ${className}`} ref={containerRef} style={style} data-searchable-select data-enter-type="dropdown">
 			{label && <label className="text-xs font-semibold text-slate-600 uppercase tracking-wide mb-1 ml-0.5 whitespace-nowrap">{String(label)}</label>}
 			<div className="relative group" ref={inputWrapperRef} data-open={open ? "true" : "false"}>
-				<input ref={actualInputRef} type="text" disabled={disabled} placeholder={placeholder} className={`w-full bg-white border ${error ? 'border-red-400 ring-2 ring-red-50' : 'border-slate-300'} rounded-sm px-3 py-2 text-sm font-medium outline-none focus:border-primary-500 focus:ring-2 focus:ring-primary-50 transition-all`} style={{ height: '36px' }} value={searchTerm} onFocus={handleFocus} onKeyDown={handleKeyDown} onBlur={() => setTimeout(() => {!document.activeElement?.closest('[data-searchable-select]') && setOpen(false);}, 150)}  onChange={(e) => { 
+				<input ref={actualInputRef} type="text" disabled={disabled} placeholder={placeholder} className={`w-full bg-white border ${error ? 'border-red-400 ring-2 ring-red-50' : 'border-slate-300'} rounded-sm px-3 py-2 text-sm font-medium outline-none focus:border-primary-500 focus:ring-2 focus:ring-primary-50 transition-all`} style={{ height: '36px' }} value={searchTerm} onFocus={(e) => { setIsEditing(true); handleFocus(e); }} onKeyDown={handleKeyDown} onBlur={() => { setIsEditing(false); setTimeout(() => {!document.activeElement?.closest('[data-searchable-select]') && setOpen(false);}, 150); }}  onChange={(e) => { 
 				  setSearchTerm(e.target.value); 
 				  onChange(e.target.value); 
 				  // Update the highlight when typing to reset selection
