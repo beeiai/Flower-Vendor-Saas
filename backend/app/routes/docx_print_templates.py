@@ -95,6 +95,31 @@ def get_ledger_report_pdf(
         net_amount = total_amount - commission
         final_total = net_amount + total_luggage - total_paid
         
+        # Transform rows to match template structure
+        transformed_rows = []
+        for row in rows:
+            qty = float(row["qty"])
+            price = float(row["price"])
+            total = float(row["total"])
+            luggage = float(row["luggage"])
+            paid = float(row["paid_amount"])
+            amount = float(row["amount"])
+            
+            # Commission calculation per row
+            row_commission = total * commission_rate
+            row_net = total - row_commission
+            row_balance = row_net + luggage - paid
+            
+            transformed_rows.append({
+                "customer": farmer.name,
+                "address": farmer.address or "N/A",
+                "gross": f"{total:.2f}",
+                "commission": f"{row_commission:.2f}",
+                "net": f"{row_net:.2f}",
+                "paid": f"{paid:.2f}",
+                "balance": f"{row_balance:.2f}"
+            })
+        
         # Load and render HTML template
         template_path = os.path.join("templates", "ledger_report.html")
         
@@ -104,26 +129,33 @@ def get_ledger_report_pdf(
         with open(template_path, 'r', encoding='utf-8') as f:
             template_content = f.read()
         
+        # Add print button with JavaScript
+        print_button_html = '''
+        <div style="position: fixed; top: 10px; right: 10px; z-index: 1000; background: white; padding: 10px; border-radius: 5px; box-shadow: 0 2px 10px rgba(0,0,0,0.2);">
+            <button onclick="window.print()" style="padding: 10px 20px; background-color: #007bff; color: white; border: none; border-radius: 4px; cursor: pointer; font-size: 14px; font-weight: bold;">🖨️ Print</button>
+        </div>
+        '''
+        
         template = Template(template_content)
         html_content = template.render(
-            farmer_name=farmer.name,
-            ledger_name=farmer.farmer_code or "N/A",
-            address=farmer.address or "N/A",
             group_name=group_name,
-            balance=final_total,
             commission_pct=commission_pct,
-            from_date=from_date.isoformat(),
-            to_date=to_date.isoformat(),
-            rows=rows,
-            total_qty=total_qty,
-            total_amount=total_amount,
-            commission=commission,
-            luggage_total=total_luggage,
-            net_amount=net_amount,
-            paid_amount=total_paid,
-            final_total=final_total,
+            from_date=from_date.strftime("%d-%m-%Y"),
+            to_date=to_date.strftime("%d-%m-%Y"),
+            current_date=__import__('datetime').datetime.now().strftime("%d-%m-%Y"),
+            rows=transformed_rows,
+            totals={
+                "gross_total": f"{total_amount:.2f}",
+                "commission_total": f"{commission:.2f}",
+                "net_total": f"{net_amount:.2f}",
+                "paid_total": f"{total_paid:.2f}",
+                "balance_total": f"{final_total:.2f}"
+            },
             generated_at=__import__('datetime').datetime.now().isoformat()
         )
+        
+        # Insert print button before </body> tag
+        html_content = html_content.replace('</body>', print_button_html + '</body>')
         
         # Fix logo path
         html_content = html_content.replace('src="SKFS_logo.png"', 'src="/templates/SKFS_logo.png"')
@@ -213,6 +245,30 @@ def get_ledger_report_docx(
         net_amount = total_amount - commission
         final_total = net_amount + total_luggage - total_paid
         
+        # Transform rows to match template structure
+        transformed_rows = []
+        for row in rows:
+            qty = float(row["qty"])
+            price = float(row["price"])
+            total = float(row["total"])
+            luggage = float(row["luggage"])
+            paid = float(row["paid_amount"])
+            
+            # Commission calculation per row
+            row_commission = total * commission_rate
+            row_net = total - row_commission
+            row_balance = row_net + luggage - paid
+            
+            transformed_rows.append({
+                "customer": farmer.name,
+                "address": farmer.address or "N/A",
+                "gross": f"{total:.2f}",
+                "commission": f"{row_commission:.2f}",
+                "net": f"{row_net:.2f}",
+                "paid": f"{paid:.2f}",
+                "balance": f"{row_balance:.2f}"
+            })
+        
         # Load and render HTML template
         template_path = os.path.join("templates", "ledger_report.html")
         
@@ -222,26 +278,33 @@ def get_ledger_report_docx(
         with open(template_path, 'r', encoding='utf-8') as f:
             template_content = f.read()
         
+        # Add print button with JavaScript
+        print_button_html = '''
+        <div style="position: fixed; top: 10px; right: 10px; z-index: 1000; background: white; padding: 10px; border-radius: 5px; box-shadow: 0 2px 10px rgba(0,0,0,0.2);">
+            <button onclick="window.print()" style="padding: 10px 20px; background-color: #007bff; color: white; border: none; border-radius: 4px; cursor: pointer; font-size: 14px; font-weight: bold;">🖨️ Print</button>
+        </div>
+        '''
+        
         template = Template(template_content)
         html_content = template.render(
-            farmer_name=farmer.name,
-            ledger_name=farmer.farmer_code or "N/A",
-            address=farmer.address or "N/A",
             group_name=group_name,
-            balance=final_total,
             commission_pct=commission_pct,
-            from_date=from_date.isoformat(),
-            to_date=to_date.isoformat(),
-            rows=rows,
-            total_qty=total_qty,
-            total_amount=total_amount,
-            commission=commission,
-            luggage_total=total_luggage,
-            net_amount=net_amount,
-            paid_amount=total_paid,
-            final_total=final_total,
+            from_date=from_date.strftime("%d-%m-%Y"),
+            to_date=to_date.strftime("%d-%m-%Y"),
+            current_date=__import__('datetime').datetime.now().strftime("%d-%m-%Y"),
+            rows=transformed_rows,
+            totals={
+                "gross_total": f"{total_amount:.2f}",
+                "commission_total": f"{commission:.2f}",
+                "net_total": f"{net_amount:.2f}",
+                "paid_total": f"{total_paid:.2f}",
+                "balance_total": f"{final_total:.2f}"
+            },
             generated_at=__import__('datetime').datetime.now().isoformat()
         )
+        
+        # Insert print button before </body> tag
+        html_content = html_content.replace('</body>', print_button_html + '</body>')
         
         # Fix logo path
         html_content = html_content.replace('src="SKFS_logo.png"', 'src="/templates/SKFS_logo.png"')
@@ -373,15 +436,26 @@ def get_group_patti_report_docx(
         with open(template_path, 'r', encoding='utf-8') as f:
             template_content = f.read()
         
+        # Add print button with JavaScript
+        print_button_html = '''
+        <div style="position: fixed; top: 10px; right: 10px; z-index: 1000; background: white; padding: 10px; border-radius: 5px; box-shadow: 0 2px 10px rgba(0,0,0,0.2);">
+            <button onclick="window.print()" style="padding: 10px 20px; background-color: #007bff; color: white; border: none; border-radius: 4px; cursor: pointer; font-size: 14px; font-weight: bold;">🖨️ Print</button>
+        </div>
+        '''
+        
         template = Template(template_content)
         html_content = template.render(
-            group=group,
-            farmers=rows,
+            group_name=group.name,
+            customers=rows,
             totals=totals,
-            from_date=from_date.isoformat(),
-            to_date=to_date.isoformat(),
+            from_date=from_date.strftime("%d-%m-%Y"),
+            to_date=to_date.strftime("%d-%m-%Y"),
+            current_date=__import__('datetime').datetime.now().strftime("%d-%m-%Y"),
             generated_at=__import__('datetime').datetime.now().isoformat()
         )
+        
+        # Insert print button before </body> tag
+        html_content = html_content.replace('</body>', print_button_html + '</body>')
         
         # Fix logo path
         html_content = html_content.replace('src="SKFS_logo.png"', 'src="/templates/SKFS_logo.png"')
@@ -481,6 +555,17 @@ def get_group_total_report_docx(
         # Calculate group total
         group_total = total_amount - total_paid
         
+        # Aggregate data by group (row structure for group_total_report template)
+        # The template expects rows with: group_name, customer_count, total_qty, total_amount
+        aggregated_rows = [{
+            "group_name": group.name,
+            "customer_count": len(farmers),
+            "total_qty": f"{total_qty:.2f}",
+            "total_amount": f"{total_amount:.2f}",
+            "total_paid": f"{total_paid:.2f}",
+            "balance": f"{group_total:.2f}"
+        }]
+        
         # Load and render HTML template
         template_path = os.path.join("templates", "group_total_report.html")
         
@@ -490,19 +575,28 @@ def get_group_total_report_docx(
         with open(template_path, 'r', encoding='utf-8') as f:
             template_content = f.read()
         
+        # Add print button with JavaScript
+        print_button_html = '''
+        <div style="position: fixed; top: 10px; right: 10px; z-index: 1000; background: white; padding: 10px; border-radius: 5px; box-shadow: 0 2px 10px rgba(0,0,0,0.2);">
+            <button onclick="window.print()" style="padding: 10px 20px; background-color: #007bff; color: white; border: none; border-radius: 4px; cursor: pointer; font-size: 14px; font-weight: bold;">🖨️ Print</button>
+        </div>
+        '''
+        
         template = Template(template_content)
         html_content = template.render(
-            group=group,
-            rows=rows,
-            total_qty=total_qty,
-            total_amount=total_amount,
-            total_paid=total_paid,
-            total_luggage=total_luggage,
-            group_total=group_total,
-            from_date=from_date.isoformat(),
-            to_date=to_date.isoformat(),
+            rows=aggregated_rows,
+            overall_qty=f"{total_qty:.2f}",
+            overall_amount=f"{total_amount:.2f}",
+            overall_paid=f"{total_paid:.2f}",
+            overall_balance=f"{group_total:.2f}",
+            from_date=from_date.strftime("%d-%m-%Y"),
+            to_date=to_date.strftime("%d-%m-%Y"),
+            current_date=__import__('datetime').datetime.now().strftime("%d-%m-%Y"),
             generated_at=__import__('datetime').datetime.now().isoformat()
         )
+        
+        # Insert print button before </body> tag
+        html_content = html_content.replace('</body>', print_button_html + '</body>')
         
         # Fix logo path
         html_content = html_content.replace('src="SKFS_logo.png"', 'src="/templates/SKFS_logo.png"')
@@ -511,6 +605,8 @@ def get_group_total_report_docx(
         
     except HTTPException:
         raise
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"Failed to generate group total report: {str(e)}")
 
 
 @router.get("/daily-sales-report")
@@ -545,7 +641,7 @@ def get_daily_sales_report_docx(
         
         items = query.order_by(CollectionItem.date).all()
         
-        # Transform data for template
+        # Transform data for template - match the template structure
         rows = []
         total_qty = 0
         total_amount = 0
@@ -557,7 +653,9 @@ def get_daily_sales_report_docx(
             
             rows.append({
                 "date": item.date.strftime("%d-%m-%Y"),
-                "item_name": item.item_name or "N/A",
+                "vehicle": item.vehicle or "N/A",  # Assuming vehicle field exists in CollectionItem
+                "party": item.farmer.name if item.farmer else "N/A",  # Get farmer name as party
+                "itemName": item.item_name or "N/A",
                 "qty": f"{qty:.2f}",
                 "rate": f"{rate:.2f}",
                 "total": f"{total:.2f}"
@@ -575,16 +673,27 @@ def get_daily_sales_report_docx(
         with open(template_path, 'r', encoding='utf-8') as f:
             template_content = f.read()
         
+        # Add print button with JavaScript
+        print_button_html = '''
+        <div style="position: fixed; top: 10px; right: 10px; z-index: 1000; background: white; padding: 10px; border-radius: 5px; box-shadow: 0 2px 10px rgba(0,0,0,0.2);">
+            <button onclick="window.print()" style="padding: 10px 20px; background-color: #007bff; color: white; border: none; border-radius: 4px; cursor: pointer; font-size: 14px; font-weight: bold;">🖨️ Print</button>
+        </div>
+        '''
+        
         template = Template(template_content)
         html_content = template.render(
             rows=rows,
-            total_qty=total_qty,
-            total_amount=total_amount,
-            item_name_filter=item_name or "All Items",
-            from_date=from_date.isoformat(),
-            to_date=to_date.isoformat(),
+            total_qty=f"{total_qty:.2f}",
+            total_amount=f"{total_amount:.2f}",
+            item_filter=item_name or "All Items",
+            from_date=from_date.strftime("%d-%m-%Y"),
+            to_date=to_date.strftime("%d-%m-%Y"),
+            current_date=__import__('datetime').datetime.now().strftime("%d-%m-%Y"),
             generated_at=__import__('datetime').datetime.now().isoformat()
         )
+        
+        # Insert print button before </body> tag
+        html_content = html_content.replace('</body>', print_button_html + '</body>')
         
         # Fix logo path
         html_content = html_content.replace('src="SKFS_logo.png"', 'src="/templates/SKFS_logo.png"')

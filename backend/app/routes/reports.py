@@ -27,7 +27,7 @@ router = APIRouter(
 
 def render_template(template_name: str, data: dict, template_dir: str = "templates") -> str:
     """
-    Render Jinja2 template with provided data.
+    Render Jinja2 template with provided data and add print button.
     
     Args:
         template_name: Name of template file (e.g., 'ledger_report.html')
@@ -35,7 +35,7 @@ def render_template(template_name: str, data: dict, template_dir: str = "templat
         template_dir: Directory containing templates
     
     Returns:
-        Rendered HTML string with corrected asset paths
+        Rendered HTML string with corrected asset paths and print button
     """
     import os
     template_path = os.path.join(template_dir, template_name)
@@ -48,6 +48,16 @@ def render_template(template_name: str, data: dict, template_dir: str = "templat
     
     template = Template(template_content)
     html = template.render(**data)
+    
+    # Add print button with JavaScript
+    print_button_html = '''
+    <div style="position: fixed; top: 10px; right: 10px; z-index: 1000; background: white; padding: 10px; border-radius: 5px; box-shadow: 0 2px 10px rgba(0,0,0,0.2);">
+        <button onclick="window.print()" style="padding: 10px 20px; background-color: #007bff; color: white; border: none; border-radius: 4px; cursor: pointer; font-size: 14px; font-weight: bold;">🖨️ Print</button>
+    </div>
+    '''
+    
+    # Insert print button before </body> tag
+    html = html.replace('</body>', print_button_html + '</body>')
     
     # Fix logo path: replace relative path with absolute /templates path
     # Templates reference logo as: <img src="SKFS_logo.png">
