@@ -627,6 +627,14 @@ export default function App() {
     commissionPct: 12,
   });
   const [isGroupPattiPrinting, setIsGroupPattiPrinting] = useState(false);
+  
+  // Refs for keyboard navigation in Group Patti form
+  const groupPattiFromDateRef = useRef(null);
+  const groupPattiToDateRef = useRef(null);
+  const groupPattiGroupRef = useRef(null);
+  const groupPattiCommissionRef = useRef(null);
+  const groupPattiPrintBtnRef = useRef(null);
+  const groupPattiCancelBtnRef = useRef(null);
 
   const [groupTotalForm, setGroupTotalForm] = useState({
     fromDate: new Date().toISOString().split('T')[0],
@@ -1179,16 +1187,87 @@ export default function App() {
           <div className="grid grid-cols-2 gap-5">
             <div>
               <label className="text-xs font-bold uppercase text-slate-600 tracking-widest block mb-2">From Date</label>
-              <input type="date" className="w-full border border-rose-200 rounded-lg px-4 py-3 text-sm font-medium bg-white outline-none focus:border-rose-500 focus:ring-2 focus:ring-rose-500/20 shadow-sm hover:shadow-md transition-all" style={{ height: '46px' }} value={groupPattiForm.fromDate} onChange={e => setGroupPattiForm({ ...groupPattiForm, fromDate: e.target.value })} data-enter-index="1" />
+              <input 
+                ref={groupPattiFromDateRef}
+                type="date" 
+                className="w-full border border-rose-200 rounded-lg px-4 py-3 text-sm font-medium bg-white outline-none focus:border-rose-500 focus:ring-2 focus:ring-rose-500/20 shadow-sm hover:shadow-md transition-all" 
+                style={{ height: '46px' }} 
+                value={groupPattiForm.fromDate} 
+                onChange={e => setGroupPattiForm({ ...groupPattiForm, fromDate: e.target.value })} 
+                onKeyDown={(e) => {
+                  if (e.key === 'Enter' || e.key === 'ArrowRight') {
+                    e.preventDefault();
+                    groupPattiToDateRef.current?.focus();
+                  } else if (e.key === 'ArrowLeft') {
+                    // No previous field, so do nothing or go to a previous section if applicable
+                  } else if (e.key === 'ArrowDown') {
+                    e.preventDefault();
+                    groupPattiToDateRef.current?.focus();
+                  }
+                }}
+                data-enter-index="1" 
+              />
             </div>
             <div>
               <label className="text-xs font-bold uppercase text-slate-600 tracking-widest block mb-2">To Date</label>
-              <input type="date" className="w-full border border-rose-200 rounded-lg px-4 py-3 text-sm font-medium bg-white outline-none focus:border-rose-500 focus:ring-2 focus:ring-rose-500/20 shadow-sm hover:shadow-md transition-all" style={{ height: '46px' }} value={groupPattiForm.toDate} onChange={e => setGroupPattiForm({ ...groupPattiForm, toDate: e.target.value })} data-enter-index="2" />
+              <input 
+                ref={groupPattiToDateRef}
+                type="date" 
+                className="w-full border border-rose-200 rounded-lg px-4 py-3 text-sm font-medium bg-white outline-none focus:border-rose-500 focus:ring-2 focus:ring-rose-500/20 shadow-sm hover:shadow-md transition-all" 
+                style={{ height: '46px' }} 
+                value={groupPattiForm.toDate} 
+                onChange={e => setGroupPattiForm({ ...groupPattiForm, toDate: e.target.value })} 
+                onKeyDown={(e) => {
+                  if (e.key === 'Enter' || e.key === 'ArrowRight') {
+                    e.preventDefault();
+                    groupPattiGroupRef.current?.querySelector('input')?.focus();
+                  } else if (e.key === 'ArrowLeft') {
+                    e.preventDefault();
+                    groupPattiFromDateRef.current?.focus();
+                  } else if (e.key === 'ArrowDown') {
+                    e.preventDefault();
+                    groupPattiGroupRef.current?.querySelector('input')?.focus();
+                  }
+                }}
+                data-enter-index="2" 
+              />
             </div>
           </div>
 
-          <div className="relative">
-            <SearchableSelect label="Group Name" options={groups.map(g => g.name)} value={groupPattiForm.groupName} onChange={(val) => setGroupPattiForm({ ...groupPattiForm, groupName: val })} placeholder="Select group" data-enter-index="3" className="focus:border-rose-500 focus:ring-rose-500/20 rounded-lg shadow-sm hover:shadow-md transition-all border-rose-200" />
+          <div className="relative" ref={groupPattiGroupRef}>
+            <SearchableSelect 
+              label="Group Name" 
+              options={groups.map(g => g.name)} 
+              value={groupPattiForm.groupName} 
+              onChange={(val) => setGroupPattiForm({ ...groupPattiForm, groupName: val })} 
+              placeholder="Select group" 
+              inputRef={groupPattiGroupRef}
+              onSelectionComplete={() => {
+                // Called when an option is selected via keyboard or mouse
+                setTimeout(() => {
+                  groupPattiCommissionRef.current?.focus();
+                }, 0);
+              }}
+              onKeyDown={(e) => {
+                if (e.key === 'Enter') {
+                  // Check if dropdown is open, then let it handle Enter
+                  // If dropdown is closed, move to next field
+                  const dropdownOpen = groupPattiGroupRef.current?.closest('[data-open="true"]');
+                  if (!dropdownOpen) {
+                    e.preventDefault();
+                    groupPattiCommissionRef.current?.focus();
+                  }
+                } else if (e.key === 'ArrowRight' || e.key === 'ArrowDown') {
+                  e.preventDefault();
+                  groupPattiCommissionRef.current?.focus();
+                } else if (e.key === 'ArrowLeft' || e.key === 'ArrowUp') {
+                  e.preventDefault();
+                  groupPattiToDateRef.current?.focus();
+                }
+              }}
+              data-enter-index="3" 
+              className="focus:border-rose-500 focus:ring-rose-500/20 rounded-lg shadow-sm hover:shadow-md transition-all border-rose-200" 
+            />
             <div className="absolute right-3 top-8 text-slate-700">
               <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
@@ -1198,14 +1277,68 @@ export default function App() {
 
           <div>
             <label className="text-xs font-bold uppercase text-slate-600 tracking-widest block mb-2">Commission (%)</label>
-            <input type="number" className="w-full border border-rose-200 rounded-lg px-4 py-3 text-sm font-medium bg-white outline-none text-right focus:border-rose-500 focus:ring-2 focus:ring-rose-500/20 shadow-sm hover:shadow-md transition-all" style={{ height: '46px' }} value={groupPattiForm.commissionPct} onChange={e => setGroupPattiForm({ ...groupPattiForm, commissionPct: e.target.value })} data-enter-index="4" />
+            <input 
+              ref={groupPattiCommissionRef}
+              type="number" 
+              className="w-full border border-rose-200 rounded-lg px-4 py-3 text-sm font-medium bg-white outline-none text-right focus:border-rose-500 focus:ring-2 focus:ring-rose-500/20 shadow-sm hover:shadow-md transition-all" 
+              style={{ height: '46px' }} 
+              value={groupPattiForm.commissionPct} 
+              onChange={e => setGroupPattiForm({ ...groupPattiForm, commissionPct: e.target.value })} 
+              onKeyDown={(e) => {
+                if (e.key === 'Enter' || e.key === 'ArrowRight') {
+                  e.preventDefault();
+                  groupPattiPrintBtnRef.current?.focus();
+                } else if (e.key === 'ArrowLeft') {
+                  e.preventDefault();
+                  groupPattiGroupRef.current?.querySelector('input')?.focus();
+                } else if (e.key === 'ArrowDown') {
+                  e.preventDefault();
+                  groupPattiPrintBtnRef.current?.focus();
+                }
+              }}
+              data-enter-index="4" 
+            />
           </div>
 
           <div className="flex gap-4 pt-3">
-            <button onClick={handleGroupPattiPrint} disabled={!groupPattiForm.groupName || isGroupPattiPrinting} className="flex-1 bg-gradient-to-r from-[#5B55E6] to-[#4A44D0] text-white py-3.5 font-bold uppercase text-sm rounded-xl shadow-lg disabled:opacity-50 hover:from-[#4A44D0] hover:to-[#3A34C0] transition-all hover:shadow-xl active:translate-y-0.5" data-enter-index="5">
+            <button 
+              ref={groupPattiPrintBtnRef}
+              onClick={handleGroupPattiPrint} 
+              disabled={!groupPattiForm.groupName || isGroupPattiPrinting} 
+              className="flex-1 bg-gradient-to-r from-[#5B55E6] to-[#4A44D0] text-white py-3.5 font-bold uppercase text-sm rounded-xl shadow-lg disabled:opacity-50 hover:from-[#4A44D0] hover:to-[#3A34C0] transition-all hover:shadow-xl active:translate-y-0.5" 
+              data-enter-index="5"
+              onKeyDown={(e) => {
+                if (e.key === 'Enter') {
+                  e.preventDefault();
+                  handleGroupPattiPrint();
+                } else if (e.key === 'ArrowLeft') {
+                  e.preventDefault();
+                  groupPattiCommissionRef.current?.focus();
+                } else if (e.key === 'ArrowRight' || e.key === 'ArrowDown') {
+                  e.preventDefault();
+                  groupPattiCancelBtnRef.current?.focus();
+                }
+              }}
+            >
               {isGroupPattiPrinting ? 'Printing...' : 'Print'}
             </button>
-            <button onClick={() => { setIsGroupPattiPrinting(false); setActiveSection('daily'); }} className="flex-1 bg-gradient-to-r from-slate-100 to-slate-200 text-slate-700 py-3.5 font-bold uppercase text-sm border border-slate-300 rounded-xl shadow-md hover:from-slate-200 hover:to-slate-300 transition-all hover:shadow-lg" data-enter-index="6">Cancel</button>
+            <button 
+              ref={groupPattiCancelBtnRef}
+              onClick={() => { setIsGroupPattiPrinting(false); setActiveSection('daily'); }} 
+              className="flex-1 bg-gradient-to-r from-slate-100 to-slate-200 text-slate-700 py-3.5 font-bold uppercase text-sm border border-slate-300 rounded-xl shadow-md hover:from-slate-200 hover:to-slate-300 transition-all hover:shadow-lg" 
+              data-enter-index="6"
+              onKeyDown={(e) => {
+                if (e.key === 'Enter') {
+                  e.preventDefault();
+                  setActiveSection('daily');
+                } else if (e.key === 'ArrowLeft') {
+                  e.preventDefault();
+                  groupPattiPrintBtnRef.current?.focus();
+                } else if (e.key === 'ArrowRight' || e.key === 'ArrowUp') {
+                  // No next field, so do nothing or cycle back to first field
+                }
+              }}
+            >Cancel</button>
           </div>
 
           <div className="text-center text-sm font-medium text-slate-500 min-h-[24px]">
