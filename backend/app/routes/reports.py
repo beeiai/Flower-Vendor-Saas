@@ -120,22 +120,19 @@ def get_ledger_report(
     
     # Default commission is 12%
     commission_pct = 12.0
-    
-    # Transform entries to match template expectations
     rows = []
     gross_total = 0
     commission_total = 0
     net_total = 0
     paid_total = 0
     balance_total = 0
-    
     for entry in ledger_data.get("entries", []):
-        gross = float(entry.get("amount", 0))  # Use "amount" from ledger_data
-        commission = gross * (commission_pct / 100)  # Calculate commission
+        gross = float(entry.get("amount", 0))
+        commission = gross * (commission_pct / 100)
         net = gross - commission
         paid = float(entry.get("paid", 0)) if entry.get("paid") is not None else 0.0
         balance = net - paid
-        # Vehicle and date fields
+        # Populate date and vehicle fields from entry
         date_val = entry.get("date", "")
         if isinstance(date_val, str):
             date_val = date_val.split("T")[0]

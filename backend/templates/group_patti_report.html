@@ -318,27 +318,27 @@
             </tr>
             <tr>
                 <td>Total Customers:</td>
-                <td>{{ totals.customer_count }}</td>
+                <td>{{ totals.customer_count if totals and totals.customer_count else '-' }}</td>
             </tr>
             <tr class="total-highlight">
                 <td>Gross Total:</td>
-                <td>₹ {{ totals.gross_total }}</td>
+                <td>₹ {{ totals.gross_total if totals and totals.gross_total else '0.00' }}</td>
             </tr>
             <tr>
                 <td>Commission Total:</td>
-                <td>₹ {{ totals.commission_total }}</td>
+                <td>₹ {{ totals.commission_total if totals and totals.commission_total else '0.00' }}</td>
             </tr>
             <tr>
                 <td>Net Total:</td>
-                <td>₹ {{ totals.net_total }}</td>
+                <td>₹ {{ totals.net_total if totals and totals.net_total else '0.00' }}</td>
             </tr>
             <tr>
                 <td>Paid Total:</td>
-                <td>₹ {{ totals.paid_total }}</td>
+                <td>₹ {{ totals.paid_total if totals and totals.paid_total else '0.00' }}</td>
             </tr>
             <tr class="total-highlight">
                 <td>Balance Total:</td>
-                <td>₹ {{ totals.balance_total }}</td>
+                <td>₹ {{ totals.balance_total if totals and totals.balance_total else '0.00' }}</td>
             </tr>
         </table>
         
@@ -349,7 +349,7 @@
 </div>
 
 <!-- INDIVIDUAL CUSTOMER LEDGER PAGES -->
-{% for customer in customers %}
+            {% for customer in customers %}
 <div class="page customer-section">
     <div class="header-container">
         <div class="header-photo">
@@ -371,21 +371,21 @@
     <table class="info-table">
         <tr>
             <td>Customer:</td>
-            <td>{{ customer.name }}</td>
+                <td>{{ customer.name }}</td>
             <td>Group:</td>
-            <td>{{ group_name }}</td>
+                <td>{{ group_name }}</td>
         </tr>
         <tr>
             <td>Address:</td>
-            <td>{{ customer.address }}</td>
+                <td>{{ customer.address }}</td>
             <td>Ledger:</td>
-            <td>{{ customer.ledger_name }}</td>
+                <td>{{ customer.ledger_name }}</td>
         </tr>
         <tr>
             <td>Balance:</td>
-            <td>₹ {{ customer.balance }}</td>
+                <td>₹ {{ customer.balance if customer.balance else '0.00' }}</td>
             <td>Date:</td>
-            <td>{{ current_date }}</td>
+                <td>{{ current_date }}</td>
         </tr>
     </table>
 
@@ -406,14 +406,14 @@
         <tbody>
             {% for row in customer.transactions %}
             <tr>
-                <td>{{ row.date }}</td>
-                <td>{{ row.vehicle }}</td>
-                <td>{{ row.qty }}</td>
-                <td>{{ row.price }}</td>
-                <td>{{ row.total }}</td>
-                <td>{{ row.luggage }}</td>
-                <td>{{ row.paid }}</td>
-                <td>{{ row.amount }}</td>
+                <td>{{ row.date if row.date else '-' }}</td>
+                <td>{{ row.vehicle if row.vehicle else '-' }}</td>
+                <td>{{ row.qty if row.qty else '0.00' }}</td>
+                <td>{{ row.price if row.price else '0.00' }}</td>
+                <td>{{ row.total if row.total else '0.00' }}</td>
+                <td>{{ row.luggage if row.luggage else '0.00' }}</td>
+                <td>{{ row.paid if row.paid else '0.00' }}</td>
+                <td>{{ row.amount if row.amount else '0.00' }}</td>
             </tr>
             {% endfor %}
             <!-- TOTAL ROW as part of the table -->
