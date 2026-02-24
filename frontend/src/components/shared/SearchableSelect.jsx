@@ -11,7 +11,7 @@ export function SearchableSelect({ label, options, value, onChange, placeholder,
 		if (newState && onMenuOpen) onMenuOpen();
 		if (!newState && onMenuClose) onMenuClose();
 	} : setInternalOpen;
-	
+
 	const [searchTerm, setSearchTerm] = useState(value || "");
 	const [isEditing, setIsEditing] = useState(false);
 	const [coords, setCoords] = useState({ top: 0, left: 0, width: 0 });
@@ -21,15 +21,13 @@ export function SearchableSelect({ label, options, value, onChange, placeholder,
 	const internalSelectRef = useRef(null);
 	const actualInputRef = inputRef || inputRefInternal;
 	const actualSelectRef = selectRef || internalSelectRef;
-	
-	// ✅ FIX: Only sync value → searchTerm when NOT editing.
-	// Removed `searchTerm` from deps to prevent the effect from re-running
-	// every keystroke and fighting with user input.
+
+	// Only sync value → searchTerm when NOT editing
 	useEffect(() => {
 		if (!isEditing) {
 			setSearchTerm(String(value || ""));
 		}
-	}, [value, isEditing]); // ← searchTerm intentionally removed from deps
+	}, [value, isEditing]);
 
 	const updateCoords = () => {
 		if (inputWrapperRef.current) {
@@ -61,7 +59,6 @@ export function SearchableSelect({ label, options, value, onChange, placeholder,
 		return () => document.removeEventListener("mousedown", handleClickOutside);
 	}, []);
 
-	// Close dropdown when window loses focus
 	useEffect(() => {
 		const handleWindowBlur = () => {
 			setOpen(false);
@@ -73,10 +70,10 @@ export function SearchableSelect({ label, options, value, onChange, placeholder,
 
 	const filteredOptions = useMemo(() => {
 		if (!searchTerm) return options || [];
-		const lowerSearchTerm = String(searchTerm).toLowerCase();
-		return (options || []).filter(option => 
-			String(option).toLowerCase().startsWith(lowerSearchTerm) ||
-			String(option).toLowerCase().includes(lowerSearchTerm)
+		const lower = String(searchTerm).toLowerCase();
+		return (options || []).filter(option =>
+			String(option).toLowerCase().startsWith(lower) ||
+			String(option).toLowerCase().includes(lower)
 		);
 	}, [options, searchTerm]);
 
@@ -87,30 +84,28 @@ export function SearchableSelect({ label, options, value, onChange, placeholder,
 		}
 	};
 
+	// Called on both keyboard Enter selection and mouse click
+	const handleSelect = (opt) => {
+		const stringOpt = String(opt);
+		setSearchTerm(stringOpt);
+		onChange(stringOpt);
+		setOpen(false);
+		setHighlight(0);
+		// After selecting, move focus to next field
+		setTimeout(() => {
+			onSelectionComplete?.();
+		}, 0);
+	};
+
 	const handleKeyDown = (e) => {
-		if (e.key === "Backspace") {
-			// ✅ FIX: Don't call onChange mid-delete via setTimeout hack.
-			// Let the onChange on the input element handle it naturally.
-			return;
-		}
-		
-		if (open === false && !["Tab", "Escape", "Enter", "Backspace", "ArrowLeft", "ArrowRight", "ArrowUp", "ArrowDown"].includes(e.key)) {
-			setOpen(true);
-			setHighlight(0);
-			return;
-		}
-		
-		if (e.key === "Enter") {
-			if (open === false) {
+		if (open) {
+			// --- Dropdown is OPEN: handle navigation and selection ---
+			if (e.key === 'Enter') {
 				e.preventDefault();
-				setOpen(true);
-				setHighlight(0);
-				return;
-			} else {
-				e.preventDefault();
-				if (highlight >= 0 && filteredOptions[highlight]) {
+				if (filteredOptions[highlight]) {
+					// Select highlighted option → closes dropdown → onSelectionComplete fires → moves to next field
 					handleSelect(filteredOptions[highlight]);
-				} else if (filteredOptions.length > 0 && searchTerm) {
+				} else if (filteredOptions.length > 0) {
 					handleSelect(filteredOptions[0]);
 				} else {
 					setOpen(false);
@@ -118,68 +113,109 @@ export function SearchableSelect({ label, options, value, onChange, placeholder,
 				}
 				return;
 			}
-		}
-		
-		if (open === true) {
-			if (e.key === "ArrowDown") {
+			if (e.key === 'ArrowDown') {
 				e.preventDefault();
 				setHighlight(prev => Math.min(prev + 1, filteredOptions.length - 1));
-			} else if (e.key === "ArrowUp") {
+				return;
+			}
+			if (e.key === 'ArrowUp') {
 				e.preventDefault();
 				setHighlight(prev => Math.max(prev - 1, 0));
-			} else if (e.key === "Escape") {
+				return;
+			}
+			if (e.key === 'Escape') {
+				e.preventDefault();
 				setOpen(false);
 				setHighlight(0);
-				actualInputRef.current?.focus();
-			} else if (e.key === "Tab") {
+				return;
+			}
+			if (e.key === 'Tab') {
 				setOpen(false);
+				setHighlight(0);
+				return;
+			}
+			// Any other key: let it type into the search input naturally
+			return;
+		}
+
+		// --- Dropdown is CLOSED ---
+		if (e.key === 'Enter') {
+			e.preventDefault();
+			if (value) {
+				// Already has a value selected → move to next field
+				onSelectionComplete?.();
+			} else {
+				// No value yet → open dropdown
+				setOpen(true);
 				setHighlight(0);
 			}
+			return;
 		}
-	};
 
-	const handleSelect = (opt) => {
-		const stringOpt = String(opt);
-		setSearchTerm(stringOpt);
-		onChange(stringOpt);
-		setOpen(false); 
-		setHighlight(0);
-		// Notify parent that selection is complete (e.g. move to next field)
-		setTimeout(() => {
-			onSelectionComplete?.();
-		}, 0);
+		if (e.key === 'Backspace') {
+			// Let input onChange handle it naturally
+			return;
+		}
+
+		// Any printable key → open dropdown and let the keystroke go into the input
+		if (!["Tab", "Escape", "ArrowLeft", "ArrowRight", "ArrowUp", "ArrowDown", "Shift", "Control", "Alt", "Meta"].includes(e.key)) {
+			setOpen(true);
+			setHighlight(0);
+		}
 	};
 
 	const dropdownList = open && !disabled && createPortal(
-		<div className="fixed bg-white border border-slate-300 shadow-dropdown z-[10000] max-h-56 overflow-y-auto mt-1 rounded-sm" style={{ top: `${coords.top}px`, left: `${coords.left}px`, width: `${coords.width}px` }}>
-			{filteredOptions.length > 0 ? filteredOptions.map((opt, idx) => (
-				<button 
-					key={idx} 
-					type="button" 
-					className={`w-full text-left px-3 py-2.5 text-sm font-medium border-b border-slate-100 last:border-0 transition-colors ${
-						highlight === idx ? 'bg-primary-600 text-white' : 'hover:bg-slate-50 text-slate-700'
-					}`} 
-					onMouseDown={(e) => { e.preventDefault(); handleSelect(opt); }}
-				>
-					{String(opt)}
-				</button>
-			)) : <div className="px-3 py-3 text-sm text-slate-400 italic bg-slate-50">No matches found</div>}
-		</div>, document.body
+		<div
+			className="fixed bg-white border border-slate-300 shadow-dropdown z-[10000] max-h-56 overflow-y-auto mt-1 rounded-sm"
+			style={{ top: `${coords.top}px`, left: `${coords.left}px`, width: `${coords.width}px` }}
+		>
+			{filteredOptions.length > 0
+				? filteredOptions.map((opt, idx) => (
+					<button
+						key={idx}
+						type="button"
+						className={`w-full text-left px-3 py-2.5 text-sm font-medium border-b border-slate-100 last:border-0 transition-colors ${
+							highlight === idx ? 'bg-primary-600 text-white' : 'hover:bg-slate-50 text-slate-700'
+						}`}
+						onMouseDown={(e) => { e.preventDefault(); handleSelect(opt); }}
+					>
+						{String(opt)}
+					</button>
+				))
+				: <div className="px-3 py-3 text-sm text-slate-400 italic bg-slate-50">No matches found</div>
+			}
+		</div>,
+		document.body
 	);
 
 	return (
-		<div className={`flex flex-col gap-0 w-full relative ${className}`} ref={containerRef} style={style} data-searchable-select data-enter-type="dropdown">
-			{label && <label className="text-xs font-semibold text-slate-600 uppercase tracking-wide mb-1 ml-0.5 whitespace-nowrap">{String(label)}</label>}
+		<div
+			className={`flex flex-col gap-0 w-full relative ${className}`}
+			ref={containerRef}
+			style={style}
+			data-searchable-select
+			data-enter-type="dropdown"
+		>
+			{label && (
+				<label className="text-xs font-semibold text-slate-600 uppercase tracking-wide mb-1 ml-0.5 whitespace-nowrap">
+					{String(label)}
+				</label>
+			)}
 			<div className="relative group" ref={inputWrapperRef} data-open={open ? "true" : "false"}>
 				<input
 					ref={actualInputRef}
 					type="text"
 					disabled={disabled}
 					placeholder={placeholder}
-					className={`w-full bg-white border ${error ? 'border-red-400 ring-2 ring-red-50' : 'border-slate-300'} rounded-sm px-3 py-2 text-sm font-medium outline-none focus:border-primary-500 focus:ring-2 focus:ring-primary-50 transition-all`}
+					className={`w-full bg-white border ${
+						error ? 'border-red-400 ring-2 ring-red-50' : 'border-slate-300'
+					} rounded-sm px-3 py-2 text-sm font-medium outline-none focus:border-primary-500 focus:ring-2 focus:ring-primary-50 transition-all`}
 					style={{ height: '36px' }}
 					value={searchTerm}
-					onFocus={() => { setIsEditing(true); handleFocus(); }}
+					onFocus={() => {
+						setIsEditing(true);
+						handleFocus();
+					}}
 					onBlur={() => {
 						setIsEditing(false);
 						setTimeout(() => {
@@ -189,13 +225,9 @@ export function SearchableSelect({ label, options, value, onChange, placeholder,
 						}, 150);
 					}}
 					onChange={(e) => {
-						// ✅ FIX: Update local searchTerm freely while typing.
-						// Do NOT call onChange with partial text — only call onChange
-						// when a real option is selected via handleSelect.
-						// This stops the parent value from updating mid-type and
-						// causing the useEffect to reset searchTerm on each keystroke.
-						const typed = e.target.value;
-						setSearchTerm(typed);
+						// Only update local search term — do NOT call onChange with partial text
+						// onChange is only called from handleSelect when a real option is picked
+						setSearchTerm(e.target.value);
 						setHighlight(0);
 						if (!open) setOpen(true);
 					}}
@@ -203,6 +235,7 @@ export function SearchableSelect({ label, options, value, onChange, placeholder,
 				/>
 				<button
 					type="button"
+					tabIndex={-1}
 					className="absolute right-3 top-1/2 -translate-y-1/2 p-1.5 text-slate-700 hover:text-slate-900 transition-colors"
 					onClick={() => !disabled && setOpen(!open)}
 				>
@@ -214,5 +247,4 @@ export function SearchableSelect({ label, options, value, onChange, placeholder,
 	);
 }
 
-// Default export for backward compatibility
 export default SearchableSelect;
