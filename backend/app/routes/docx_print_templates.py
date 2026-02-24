@@ -60,7 +60,7 @@ def get_ledger_report_pdf(
             CollectionItem.vendor_id == user.vendor_id
         ).all()
         
-        # Transform data for template
+        # Transform data for template - ensure proper date and vehicle mapping
         rows = []
         total_qty = 0
         total_amount = 0
@@ -74,8 +74,15 @@ def get_ledger_report_pdf(
             paid = float(item.paid_amount or 0)
             total = qty * rate
             
+            # Format date properly as DD-MM-YYYY
+            date_str = item.date.strftime("%d-%m-%Y") if item.date else "N/A"
+            
+            # Get vehicle information - try multiple field names
+            vehicle_info = item.vehicle_name or item.vehicle_number or item.vehicle or "N/A"
+            
             rows.append({
-                "date": item.date.strftime("%d-%m-%Y"),
+                "date": date_str,
+                "vehicle": vehicle_info,
                 "qty": f"{qty:.2f}",
                 "price": f"{rate:.2f}",
                 "total": f"{total:.2f}",
@@ -157,8 +164,19 @@ def get_ledger_report_pdf(
         # Insert print button before </body> tag
         html_content = html_content.replace('</body>', print_button_html + '</body>')
         
-        # Fix logo path
-        html_content = html_content.replace('src="SKFS_logo.png"', 'src="/templates/SKFS_logo.png"')
+        # Fix logo path with proper error handling
+        import os
+        import logging
+        logo_path = os.path.join("templates", "SKFS_logo.png")
+        if os.path.exists(logo_path):
+            html_content = html_content.replace('src="SKFS_logo.png"', 'src="/templates/SKFS_logo.png"')
+            html_content = html_content.replace("src='SKFS_logo.png'", 'src="/templates/SKFS_logo.png"')
+        else:
+            logger = logging.getLogger(__name__)
+            logger.warning(f"Logo file not found at: {logo_path}")
+            # Remove broken image references
+            html_content = html_content.replace('src="SKFS_logo.png"', '')
+            html_content = html_content.replace("src='SKFS_logo.png'", '')
         
         return HTMLResponse(content=html_content)
         
@@ -245,7 +263,7 @@ def get_ledger_report_docx(
         net_amount = total_amount - commission
         final_total = net_amount + total_luggage - total_paid
         
-        # Transform rows to match template structure
+        # Transform rows to match template structure - include date and vehicle
         transformed_rows = []
         for row in rows:
             qty = float(row["qty"])
@@ -260,6 +278,8 @@ def get_ledger_report_docx(
             row_balance = row_net + luggage - paid
             
             transformed_rows.append({
+                "date": row["date"],
+                "vehicle": row["vehicle"],
                 "customer": farmer.name,
                 "address": farmer.address or "N/A",
                 "gross": f"{total:.2f}",
@@ -306,8 +326,19 @@ def get_ledger_report_docx(
         # Insert print button before </body> tag
         html_content = html_content.replace('</body>', print_button_html + '</body>')
         
-        # Fix logo path
-        html_content = html_content.replace('src="SKFS_logo.png"', 'src="/templates/SKFS_logo.png"')
+        # Fix logo path with proper error handling
+        import os
+        import logging
+        logo_path = os.path.join("templates", "SKFS_logo.png")
+        if os.path.exists(logo_path):
+            html_content = html_content.replace('src="SKFS_logo.png"', 'src="/templates/SKFS_logo.png"')
+            html_content = html_content.replace("src='SKFS_logo.png'", 'src="/templates/SKFS_logo.png"')
+        else:
+            logger = logging.getLogger(__name__)
+            logger.warning(f"Logo file not found at: {logo_path}")
+            # Remove broken image references
+            html_content = html_content.replace('src="SKFS_logo.png"', '')
+            html_content = html_content.replace("src='SKFS_logo.png'", '')
         
         return HTMLResponse(content=html_content)
         
@@ -457,8 +488,19 @@ def get_group_patti_report_docx(
         # Insert print button before </body> tag
         html_content = html_content.replace('</body>', print_button_html + '</body>')
         
-        # Fix logo path
-        html_content = html_content.replace('src="SKFS_logo.png"', 'src="/templates/SKFS_logo.png"')
+        # Fix logo path with proper error handling
+        import os
+        import logging
+        logo_path = os.path.join("templates", "SKFS_logo.png")
+        if os.path.exists(logo_path):
+            html_content = html_content.replace('src="SKFS_logo.png"', 'src="/templates/SKFS_logo.png"')
+            html_content = html_content.replace("src='SKFS_logo.png'", 'src="/templates/SKFS_logo.png"')
+        else:
+            logger = logging.getLogger(__name__)
+            logger.warning(f"Logo file not found at: {logo_path}")
+            # Remove broken image references
+            html_content = html_content.replace('src="SKFS_logo.png"', '')
+            html_content = html_content.replace("src='SKFS_logo.png'", '')
         
         return HTMLResponse(content=html_content)
         
@@ -470,7 +512,7 @@ def get_group_patti_report_docx(
 
 @router.get("/group-total-report")
 def get_group_total_report_docx(
-    group_id: int = Query(..., description="Group ID"),
+    group_id: int = Query(..., description="Group ID", gt=0),
     from_date: date = Query(..., description="Start date"),
     to_date: date = Query(..., description="End date"),
     db: Session = Depends(get_db),
@@ -482,12 +524,27 @@ def get_group_total_report_docx(
     
     Note: This endpoint now uses the new HTML template system instead of DOCX.
     Use /api/reports/group-total?format=html for future integrations.
+    
+    Query Parameters:
+    - group_id: Group ID (required, must be > 0)
+    - from_date: Start date (required, format: YYYY-MM-DD)
+    - to_date: End date (required, format: YYYY-MM-DD)
     """
     from fastapi.responses import HTMLResponse
     from jinja2 import Template
     import os
+    import logging
+    
+    logger = logging.getLogger(__name__)
     
     try:
+        # Validate date range
+        if from_date > to_date:
+            raise HTTPException(
+                status_code=422, 
+                detail="from_date cannot be later than to_date"
+            )
+        
         # Fetch group details
         group = db.query(FarmerGroup).filter(
             FarmerGroup.id == group_id,
@@ -504,19 +561,25 @@ def get_group_total_report_docx(
         ).all()
         
         if not farmers:
-            raise HTTPException(status_code=404, detail="No farmers found in group")
+            logger.warning(f"No farmers found in group {group_id}")
+            # Still generate report but with empty data
+            pass
         
         # Fetch all collection items for all farmers in one query
-        farmer_ids = [f.id for f in farmers]
-        all_items = db.query(CollectionItem).filter(
-            CollectionItem.farmer_id.in_(farmer_ids),
+        farmer_ids = [f.id for f in farmers] if farmers else []
+        query = db.query(CollectionItem).filter(
             CollectionItem.date >= from_date,
             CollectionItem.date <= to_date,
             CollectionItem.vendor_id == user.vendor_id
-        ).order_by(CollectionItem.date).all()
+        )
+        
+        if farmer_ids:
+            query = query.filter(CollectionItem.farmer_id.in_(farmer_ids))
+        
+        all_items = query.order_by(CollectionItem.date).all()
         
         # Create farmer lookup for customer names
-        farmer_lookup = {f.id: f for f in farmers}
+        farmer_lookup = {f.id: f for f in farmers} if farmers else {}
         
         # Transform data for template
         rows = []
@@ -559,7 +622,7 @@ def get_group_total_report_docx(
         # The template expects rows with: group_name, customer_count, total_qty, total_amount
         aggregated_rows = [{
             "group_name": group.name,
-            "customer_count": len(farmers),
+            "customer_count": len(farmers) if farmers else 0,
             "total_qty": f"{total_qty:.2f}",
             "total_amount": f"{total_amount:.2f}",
             "total_paid": f"{total_paid:.2f}",
@@ -598,14 +661,26 @@ def get_group_total_report_docx(
         # Insert print button before </body> tag
         html_content = html_content.replace('</body>', print_button_html + '</body>')
         
-        # Fix logo path
-        html_content = html_content.replace('src="SKFS_logo.png"', 'src="/templates/SKFS_logo.png"')
+        # Fix logo path with proper error handling
+        import os
+        import logging
+        logo_path = os.path.join("templates", "SKFS_logo.png")
+        if os.path.exists(logo_path):
+            html_content = html_content.replace('src="SKFS_logo.png"', 'src="/templates/SKFS_logo.png"')
+            html_content = html_content.replace("src='SKFS_logo.png'", 'src="/templates/SKFS_logo.png"')
+        else:
+            logger = logging.getLogger(__name__)
+            logger.warning(f"Logo file not found at: {logo_path}")
+            # Remove broken image references
+            html_content = html_content.replace('src="SKFS_logo.png"', '')
+            html_content = html_content.replace("src='SKFS_logo.png'", '')
         
         return HTMLResponse(content=html_content)
         
     except HTTPException:
         raise
     except Exception as e:
+        logger.error(f"Failed to generate group total report: {str(e)}", exc_info=True)
         raise HTTPException(status_code=500, detail=f"Failed to generate group total report: {str(e)}")
 
 
@@ -695,8 +770,19 @@ def get_daily_sales_report_docx(
         # Insert print button before </body> tag
         html_content = html_content.replace('</body>', print_button_html + '</body>')
         
-        # Fix logo path
-        html_content = html_content.replace('src="SKFS_logo.png"', 'src="/templates/SKFS_logo.png"')
+        # Fix logo path with proper error handling
+        import os
+        import logging
+        logo_path = os.path.join("templates", "SKFS_logo.png")
+        if os.path.exists(logo_path):
+            html_content = html_content.replace('src="SKFS_logo.png"', 'src="/templates/SKFS_logo.png"')
+            html_content = html_content.replace("src='SKFS_logo.png'", 'src="/templates/SKFS_logo.png"')
+        else:
+            logger = logging.getLogger(__name__)
+            logger.warning(f"Logo file not found at: {logo_path}")
+            # Remove broken image references
+            html_content = html_content.replace('src="SKFS_logo.png"', '')
+            html_content = html_content.replace("src='SKFS_logo.png'", '')
         
         return HTMLResponse(content=html_content)
         
