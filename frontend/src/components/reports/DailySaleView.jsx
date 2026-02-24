@@ -1,5 +1,5 @@
 import React, { useState, useMemo, useEffect, useCallback, useRef } from 'react';
-import { X, Printer, Send } from 'lucide-react';
+import { X, Printer, Send, Users } from 'lucide-react';
 import { api } from '../../utils/api';
 
 function todayISO() {
@@ -7,62 +7,140 @@ function todayISO() {
 }
 
 export default function DailySaleView({ onCancel }) {
-  const [fromDate, setFromDate] = useState(todayISO());
-  const [toDate, setToDate]     = useState(todayISO());
-  const [itemName, setItemName] = useState('');
-  const [useItem, setUseItem]   = useState(false); // checkbox
-  const [catalog, setCatalog]   = useState([]);
-  const [rows, setRows]         = useState([]);
-  const [loading, setLoading]   = useState(false);
+  const [fromDate, setFromDate]     = useState(todayISO());
+  const [toDate, setToDate]         = useState(todayISO());
+  const [groupName, setGroupName]   = useState('');
+  const [useGroup, setUseGroup]     = useState(false); // checkbox
+  const [groups, setGroups]         = useState([]);
+  const [customers, setCustomers]   = useState([]);
+  const [rows, setRows]             = useState([]);
+  const [loading, setLoading]       = useState(false);
+  const [smsSending, setSmsSending] = useState(false);
+  const [smsStatus, setSmsStatus]   = useState(''); // feedback message
 
-  const itemRef   = useRef(null);
+  const groupRef  = useRef(null);
   const fromRef   = useRef(null);
   const toRef     = useRef(null);
   const goRef     = useRef(null);
   const smsRef    = useRef(null);
+  const smsAllRef = useRef(null);
   const printRef  = useRef(null);
   const cancelRef = useRef(null);
 
+  // Load groups + customers on mount
   useEffect(() => {
-    api.listCatalog()
-      .then(data => setCatalog(Array.isArray(data) ? data : []))
+    Promise.all([api.listGroups(), api.listCustomers()])
+      .then(([g, c]) => {
+        setGroups(Array.isArray(g) ? g : []);
+        setCustomers(Array.isArray(c) ? c : []);
+      })
       .catch(() => {});
   }, []);
 
   const handleGo = useCallback(async () => {
     setLoading(true);
+    setSmsStatus('');
     try {
       const data = await api.getDailySales(fromDate, toDate, null);
-      const filtered = (Array.isArray(data) ? data : []).filter(r => {
-        if (useItem && itemName && String(r.itemName || '') !== itemName) return false;
-        return true;
-      });
-      setRows(filtered);
+      const allRows = Array.isArray(data) ? data : [];
+
+      if (useGroup && groupName) {
+        // Filter to only customers in selected group
+        const groupCustomerNames = customers
+          .filter(c => c.group === groupName)
+          .map(c => c.name);
+        setRows(allRows.filter(r => groupCustomerNames.includes(r.party)));
+      } else {
+        setRows(allRows);
+      }
     } catch (e) {
       console.error(e);
       setRows([]);
     } finally {
       setLoading(false);
     }
-  }, [fromDate, toDate, itemName, useItem]);
+  }, [fromDate, toDate, groupName, useGroup, customers]);
 
   const totals = useMemo(() => rows.reduce((acc, r) => ({
     qty:    acc.qty    + Number(r.qty   || 0),
     amount: acc.amount + Number(r.total || 0),
   }), { qty: 0, amount: 0 }), [rows]);
 
+  // Build SMS message for a given group's rows
+  const buildSmsForGroup = (grpName, grpRows) => {
+    const lines = [
+      `📦 DAILY SALE - ${grpName}`,
+      `📅 ${fromDate} to ${toDate}`,
+      '─────────────────',
+    ];
+    grpRows.forEach(r => {
+      lines.push(`${r.party}: ${Number(r.qty||0).toFixed(2)} kg @ ₹${Number(r.rate||0).toFixed(2)} = ₹${Number(r.total||0).toFixed(2)}`);
+    });
+    lines.push('─────────────────');
+    const grpQty = grpRows.reduce((s, r) => s + Number(r.qty||0), 0);
+    const grpAmt = grpRows.reduce((s, r) => s + Number(r.total||0), 0);
+    lines.push(`TOTAL QTY: ${grpQty.toFixed(2)}`);
+    lines.push(`TOTAL AMT: ₹${grpAmt.toFixed(2)}`);
+    return lines.join('\n');
+  };
+
+  // Send SMS for selected group only
   const handleSendSMS = async () => {
+    if (!useGroup || !groupName) {
+      setSmsStatus('⚠ Please select a group first (check the checkbox and pick a group)');
+      return;
+    }
+    if (rows.length === 0) {
+      setSmsStatus('⚠ No data to send. Click Go first.');
+      return;
+    }
+    setSmsSending(true);
     try {
-      const msg = [
-        'ITEMS DAILY SALE RATE',
-        `FROM: ${fromDate}  TO: ${toDate}`,
-        useItem && itemName ? `ITEM: ${itemName}` : 'ITEM: ALL',
-        `TOTAL QTY: ${totals.qty.toFixed(2)}`,
-        `AMOUNT: ₹${totals.amount.toFixed(2)}`,
-      ].join('\n');
+      const msg = buildSmsForGroup(groupName, rows);
       await navigator.clipboard.writeText(msg);
-      alert('SMS summary copied to clipboard!');
-    } catch { alert('SMS prepared'); }
+      setSmsStatus(`✓ SMS for "${groupName}" copied to clipboard!`);
+    } catch {
+      setSmsStatus('✓ SMS prepared for selected group');
+    } finally {
+      setSmsSending(false);
+    }
+  };
+
+  // Send SMS for ALL groups at once
+  const handleSendAllSMS = async () => {
+    setSmsSending(true);
+    setSmsStatus('');
+    try {
+      // Fetch fresh data for all groups
+      const data = await api.getDailySales(fromDate, toDate, null);
+      const allRows = Array.isArray(data) ? data : [];
+
+      // Group rows by group name
+      const groupMap = {};
+      allRows.forEach(r => {
+        const cust = customers.find(c => c.name === r.party);
+        const grp = cust?.group || 'Unknown';
+        if (!groupMap[grp]) groupMap[grp] = [];
+        groupMap[grp].push(r);
+      });
+
+      if (Object.keys(groupMap).length === 0) {
+        setSmsStatus('⚠ No data found for this date range.');
+        return;
+      }
+
+      // Build combined message for all groups
+      const allMessages = Object.entries(groupMap)
+        .map(([grp, grpRows]) => buildSmsForGroup(grp, grpRows))
+        .join('\n\n══════════════════\n\n');
+
+      await navigator.clipboard.writeText(allMessages);
+      setSmsStatus(`✓ SMS for ALL ${Object.keys(groupMap).length} groups copied to clipboard!`);
+    } catch (e) {
+      setSmsStatus('⚠ Failed: ' + e.message);
+    } finally {
+      setSmsSending(false);
+    }
   };
 
   const handlePrint = async () => {
@@ -87,15 +165,12 @@ export default function DailySaleView({ onCancel }) {
     }
   };
 
-  const itemOptions = useMemo(() =>
-    [...new Set(catalog.map(i => i.itemName).filter(Boolean))], [catalog]);
-
   const emptyCount = Math.max(0, 18 - rows.length);
 
   return (
     <div className="flex-1 flex flex-col h-full bg-gradient-to-br from-slate-50 to-slate-100 overflow-hidden">
 
-      {/* ── Header (same purple gradient as rest of app) ── */}
+      {/* Header */}
       <div className="bg-gradient-to-r from-[#5B55E6] to-[#4A44D0] px-5 py-3 flex justify-between items-center text-white shrink-0 shadow-xl rounded-b-xl">
         <h1 className="text-sm font-bold uppercase tracking-widest flex items-center gap-2.5">
           <Printer className="w-4 h-4" /> ITEMS DAILY SALE RATE
@@ -107,37 +182,37 @@ export default function DailySaleView({ onCancel }) {
 
       <div className="flex-1 flex flex-col overflow-hidden p-5 gap-4">
 
-        {/* ── Filter Panel ── */}
+        {/* Filter Panel */}
         <div className="bg-white rounded-2xl border border-slate-200 shadow-lg shrink-0 overflow-hidden">
-          {/* panel title bar */}
           <div className="bg-gradient-to-r from-[#5B55E6] to-[#4A44D0] px-4 py-2 text-white text-xs font-bold uppercase tracking-widest">
             Daily Sale Details
           </div>
           <div className="px-5 py-4 flex items-end gap-4 flex-wrap">
 
-            {/* Checkbox + Item dropdown (matches screenshot: checkbox on left) */}
+            {/* Checkbox + Group dropdown */}
             <div className="flex items-end gap-2">
-              <div className="flex flex-col items-center gap-1 pb-1">
+              <div className="flex flex-col items-center gap-1 pb-2.5">
                 <input
                   type="checkbox"
-                  checked={useItem}
-                  onChange={e => setUseItem(e.target.checked)}
+                  checked={useGroup}
+                  onChange={e => { setUseGroup(e.target.checked); if (!e.target.checked) setGroupName(''); }}
                   className="w-4 h-4 accent-[#5B55E6] cursor-pointer"
+                  title="Filter by group"
                 />
               </div>
               <div className="flex flex-col gap-1 w-56">
-                <label className="text-[10px] font-black uppercase text-slate-500 tracking-widest">Item Name</label>
+                <label className="text-[10px] font-black uppercase text-slate-500 tracking-widest">Group Name</label>
                 <select
-                  ref={itemRef}
-                  value={itemName}
-                  onChange={e => setItemName(e.target.value)}
-                  disabled={!useItem}
+                  ref={groupRef}
+                  value={groupName}
+                  onChange={e => setGroupName(e.target.value)}
+                  disabled={!useGroup}
                   onKeyDown={e => nav(e, fromRef, null)}
                   className="w-full border border-rose-200 rounded-lg px-3 text-sm font-medium bg-white outline-none focus:border-rose-500 focus:ring-2 focus:ring-rose-500/20 shadow-sm hover:shadow-md transition-all disabled:opacity-40 disabled:cursor-not-allowed appearance-none"
                   style={{ height: '42px' }}
                 >
-                  <option value="">All Items</option>
-                  {itemOptions.map(n => <option key={n} value={n}>{n}</option>)}
+                  <option value="">-- Select Group --</option>
+                  {groups.map(g => <option key={g.id} value={g.name}>{g.name}</option>)}
                 </select>
               </div>
             </div>
@@ -150,14 +225,13 @@ export default function DailySaleView({ onCancel }) {
                 type="date"
                 value={fromDate}
                 onChange={e => setFromDate(e.target.value)}
-                onKeyDown={e => nav(e, toRef, itemRef)}
+                onKeyDown={e => nav(e, toRef, groupRef)}
                 className="border border-rose-200 rounded-lg px-3 text-sm font-medium bg-white outline-none focus:border-rose-500 focus:ring-2 focus:ring-rose-500/20 shadow-sm hover:shadow-md transition-all"
                 style={{ height: '42px' }}
               />
             </div>
 
-            {/* To label */}
-            <span className="text-sm font-bold text-slate-500 pb-2.5">To</span>
+            <span className="text-sm font-bold text-slate-400 pb-3">To</span>
 
             {/* To Date */}
             <div className="flex flex-col gap-1">
@@ -173,7 +247,7 @@ export default function DailySaleView({ onCancel }) {
               />
             </div>
 
-            {/* Go button */}
+            {/* Go */}
             <button
               ref={goRef}
               onClick={handleGo}
@@ -183,7 +257,7 @@ export default function DailySaleView({ onCancel }) {
                 else if (e.key === 'ArrowRight' || e.key === 'ArrowDown') { e.preventDefault(); smsRef.current?.focus(); }
                 else if (e.key === 'ArrowLeft' || e.key === 'ArrowUp') { e.preventDefault(); toRef.current?.focus(); }
               }}
-              className="bg-gradient-to-r from-[#5B55E6] to-[#4A44D0] text-white font-bold text-sm px-6 rounded-xl shadow-lg hover:from-[#4A44D0] hover:to-[#3A34C0] disabled:opacity-50 transition-all hover:shadow-xl active:translate-y-0.5"
+              className="bg-gradient-to-r from-[#5B55E6] to-[#4A44D0] text-white font-bold text-sm px-7 rounded-xl shadow-lg hover:from-[#4A44D0] hover:to-[#3A34C0] disabled:opacity-50 transition-all hover:shadow-xl active:translate-y-0.5"
               style={{ height: '42px' }}
             >
               {loading ? '...' : 'Go'}
@@ -191,7 +265,7 @@ export default function DailySaleView({ onCancel }) {
           </div>
         </div>
 
-        {/* ── Table (green header, grid lines — matches screenshot) ── */}
+        {/* Table */}
         <div className="flex-1 bg-white rounded-2xl border border-slate-200 shadow-lg overflow-hidden flex flex-col">
           <div className="flex-1 overflow-auto">
             <table className="w-full border-collapse text-[12px]">
@@ -220,13 +294,9 @@ export default function DailySaleView({ onCancel }) {
                 ))}
                 {Array.from({ length: emptyCount }).map((_, i) => (
                   <tr key={`e-${i}`} style={{ height: '30px' }}>
-                    <td className="border border-slate-100 px-3">&nbsp;</td>
-                    <td className="border border-slate-100 px-3">&nbsp;</td>
-                    <td className="border border-slate-100 px-3">&nbsp;</td>
-                    <td className="border border-slate-100 px-3">&nbsp;</td>
-                    <td className="border border-slate-100 px-3">&nbsp;</td>
-                    <td className="border border-slate-100 px-3">&nbsp;</td>
-                    <td className="border border-slate-100 px-3">&nbsp;</td>
+                    {Array.from({ length: 7 }).map((_, ci) => (
+                      <td key={ci} className="border border-slate-100 px-3">&nbsp;</td>
+                    ))}
                   </tr>
                 ))}
               </tbody>
@@ -234,73 +304,104 @@ export default function DailySaleView({ onCancel }) {
           </div>
         </div>
 
-        {/* ── Footer (Send SMS | totals | Print | Cancel) ── */}
-        <div className="bg-white rounded-2xl border border-slate-200 shadow-lg px-5 py-3.5 shrink-0 flex items-center justify-between gap-4">
-
-          {/* Send SMS */}
-          <button
-            ref={smsRef}
-            onClick={handleSendSMS}
-            onKeyDown={e => {
-              if (e.key === 'Enter') { e.preventDefault(); handleSendSMS(); }
-              else if (e.key === 'ArrowRight' || e.key === 'ArrowDown') { e.preventDefault(); printRef.current?.focus(); }
-              else if (e.key === 'ArrowLeft' || e.key === 'ArrowUp') { e.preventDefault(); goRef.current?.focus(); }
-            }}
-            className="bg-gradient-to-r from-emerald-500 to-emerald-600 text-white font-black uppercase text-[11px] px-6 rounded-xl shadow-lg hover:from-emerald-600 hover:to-emerald-700 transition-all tracking-wider flex items-center gap-2 hover:shadow-xl active:translate-y-0.5"
-            style={{ height: '40px' }}
-          >
-            <Send className="w-3.5 h-3.5" /> SEND SMS
-          </button>
-
-          {/* Totals */}
-          <div className="flex items-center gap-5">
-            <div className="flex items-center gap-2">
-              <span className="text-[10px] font-black text-slate-500 uppercase tracking-widest whitespace-nowrap">Total Quantity</span>
-              <input
-                readOnly
-                className="w-28 border border-slate-200 bg-slate-50 px-2 text-[13px] font-black text-right outline-none rounded-lg shadow-inner"
-                style={{ height: '36px' }}
-                value={totals.qty.toFixed(2)}
-              />
-            </div>
-            <div className="flex items-center gap-2">
-              <span className="text-[10px] font-black text-slate-500 uppercase tracking-widest whitespace-nowrap">Amount Total</span>
-              <input
-                readOnly
-                className="w-40 bg-gradient-to-r from-rose-500 to-rose-600 text-white border-0 px-2 text-[14px] font-black text-right outline-none rounded-lg shadow-lg"
-                style={{ height: '36px' }}
-                value={`₹ ${totals.amount.toFixed(2)}`}
-              />
-            </div>
+        {/* SMS status feedback */}
+        {smsStatus && (
+          <div className={`text-xs font-bold px-4 py-2 rounded-lg shrink-0 ${smsStatus.startsWith('✓') ? 'bg-emerald-50 text-emerald-700 border border-emerald-200' : 'bg-amber-50 text-amber-700 border border-amber-200'}`}>
+            {smsStatus}
           </div>
+        )}
 
-          {/* Print + Cancel */}
-          <div className="flex gap-2">
-            <button
-              ref={printRef}
-              onClick={handlePrint}
-              onKeyDown={e => {
-                if (e.key === 'Enter') { e.preventDefault(); handlePrint(); }
-                else if (e.key === 'ArrowRight' || e.key === 'ArrowDown') { e.preventDefault(); cancelRef.current?.focus(); }
-                else if (e.key === 'ArrowLeft' || e.key === 'ArrowUp') { e.preventDefault(); smsRef.current?.focus(); }
-              }}
-              className="bg-gradient-to-r from-slate-700 to-slate-800 text-white font-bold text-sm px-5 rounded-xl shadow-lg hover:from-slate-800 hover:to-slate-900 transition-all hover:shadow-xl active:translate-y-0.5 flex items-center gap-1.5"
-              style={{ height: '40px' }}
-            >
-              <Printer className="w-3.5 h-3.5" /> Print
-            </button>
-            <button
-              ref={cancelRef}
-              onClick={onCancel}
-              onKeyDown={e => {
-                if (e.key === 'Enter') { e.preventDefault(); onCancel?.(); }
-                else if (e.key === 'ArrowLeft' || e.key === 'ArrowUp') { e.preventDefault(); printRef.current?.focus(); }
-              }}
-              className="bg-gradient-to-r from-slate-100 to-slate-200 text-slate-700 font-bold text-sm px-5 rounded-xl border border-slate-300 shadow-md hover:from-slate-200 hover:to-slate-300 transition-all hover:shadow-lg active:translate-y-0.5"
-              style={{ height: '40px' }}
-            >
-              Cancel
-            </button>
+        {/* Footer */}
+        <div className="bg-white rounded-2xl border border-slate-200 shadow-lg px-5 py-3.5 shrink-0">
+          <div className="flex items-center justify-between gap-4 flex-wrap">
+
+            {/* SMS buttons */}
+            <div className="flex gap-2">
+              {/* Send to selected group */}
+              <button
+                ref={smsRef}
+                onClick={handleSendSMS}
+                disabled={smsSending}
+                title="Send SMS for selected group only"
+                onKeyDown={e => {
+                  if (e.key === 'Enter') { e.preventDefault(); handleSendSMS(); }
+                  else if (e.key === 'ArrowRight' || e.key === 'ArrowDown') { e.preventDefault(); smsAllRef.current?.focus(); }
+                  else if (e.key === 'ArrowLeft' || e.key === 'ArrowUp') { e.preventDefault(); goRef.current?.focus(); }
+                }}
+                className="bg-gradient-to-r from-emerald-500 to-emerald-600 text-white font-black uppercase text-[11px] px-4 rounded-xl shadow-lg hover:from-emerald-600 hover:to-emerald-700 disabled:opacity-50 transition-all tracking-wider flex items-center gap-1.5 hover:shadow-xl active:translate-y-0.5"
+                style={{ height: '40px' }}
+              >
+                <Send className="w-3.5 h-3.5" /> SEND SMS
+              </button>
+
+              {/* Send to ALL groups */}
+              <button
+                ref={smsAllRef}
+                onClick={handleSendAllSMS}
+                disabled={smsSending}
+                title="Send SMS for ALL groups at once"
+                onKeyDown={e => {
+                  if (e.key === 'Enter') { e.preventDefault(); handleSendAllSMS(); }
+                  else if (e.key === 'ArrowRight' || e.key === 'ArrowDown') { e.preventDefault(); printRef.current?.focus(); }
+                  else if (e.key === 'ArrowLeft' || e.key === 'ArrowUp') { e.preventDefault(); smsRef.current?.focus(); }
+                }}
+                className="bg-gradient-to-r from-blue-500 to-blue-600 text-white font-black uppercase text-[11px] px-4 rounded-xl shadow-lg hover:from-blue-600 hover:to-blue-700 disabled:opacity-50 transition-all tracking-wider flex items-center gap-1.5 hover:shadow-xl active:translate-y-0.5"
+                style={{ height: '40px' }}
+              >
+                <Users className="w-3.5 h-3.5" /> SEND ALL
+              </button>
+            </div>
+
+            {/* Totals */}
+            <div className="flex items-center gap-5">
+              <div className="flex items-center gap-2">
+                <span className="text-[10px] font-black text-slate-500 uppercase tracking-widest whitespace-nowrap">Total Quantity</span>
+                <input
+                  readOnly
+                  className="w-28 border border-slate-200 bg-slate-50 px-2 text-[13px] font-black text-right outline-none rounded-lg shadow-inner"
+                  style={{ height: '36px' }}
+                  value={totals.qty.toFixed(2)}
+                />
+              </div>
+              <div className="flex items-center gap-2">
+                <span className="text-[10px] font-black text-slate-500 uppercase tracking-widest whitespace-nowrap">Amount Total</span>
+                <input
+                  readOnly
+                  className="w-40 bg-gradient-to-r from-rose-500 to-rose-600 text-white border-0 px-2 text-[14px] font-black text-right outline-none rounded-lg shadow-lg"
+                  style={{ height: '36px' }}
+                  value={`₹ ${totals.amount.toFixed(2)}`}
+                />
+              </div>
+            </div>
+
+            {/* Print + Cancel */}
+            <div className="flex gap-2">
+              <button
+                ref={printRef}
+                onClick={handlePrint}
+                onKeyDown={e => {
+                  if (e.key === 'Enter') { e.preventDefault(); handlePrint(); }
+                  else if (e.key === 'ArrowRight' || e.key === 'ArrowDown') { e.preventDefault(); cancelRef.current?.focus(); }
+                  else if (e.key === 'ArrowLeft' || e.key === 'ArrowUp') { e.preventDefault(); smsAllRef.current?.focus(); }
+                }}
+                className="bg-gradient-to-r from-slate-700 to-slate-800 text-white font-bold text-sm px-5 rounded-xl shadow-lg hover:from-slate-800 hover:to-slate-900 transition-all hover:shadow-xl active:translate-y-0.5 flex items-center gap-1.5"
+                style={{ height: '40px' }}
+              >
+                <Printer className="w-3.5 h-3.5" /> Print
+              </button>
+              <button
+                ref={cancelRef}
+                onClick={onCancel}
+                onKeyDown={e => {
+                  if (e.key === 'Enter') { e.preventDefault(); onCancel?.(); }
+                  else if (e.key === 'ArrowLeft' || e.key === 'ArrowUp') { e.preventDefault(); printRef.current?.focus(); }
+                }}
+                className="bg-gradient-to-r from-slate-100 to-slate-200 text-slate-700 font-bold text-sm px-5 rounded-xl border border-slate-300 shadow-md hover:from-slate-200 hover:to-slate-300 transition-all hover:shadow-lg active:translate-y-0.5"
+                style={{ height: '40px' }}
+              >
+                Cancel
+              </button>
+            </div>
           </div>
         </div>
       </div>
