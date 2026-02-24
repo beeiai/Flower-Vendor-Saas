@@ -77,7 +77,8 @@ def get_ledger_data(
     db: Session = None
 ) -> Dict[str, Any]:
     """
-    Get Silk Ledger data for a specific customer (farmer).
+    Get Ledger data for a specific customer (farmer) using CollectionItem data.
+    This provides proper date and vehicle information.
     
     Args:
         vendor_id: Vendor/vendor_id
@@ -111,43 +112,52 @@ def get_ledger_data(
         if group:
             group_name = group.name
     
-    # Fetch ledger entries
+    # Fetch collection items (transactions) with proper date and vehicle info
     entries = db.query(
-        SilkLedgerEntry.id,
-        SilkLedgerEntry.date,
-        SilkLedgerEntry.qty,
-        SilkLedgerEntry.kg,
-        SilkLedgerEntry.rate
+        CollectionItem.id,
+        CollectionItem.date,
+        CollectionItem.vehicle_name,
+        CollectionItem.vehicle_number,
+        CollectionItem.qty_kg,
+        CollectionItem.rate_per_kg,
+        CollectionItem.paid_amount
     ).filter(
-        SilkLedgerEntry.vendor_id == vendor_id,
-        SilkLedgerEntry.customer_id == customer_id,
-        SilkLedgerEntry.date >= from_date,
-        SilkLedgerEntry.date <= to_date
-    ).order_by(SilkLedgerEntry.date.asc()).all()
+        CollectionItem.vendor_id == vendor_id,
+        CollectionItem.farmer_id == customer_id,
+        CollectionItem.date >= from_date,
+        CollectionItem.date <= to_date
+    ).order_by(CollectionItem.date.asc()).all()
     
     # Calculate aggregates
     total_qty = Decimal("0")
-    total_kg = Decimal("0")
     total_amount = Decimal("0")
+    total_paid = Decimal("0")
     
     entries_list = []
     for entry in entries:
-        qty = Decimal(str(entry.qty or 0))
-        kg = Decimal(str(entry.kg or 0))
-        rate = Decimal(str(entry.rate or 0))
+        qty = Decimal(str(entry.qty_kg or 0))
+        rate = Decimal(str(entry.rate_per_kg or 0))
         amount = qty * rate
+        paid = Decimal(str(entry.paid_amount or 0))
         
         total_qty += qty
-        total_kg += kg
         total_amount += amount
+        total_paid += paid
+        
+        # Format date as DD-MM-YYYY
+        date_str = entry.date.strftime("%d-%m-%Y") if entry.date else "N/A"
+        
+        # Get vehicle info
+        vehicle_info = entry.vehicle_name or entry.vehicle_number or "N/A"
         
         entries_list.append({
             "id": entry.id,
-            "date": entry.date.isoformat(),
+            "date": date_str,
+            "vehicle": vehicle_info,
             "qty": str(qty),
-            "kg": str(kg),
             "rate": str(rate),
-            "amount": str(amount)
+            "amount": str(amount),
+            "paid": str(paid)
         })
     
     return {
@@ -160,8 +170,8 @@ def get_ledger_data(
         },
         "entries": entries_list,
         "total_qty": str(total_qty),
-        "total_kg": str(total_kg),
         "total_amount": str(total_amount),
+        "total_paid": str(total_paid),
         "record_count": len(entries_list)
     }
 
@@ -304,56 +314,63 @@ def get_group_patti_data(
     total_entry_count = 0
     
     for farmer in farmers:
-        # Get this farmer's ledger entries
+        # Get this farmer's collection items (transactions) with proper date and vehicle info
         entries = db.query(
-            SilkLedgerEntry.id,
-            SilkLedgerEntry.date,
-            SilkLedgerEntry.qty,
-            SilkLedgerEntry.kg,
-            SilkLedgerEntry.rate
+            CollectionItem.id,
+            CollectionItem.date,
+            CollectionItem.vehicle_name,
+            CollectionItem.vehicle_number,
+            CollectionItem.qty_kg,
+            CollectionItem.rate_per_kg,
+            CollectionItem.paid_amount
         ).filter(
-            SilkLedgerEntry.vendor_id == vendor_id,
-            SilkLedgerEntry.customer_id == farmer.id,
-            SilkLedgerEntry.date >= from_date,
-            SilkLedgerEntry.date <= to_date
-        ).order_by(SilkLedgerEntry.date.asc()).all()
+            CollectionItem.vendor_id == vendor_id,
+            CollectionItem.farmer_id == farmer.id,
+            CollectionItem.date >= from_date,
+            CollectionItem.date <= to_date
+        ).order_by(CollectionItem.date.asc()).all()
         
         if not entries:
             continue  # Skip farmers with no entries
         
         farmer_total_qty = Decimal("0")
         farmer_total_amount = Decimal("0")
+        farmer_total_paid = Decimal("0")
         entries_list = []
         
         for entry in entries:
-            qty = Decimal(str(entry.qty or 0))
-            kg = Decimal(str(entry.kg or 0))
-            rate = Decimal(str(entry.rate or 0))
+            qty = Decimal(str(entry.qty_kg or 0))
+            rate = Decimal(str(entry.rate_per_kg or 0))
             amount = qty * rate
+            paid = Decimal(str(entry.paid_amount or 0))
             
             farmer_total_qty += qty
             farmer_total_amount += amount
+            farmer_total_paid += paid
+            
+            # Format date as DD-MM-YYYY
+            date_str = entry.date.strftime("%d-%m-%Y") if entry.date else "N/A"
+            
+            # Get vehicle info
+            vehicle_info = entry.vehicle_name or entry.vehicle_number or "N/A"
             
             entries_list.append({
                 "id": entry.id,
-                "date": entry.date.isoformat(),
+                "date": date_str,
+                "vehicle_name": vehicle_info,
+                "vehicle": vehicle_info,  # For backward compatibility
                 "qty": str(qty),
-                "kg": str(kg),
                 "rate": str(rate),
-                "amount": str(amount)
+                "amount": str(amount),
+                "paid": str(paid)
             })
         
         grand_total_qty += farmer_total_qty
         grand_total_amount += farmer_total_amount
         total_entry_count += len(entries_list)
         
-        # Calculate farmer's commission
-        farmer_commission = calculate_commission(
-            farmer_total_amount,
-            farmer.commission_percent,
-            group.commission_percent,
-            db=db
-        )
+        # Calculate farmer's commission (using default 12% as requested)
+        farmer_commission = (farmer_total_amount * Decimal("12") / 100).quantize(Decimal("0.01"))
         
         farmers_list.append({
             "id": farmer.id,
@@ -363,6 +380,7 @@ def get_group_patti_data(
             "entries": entries_list,
             "total_qty": str(farmer_total_qty),
             "total_amount": str(farmer_total_amount),
+            "total_paid": str(farmer_total_paid),
             "commission": str(farmer_commission),
             "entry_count": len(entries_list)
         })

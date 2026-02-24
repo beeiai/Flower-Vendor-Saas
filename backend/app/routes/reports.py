@@ -118,7 +118,7 @@ def get_ledger_report(
     generated_at = datetime.now().isoformat()
     current_date = datetime.now().strftime("%d-%m-%Y")
     
-    # Default commission is 12%
+    # Default commission is 12% (as requested)
     commission_pct = 12.0
     rows = []
     gross_total = 0
@@ -132,10 +132,8 @@ def get_ledger_report(
         net = gross - commission
         paid = float(entry.get("paid", 0)) if entry.get("paid") is not None else 0.0
         balance = net - paid
-        # Populate date and vehicle fields from entry
-        date_val = entry.get("date", "")
-        if isinstance(date_val, str):
-            date_val = date_val.split("T")[0]
+        # Date and vehicle are already properly formatted in the data
+        date_val = entry.get("date", "N/A")
         vehicle_val = entry.get("vehicle", "N/A")
         rows.append({
             "date": date_val,
@@ -402,11 +400,10 @@ def get_group_patti_report(
             qty = float(entry.get("qty", 0))
             rate = float(entry.get("rate", 0))
             total = qty * rate
-            # If vehicle is available in entry, use it, else N/A
-            vehicle = entry.get("vehicle", "N/A")
-            date_val = entry.get("date", "")
-            if isinstance(date_val, str):
-                date_val = date_val.split("T")[0]
+            # Get vehicle info - entries from get_group_patti_data now have proper date/vehicle fields
+            vehicle = entry.get("vehicle_name", entry.get("vehicle", "N/A"))
+            # Date is already formatted as DD-MM-YYYY from reports_db
+            date_val = entry.get("date", "N/A")
             transactions.append({
                 "date": date_val,
                 "vehicle": vehicle,

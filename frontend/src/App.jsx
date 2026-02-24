@@ -931,45 +931,50 @@ export default function App() {
   };
 
   const handleGroupTotalPrint = async () => {
-    const group = String(groupTotalForm.groupName || '').trim();
-    if (!group) return;
-
     setIsGroupTotalPrinting(true);
     try {
-      // Get the selected group ID
-      const selectedGroup = groups.find(g => g.name === group);
-      if (!selectedGroup) {
-        throw new Error('Group not found');
+      // Use the new preview system instead of direct PDF download
+      const response = await api.getGroupTotalReport({
+        fromDate: groupTotalForm.fromDate,
+        toDate: groupTotalForm.toDate,
+        asJson: true
+      });
+      
+      // Open preview in new tab
+      const previewWindow = window.open('about:blank', '_blank');
+      if (previewWindow) {
+        previewWindow.document.write(response.html);
+        previewWindow.document.close();
+        previewWindow.focus();
+        // Add print button to the preview
+        previewWindow.document.addEventListener('DOMContentLoaded', () => {
+          const printButton = previewWindow.document.createElement('button');
+          printButton.innerHTML = '🖨️ Print';
+          printButton.style.position = 'fixed';
+          printButton.style.top = '20px';
+          printButton.style.right = '20px';
+          printButton.style.zIndex = '999';
+          printButton.style.padding = '8px 18px';
+          printButton.style.fontSize = '15px';
+          printButton.style.background = '#1976d2';
+          printButton.style.color = '#fff';
+          printButton.style.border = 'none';
+          printButton.style.borderRadius = '4px';
+          printButton.style.cursor = 'pointer';
+          printButton.onclick = () => previewWindow.print();
+          previewWindow.document.body.appendChild(printButton);
+        });
+      } else {
+        // Fallback: open in current window
+        const newWindow = window.open('about:blank');
+        newWindow.document.write(response.html);
+        newWindow.document.close();
       }
-      
-      // Generate the print report from backend
-      const response = await api.getGroupTotalReport(
-        selectedGroup.id,
-        groupTotalForm.fromDate,
-        groupTotalForm.toDate
-      );
-      
-      // Handle PDF preview (open in new tab for print preview)
-      const blob = response.data;
-      const url = window.URL.createObjectURL(blob);
-      
-      // Open in new tab for preview and print
-      const previewWindow = window.open(url, '_blank');
-      if (!previewWindow) {
-        // Fallback to download if popup blocked
-        const a = document.createElement('a');
-        a.href = url;
-        a.download = `group_total_report_${group}_${new Date().toISOString().slice(0, 10)}.pdf`;
-        document.body.appendChild(a);
-        a.click();
-        document.body.removeChild(a);
-      }
-      
-      // Clean up the URL object
-      window.URL.revokeObjectURL(url);
     } catch (error) {
       console.error('Print error:', error);
       alert(`Print failed: ${error.message}`);
+    } finally {
+      setIsGroupTotalPrinting(false);
     }
   };
 
@@ -1370,24 +1375,26 @@ export default function App() {
             </div>
           </div>
 
-          <div className="relative">
-            <SearchableSelect label="Group Name" options={groups.map(g => g.name)} value={groupTotalForm.groupName} onChange={(val) => setGroupTotalForm({ ...groupTotalForm, groupName: val })} placeholder="Select group" data-enter-index="3" className="focus:border-rose-500 focus:ring-rose-500/20 rounded-lg shadow-sm hover:shadow-md transition-all border-rose-200" />
-            <div className="absolute right-3 top-8 text-slate-700">
-              <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
-              </svg>
-            </div>
-          </div>
-
           <div className="flex gap-4 pt-3">
-            <button onClick={handleGroupTotalPrint} disabled={!groupTotalForm.groupName || isGroupTotalPrinting} className="flex-1 bg-gradient-to-r from-[#5B55E6] to-[#4A44D0] text-white py-3.5 font-bold uppercase text-sm rounded-xl shadow-lg disabled:opacity-50 hover:from-[#4A44D0] hover:to-[#3A34C0] transition-all hover:shadow-xl active:translate-y-0.5" data-enter-index="4">
-              {isGroupTotalPrinting ? 'Printing...' : 'Print'}
+            <button 
+              onClick={handleGroupTotalPrint} 
+              disabled={isGroupTotalPrinting} 
+              className="flex-1 bg-gradient-to-r from-[#5B55E6] to-[#4A44D0] text-white py-3.5 font-bold uppercase text-sm rounded-xl shadow-lg disabled:opacity-50 hover:from-[#4A44D0] hover:to-[#3A34C0] transition-all hover:shadow-xl active:translate-y-0.5" 
+              data-enter-index="3"
+            >
+              {isGroupTotalPrinting ? 'Printing...' : 'Print All Groups'}
             </button>
-            <button onClick={() => { setIsGroupTotalPrinting(false); setActiveSection('daily'); }} className="flex-1 bg-gradient-to-r from-slate-100 to-slate-200 text-slate-700 py-3.5 font-bold uppercase text-sm border border-slate-300 rounded-xl shadow-md hover:from-slate-200 hover:to-slate-300 transition-all hover:shadow-lg" data-enter-index="5">Cancel</button>
+            <button 
+              onClick={() => { setIsGroupTotalPrinting(false); setActiveSection('daily'); }} 
+              className="flex-1 bg-gradient-to-r from-slate-100 to-slate-200 text-slate-700 py-3.5 font-bold uppercase text-sm border border-slate-300 rounded-xl shadow-md hover:from-slate-200 hover:to-slate-300 transition-all hover:shadow-lg" 
+              data-enter-index="4"
+            >
+              Cancel
+            </button>
           </div>
 
           <div className="text-center text-sm font-medium text-slate-500 min-h-[24px]">
-            {isGroupTotalPrinting ? 'Preparing report...' : ''}
+            {isGroupTotalPrinting ? 'Preparing report for all groups...' : 'Report will include all groups in the selected date range'}
           </div>
         </div>
       </div>
