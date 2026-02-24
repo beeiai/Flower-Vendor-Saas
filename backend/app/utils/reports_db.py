@@ -104,6 +104,13 @@ def get_ledger_data(
     if not customer:
         return {"entries": [], "total_qty": "0", "total_kg": "0", "total_amount": "0", "customer": None}
     
+    # Get group name
+    group_name = "N/A"
+    if customer.group_id:
+        group = db.query(FarmerGroup).filter(FarmerGroup.id == customer.group_id).first()
+        if group:
+            group_name = group.name
+    
     # Fetch ledger entries
     entries = db.query(
         SilkLedgerEntry.id,
@@ -148,7 +155,8 @@ def get_ledger_data(
             "id": customer.id,
             "name": customer.name,
             "code": customer.farmer_code,
-            "phone": customer.phone
+            "phone": customer.phone,
+            "group_name": group_name
         },
         "entries": entries_list,
         "total_qty": str(total_qty),

@@ -118,6 +118,9 @@ def get_ledger_report(
     generated_at = datetime.now().isoformat()
     current_date = datetime.now().strftime("%d-%m-%Y")
     
+    # Default commission is 12%
+    commission_pct = 12.0
+    
     # Transform entries to match template expectations
     rows = []
     gross_total = 0
@@ -127,15 +130,15 @@ def get_ledger_report(
     balance_total = 0
     
     for entry in ledger_data.get("entries", []):
-        gross = float(entry.get("total", 0))
-        commission = float(entry.get("commission", 0))
+        gross = float(entry.get("amount", 0))  # Use "amount" from ledger_data
+        commission = gross * (commission_pct / 100)  # Calculate commission
         net = gross - commission
         paid = float(entry.get("paid", 0))
         balance = net - paid
         
         rows.append({
-            "customer": entry.get("customer", "N/A"),
-            "address": entry.get("address", "N/A"),
+            "customer": ledger_data.get("customer", {}).get("name", "N/A"),
+            "address": ledger_data.get("customer", {}).get("phone", "N/A"),
             "gross": f"{gross:.2f}",
             "commission": f"{commission:.2f}",
             "net": f"{net:.2f}",
@@ -247,22 +250,22 @@ def get_group_total_report(
     for group in group_data.get("groups", []):
         total_qty = float(group.get("total_qty", 0))
         total_amount = float(group.get("total_amount", 0))
-        total_paid = float(group.get("total_paid", 0))
-        balance = total_amount - total_paid
-        customer_count = group.get("customer_count", 0)
+        # Get number of farmers in this group for customer_count
+        farmer_count = db.query(Farmer).filter(
+            Farmer.group_id == group.get("id"),
+            Farmer.vendor_id == user.vendor_id
+        ).count()
+        balance = total_amount  # No paid_amount in group_data, total_amount is the balance
         
         rows.append({
             "group_name": group.get("name", "N/A"),
-            "customer_count": customer_count,
+            "customer_count": farmer_count,
             "total_qty": f"{total_qty:.2f}",
-            "total_amount": f"{total_amount:.2f}",
-            "total_paid": f"{total_paid:.2f}",
-            "balance": f"{balance:.2f}"
+            "total_amount": f"{total_amount:.2f}"
         })
         
         overall_qty += total_qty
         overall_amount += total_amount
-        overall_paid += total_paid
         overall_balance += balance
     
     # Prepare template data
@@ -270,7 +273,7 @@ def get_group_total_report(
         "rows": rows,
         "overall_qty": f"{overall_qty:.2f}",
         "overall_amount": f"{overall_amount:.2f}",
-        "overall_paid": f"{overall_paid:.2f}",
+        "overall_paid": "0.00",
         "overall_balance": f"{overall_balance:.2f}",
         "from_date": from_date.strftime("%d-%m-%Y"),
         "to_date": to_date.strftime("%d-%m-%Y"),
@@ -377,26 +380,26 @@ def get_group_patti_report(
         farmer_name = farmer.get("name", "Unknown")
         farmer_id = farmer.get("id", 0)
         
-        # Transform transactions
+        # Transform entries (from reports_db) to transactions (for template)
         transactions = []
         farmer_qty = 0
         farmer_amount = 0
         farmer_paid = 0
         farmer_balance = 0
         
-        for trans in farmer.get("transactions", []):
-            qty = float(trans.get("qty", 0))
-            price = float(trans.get("price", 0))
-            total = qty * price
-            luggage = float(trans.get("luggage", 0))
-            paid = float(trans.get("paid", 0))
-            amount = total + luggage - paid
+        for entry in farmer.get("entries", []):
+            qty = float(entry.get("qty", 0))
+            rate = float(entry.get("rate", 0))
+            total = qty * rate
+            luggage = 0  # Not available in silk ledger entries
+            paid = 0  # Not available in silk ledger entries
+            amount = total
             
             transactions.append({
-                "date": trans.get("date", "").strftime("%d-%m-%Y") if hasattr(trans.get("date"), "strftime") else trans.get("date", ""),
-                "vehicle": trans.get("vehicle", "N/A"),
+                "date": entry.get("date", "").split("T")[0] if isinstance(entry.get("date"), str) else entry.get("date", ""),
+                "vehicle": "N/A",
                 "qty": f"{qty:.2f}",
-                "price": f"{price:.2f}",
+                "price": f"{rate:.2f}",
                 "total": f"{total:.2f}",
                 "luggage": f"{luggage:.2f}",
                 "paid": f"{paid:.2f}",
@@ -411,8 +414,8 @@ def get_group_patti_report(
         customers.append({
             "id": farmer_id,
             "name": farmer_name,
-            "address": farmer.get("address", "N/A"),
-            "ledger_name": farmer.get("ledger_name", "N/A"),
+            "address": farmer.get("phone", "N/A"),
+            "ledger_name": farmer.get("code", "N/A"),
             "balance": f"{farmer_balance:.2f}",
             "transactions": transactions
         })
@@ -539,11 +542,17 @@ def get_daily_sales_report(
         rate = float(entry.get("rate", 0))
         total = qty * rate
         
+        # Format date properly
+        entry_date = entry.get("date", "")
+        if isinstance(entry_date, str):
+            # If ISO format (YYYY-MM-DD), keep it; if has T (ISO datetime), extract date part
+            entry_date = entry_date.split("T")[0] if "T" in entry_date else entry_date
+        
         rows.append({
-            "date": entry.get("date", "").strftime("%d-%m-%Y") if hasattr(entry.get("date"), "strftime") else entry.get("date", ""),
+            "date": entry_date,
             "vehicle": entry.get("vehicle", "N/A"),
             "party": entry.get("party", "N/A"),
-            "itemName": entry.get("item_name", "N/A"),
+            "itemName": entry.get("item", "N/A"),
             "qty": f"{qty:.2f}",
             "rate": f"{rate:.2f}",
             "total": f"{total:.2f}"
