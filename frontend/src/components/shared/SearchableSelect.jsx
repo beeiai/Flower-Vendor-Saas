@@ -122,6 +122,24 @@ export function SearchableSelect({ label, options, value, onChange, placeholder,
 							onSelectionComplete();
 						}
 					}, 0);
+				} else if (filteredOptions.length > 0 && searchTerm) {
+					// If there's a search term but no highlighted option, select the first match
+					handleSelect(filteredOptions[0]);
+					setOpen(false);
+					setHighlight(0);
+					// Notify parent component that selection is complete
+					setTimeout(() => {
+						if (onSelectionComplete) {
+							onSelectionComplete();
+						}
+					}, 0);
+				} else {
+					// If no options match, close dropdown and allow parent to handle navigation
+					setOpen(false);
+					setHighlight(0);
+					if (onSelectionComplete) {
+						onSelectionComplete();
+					}
 				}
 				return;
 			}
@@ -138,9 +156,20 @@ export function SearchableSelect({ label, options, value, onChange, placeholder,
 			} else if (e.key === "Escape") {
 				setOpen(false);
 				setHighlight(0);
+				// Move focus back to the input
+				actualInputRef.current?.focus();
 			} else if (e.key === "Tab") {
 				setOpen(false);
 				setHighlight(0);
+			}
+		} else {
+			// When dropdown is closed, handle arrow keys for navigation
+			if (e.key === "ArrowRight" || e.key === "ArrowDown") {
+				// Allow parent to handle navigation
+				return;
+			} else if (e.key === "ArrowLeft" || e.key === "ArrowUp") {
+				// Allow parent to handle navigation
+				return;
 			}
 		}
 	};

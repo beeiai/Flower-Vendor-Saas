@@ -14,6 +14,81 @@ function todayISO() {
 }
 
 export default function ReportsView({ groups, customers, vehicles, advanceStore = {}, onCancel }) {
+		// Keyboard navigation and validation state
+		const [filterError, setFilterError] = useState("");
+		const groupRef = useRef();
+		const vehicleRef = useRef();
+		const customerRef = useRef();
+		const submitRef = useRef();
+
+		// Move focus to first missing required field
+		const focusFirstMissing = () => {
+			if (!groupName) {
+				groupRef.current?.focus();
+				return;
+			}
+			if (!customerName) {
+				customerRef.current?.focus();
+				return;
+			}
+			submitRef.current?.focus();
+		};
+
+		// Submit handler with validation
+		const handleFilterSubmit = async () => {
+			setFilterError("");
+			if (!groupName) {
+				setFilterError("Group is required");
+				groupRef.current?.focus();
+				return;
+			}
+			if (!customerName) {
+				setFilterError("Customer is required");
+				customerRef.current?.focus();
+				return;
+			}
+			
+			// Set autoLoad to true to trigger data loading
+			setAutoLoadLocal(true);
+			setAutoLoad(true);
+			
+			// Fetch transactions for selected customer
+			try {
+				const selectedCustomerObj = customers.find(c => c.name === customerName);
+				if (selectedCustomerObj?.id) {
+					const data = await api.listTransactions(selectedCustomerObj.id);
+					setRows(Array.isArray(data) ? data : []);
+				} else {
+					setRows([]);
+				}
+			} catch (error) {
+				console.error('Error fetching transactions:', error);
+				setRows([]);
+				setFilterError("Failed to load report data. Please try again.");
+			}
+		};
+
+		// Keyboard navigation handler
+		const handleFilterKeyDown = (e, field) => {
+			if (e.key === 'Enter' || e.key === 'ArrowRight') {
+				e.preventDefault();
+				if (field === 'group') vehicleRef.current?.focus();
+				else if (field === 'vehicle') customerRef.current?.focus();
+				else if (field === 'customer') submitRef.current?.focus();
+				else if (field === 'submit') {
+					handleFilterSubmit();
+				}
+			} else if (e.key === 'ArrowLeft') {
+				e.preventDefault();
+				if (field === 'vehicle') groupRef.current?.focus();
+				else if (field === 'customer') vehicleRef.current?.focus();
+				else if (field === 'submit') customerRef.current?.focus();
+			} else if (e.key === 'ArrowDown' || e.key === 'ArrowUp') {
+				// For dropdowns, allow arrow keys to navigate the dropdown options
+				// The dropdown component will handle the actual navigation
+				return; // Don't prevent default for arrow up/down in dropdowns
+			}
+		};
 	const [state, setState] = useState(DEFAULT_STATES.reports);
 	
 	const {
@@ -120,15 +195,7 @@ export default function ReportsView({ groups, customers, vehicles, advanceStore 
 	}, [selectedCustomer?.id, autoLoadLocal]);
 
 	const handleSubmit = async () => {
-		if (!selectedCustomer?.id) return;
-		setAutoLoad(true);
-		// Explicitly load data when submit is clicked
-		try {
-			const data = await api.listTransactions(selectedCustomer.id);
-			setRows(Array.isArray(data) ? data : []);
-		} catch {
-			setRows([]);
-		}
+		handleFilterSubmit();
 	};
 
 	const filteredRows = useMemo(() => {
@@ -313,21 +380,11 @@ export default function ReportsView({ groups, customers, vehicles, advanceStore 
 												value={groupName}
 												onChange={setGroupName}
 												placeholder="Select group"
-												data-enter="1"
-												onKeyDown={e => {
-													if (e.key === 'Enter') {
-														e.preventDefault();
-														const next = e.target.closest('[data-enter-container]')?.querySelector('[data-enter="2"]');
-														if (next) next.focus();
-													} else if (e.key === 'ArrowDown' || e.key === 'ArrowRight') {
-														const next = e.target.closest('[data-enter-container]')?.querySelector('[data-enter="2"]');
-														if (next) next.focus();
-													} else if (e.key === 'ArrowUp' || e.key === 'ArrowLeft') {
-														const prev = e.target.closest('[data-enter-container]')?.querySelector('[data-enter="4"]');
-														if (prev) prev.focus();
-													}
-												}}
-												className="focus:border-rose-500 focus:ring-rose-500/20 rounded-lg shadow-sm hover:shadow-md transition-all border-rose-200"
+												inputRef={groupRef}
+												onSelectionComplete={() => vehicleRef.current?.focus()}
+												onKeyDown={e => handleFilterKeyDown(e, 'group')}
+												className={`focus:border-rose-500 focus:ring-rose-500/20 rounded-lg shadow-sm hover:shadow-md transition-all border-rose-200 ${filterError && !groupName ? 'border-red-500 ring-2 ring-red-100' : ''}`}
+												error={filterError && !groupName}
 											/>
 											<div className="absolute right-3 top-8 text-slate-700">
 												<svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
@@ -345,20 +402,9 @@ export default function ReportsView({ groups, customers, vehicles, advanceStore 
 												value={vehicle}
 												onChange={setVehicle}
 												placeholder="(Opt)"
-												data-enter="4"
-												onKeyDown={e => {
-													if (e.key === 'Enter') {
-														e.preventDefault();
-														const next = e.target.closest('[data-enter-container]')?.querySelector('[data-enter="5"]');
-														if (next) next.focus();
-													} else if (e.key === 'ArrowDown' || e.key === 'ArrowRight') {
-														const next = e.target.closest('[data-enter-container]')?.querySelector('[data-enter="5"]');
-														if (next) next.focus();
-													} else if (e.key === 'ArrowUp' || e.key === 'ArrowLeft') {
-														const prev = e.target.closest('[data-enter-container]')?.querySelector('[data-enter="3"]');
-														if (prev) prev.focus();
-													}
-												}}
+												inputRef={vehicleRef}
+												onSelectionComplete={() => customerRef.current?.focus()}
+												onKeyDown={e => handleFilterKeyDown(e, 'vehicle')}
 												className="focus:border-rose-500 focus:ring-rose-500/20 rounded-lg shadow-sm hover:shadow-md transition-all border-rose-200"
 											/>
 											<div className="absolute right-3 top-8 text-slate-700">
@@ -382,9 +428,25 @@ export default function ReportsView({ groups, customers, vehicles, advanceStore 
 													value={customerName}
 													onChange={setCustomerName}
 													placeholder="Select customer"
-													data-enter-index="3"
-													className="focus:border-rose-500 focus:ring-rose-500/20 rounded-lg shadow-sm hover:shadow-md transition-all border-rose-200"
+													inputRef={customerRef}
+													onSelectionComplete={() => submitRef.current?.focus()}
+													onKeyDown={e => handleFilterKeyDown(e, 'customer')}
+													className={`focus:border-rose-500 focus:ring-rose-500/20 rounded-lg shadow-sm hover:shadow-md transition-all border-rose-200 ${filterError && !customerName ? 'border-red-500 ring-2 ring-red-100' : ''}`}
+													error={filterError && !customerName}
 												/>
+																				{/* Inline validation error */}
+																				{filterError && (
+																					<div className="text-xs text-red-600 mt-2 font-semibold">{filterError}</div>
+																				)}
+																			{/* Submit Button for keyboard navigation */}
+																			<button
+																				ref={submitRef}
+																				style={{ position: 'absolute', left: '-9999px', width: 0, height: 0, opacity: 0 }}
+																				tabIndex={0}
+																				aria-hidden="true"
+																				onKeyDown={e => handleFilterKeyDown(e, 'submit')}
+																				onClick={handleFilterSubmit}
+																			>Submit</button>
 											</div>
 											<button type="button" className="w-8 border border-slate-300 bg-slate-100 font-semibold text-sm rounded-sm hover:bg-slate-200 transition-colors" style={{ height: '36px' }} onClick={goPrevCustomer} aria-label="Previous customer" data-enter-index="8">{'<'}</button>
 											<button type="button" className="w-8 border border-slate-300 bg-slate-100 font-semibold text-sm rounded-sm hover:bg-slate-200 transition-colors" style={{ height: '36px' }} onClick={goNextCustomer} aria-label="Next customer" data-enter-index="9">{'>'}</button>
@@ -422,11 +484,13 @@ export default function ReportsView({ groups, customers, vehicles, advanceStore 
 
 									<div className="col-span-1 flex items-end">
 										<button
+											ref={submitRef}
 											type="button"
-											className="w-full bg-gradient-to-r from-rose-500 to-rose-600 text-white text-sm font-bold rounded-lg hover:from-rose-600 hover:to-rose-700 transition-all shadow-md hover:shadow-lg"
+											className="w-full bg-gradient-to-r from-rose-500 to-rose-600 text-white text-sm font-bold rounded-lg hover:from-rose-600 hover:to-rose-700 transition-all shadow-md hover:shadow-lg focus:outline-none focus:ring-2 focus:ring-rose-500 focus:ring-offset-2"
 											style={{ height: '36px' }}
-											onClick={handleSubmit}
+											onClick={handleFilterSubmit}
 											tabIndex="0"
+											onKeyDown={e => handleFilterKeyDown(e, 'submit')}
 											data-enter-index="8"
 										>
 											Submit

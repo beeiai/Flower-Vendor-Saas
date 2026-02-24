@@ -39,6 +39,24 @@ const DailySaleReport = ({ onCancel }) => {
   const setSelectedGroup = useCallback((value) => {
     setState(prev => ({ ...prev, selectedGroup: value }));
   }, []);
+
+  // Keyboard navigation for filters
+  const handleFilterKeyDown = (e, idx) => {
+    if (e.key === 'Enter' || e.key === 'ArrowDown' || e.key === 'ArrowRight') {
+      e.preventDefault();
+      const next = document.querySelector(`[data-enter-index="${idx + 1}"]`);
+      if (next) {
+        next.focus();
+      } else if (idx === 3) {
+        // Last filter (To Date), trigger filter
+        handleFilter();
+      }
+    } else if (e.key === 'ArrowUp' || e.key === 'ArrowLeft') {
+      e.preventDefault();
+      const prev = document.querySelector(`[data-enter-index="${idx - 1}"]`);
+      if (prev) prev.focus();
+    }
+  };
   
   const setGroups = useCallback((value) => {
     setState(prev => ({ ...prev, groups: value }));
@@ -226,6 +244,7 @@ const DailySaleReport = ({ onCancel }) => {
                 <select 
                   value={selectedGroup}
                   onChange={(e) => setSelectedGroup(e.target.value)}
+                  onKeyDown={e => handleFilterKeyDown(e, 1)}
                   className="w-full bg-rose-50 border-2 border-rose-200 rounded-lg p-2.5 text-sm font-bold text-slate-800 outline-none transition-all duration-200 hover:border-rose-300 focus:border-rose-400 focus:ring-2 focus:ring-rose-100 appearance-none"
                   data-enter-index="1"
                 >
@@ -243,6 +262,7 @@ const DailySaleReport = ({ onCancel }) => {
                 type="date" 
                 value={fromDate}
                 onChange={(e) => setFromDate(e.target.value)}
+                onKeyDown={e => handleFilterKeyDown(e, 2)}
                 className="w-full bg-rose-50 border-2 border-rose-200 rounded-lg p-2.5 text-sm font-bold text-slate-800 outline-none transition-all duration-200 hover:border-rose-300 focus:border-rose-400 focus:ring-2 focus:ring-rose-100" 
                 data-enter-index="2"
               />
@@ -253,6 +273,7 @@ const DailySaleReport = ({ onCancel }) => {
                 type="date" 
                 value={toDate}
                 onChange={(e) => setToDate(e.target.value)}
+                onKeyDown={e => handleFilterKeyDown(e, 3)}
                 className="w-full bg-rose-50 border-2 border-rose-200 rounded-lg p-2.5 text-sm font-bold text-slate-800 outline-none transition-all duration-200 hover:border-rose-300 focus:border-rose-400 focus:ring-2 focus:ring-rose-100" 
                 data-enter-index="3"
               />
