@@ -505,16 +505,16 @@ export default function ReportsView({ groups, customers, vehicles, advanceStore 
 					</div>
 				</div>
 
-				<aside className="w-[380px] bg-gradient-to-b from-slate-800 to-slate-900 flex flex-col p-4 shrink-0 shadow-2xl rounded-r-lg border-l-2 border-[#5B55E6]/30">
-					<div className="flex items-center gap-2 mb-6">
-						<div className="w-8 h-8 rounded-lg bg-gradient-to-br from-[#5B55E6] to-[#4A44D0] flex items-center justify-center shadow-lg">
-							<svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4 text-white" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-								<path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z" />
-							</svg>
-						</div>
-						<h3 className="text-sm font-bold text-white uppercase tracking-wider">Financial Summary</h3>
-					</div>
-					<div className="space-y-2 flex-1 text-white pb-2">
+				   <aside className="w-[380px] bg-gradient-to-b from-slate-800 to-slate-900 flex flex-col p-4 shrink-0 shadow-2xl rounded-r-lg border-l-2 border-[#5B55E6]/30 max-h-full overflow-y-auto">
+					   <div className="flex items-center gap-2 mb-6 sticky top-0 z-10 bg-gradient-to-b from-slate-800 to-slate-900 pb-2">
+						   <div className="w-8 h-8 rounded-lg bg-gradient-to-br from-[#5B55E6] to-[#4A44D0] flex items-center justify-center shadow-lg">
+							   <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4 text-white" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+								   <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z" />
+							   </svg>
+						   </div>
+						   <h3 className="text-sm font-bold text-white uppercase tracking-wider">Financial Summary</h3>
+					   </div>
+					   <div className="space-y-2 flex-1 text-white pb-2 min-h-[600px]">
 						<div className="bg-slate-700/30 backdrop-blur-sm rounded-xl p-2 border border-slate-600/50 shadow-lg">
 							<label className="text-xs font-bold text-slate-300 uppercase tracking-widest mb-1 block">Total Quantity</label>
 							<input type="text" readOnly className="w-full bg-gradient-to-r from-slate-800 to-slate-700 px-2 py-1.5 text-base font-black text-right rounded-lg border border-slate-600/50 outline-none text-cyan-400 shadow-inner" value={String(summary.qty)} style={{ colorScheme: 'dark' }} />
