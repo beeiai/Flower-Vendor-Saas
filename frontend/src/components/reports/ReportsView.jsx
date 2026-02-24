@@ -263,7 +263,20 @@ export default function ReportsView({ groups, customers, vehicles, advanceStore 
 											style={{ height: '40px' }}
 											value={fromDate}
 											onChange={e => setFromDate(e.target.value)}
-											data-enter-index="6"
+											data-enter="2"
+											onKeyDown={e => {
+												if (e.key === 'Enter') {
+													e.preventDefault();
+													const next = e.target.closest('[data-enter-container]')?.querySelector('[data-enter="3"]');
+													if (next) next.focus();
+												} else if (e.key === 'ArrowDown' || e.key === 'ArrowRight') {
+													const next = e.target.closest('[data-enter-container]')?.querySelector('[data-enter="3"]');
+													if (next) next.focus();
+												} else if (e.key === 'ArrowUp' || e.key === 'ArrowLeft') {
+													const prev = e.target.closest('[data-enter-container]')?.querySelector('[data-enter="1"]');
+													if (prev) prev.focus();
+												}
+											}}
 										/>
 									</div>
 																		
@@ -275,7 +288,20 @@ export default function ReportsView({ groups, customers, vehicles, advanceStore 
 											style={{ height: '36px' }}
 											value={toDate}
 											onChange={e => setToDate(e.target.value)}
-											data-enter-index="7"
+											data-enter="3"
+											onKeyDown={e => {
+												if (e.key === 'Enter') {
+													e.preventDefault();
+													const next = e.target.closest('[data-enter-container]')?.querySelector('[data-enter="4"]');
+													if (next) next.focus();
+												} else if (e.key === 'ArrowDown' || e.key === 'ArrowRight') {
+													const next = e.target.closest('[data-enter-container]')?.querySelector('[data-enter="4"]');
+													if (next) next.focus();
+												} else if (e.key === 'ArrowUp' || e.key === 'ArrowLeft') {
+													const prev = e.target.closest('[data-enter-container]')?.querySelector('[data-enter="2"]');
+													if (prev) prev.focus();
+												}
+											}}
 										/>
 									</div>
 
@@ -287,7 +313,20 @@ export default function ReportsView({ groups, customers, vehicles, advanceStore 
 												value={groupName}
 												onChange={setGroupName}
 												placeholder="Select group"
-												data-enter-index="1"
+												data-enter="1"
+												onKeyDown={e => {
+													if (e.key === 'Enter') {
+														e.preventDefault();
+														const next = e.target.closest('[data-enter-container]')?.querySelector('[data-enter="2"]');
+														if (next) next.focus();
+													} else if (e.key === 'ArrowDown' || e.key === 'ArrowRight') {
+														const next = e.target.closest('[data-enter-container]')?.querySelector('[data-enter="2"]');
+														if (next) next.focus();
+													} else if (e.key === 'ArrowUp' || e.key === 'ArrowLeft') {
+														const prev = e.target.closest('[data-enter-container]')?.querySelector('[data-enter="4"]');
+														if (prev) prev.focus();
+													}
+												}}
 												className="focus:border-rose-500 focus:ring-rose-500/20 rounded-lg shadow-sm hover:shadow-md transition-all border-rose-200"
 											/>
 											<div className="absolute right-3 top-8 text-slate-700">
@@ -306,7 +345,20 @@ export default function ReportsView({ groups, customers, vehicles, advanceStore 
 												value={vehicle}
 												onChange={setVehicle}
 												placeholder="(Opt)"
-												data-enter-index="2"
+												data-enter="4"
+												onKeyDown={e => {
+													if (e.key === 'Enter') {
+														e.preventDefault();
+														const next = e.target.closest('[data-enter-container]')?.querySelector('[data-enter="5"]');
+														if (next) next.focus();
+													} else if (e.key === 'ArrowDown' || e.key === 'ArrowRight') {
+														const next = e.target.closest('[data-enter-container]')?.querySelector('[data-enter="5"]');
+														if (next) next.focus();
+													} else if (e.key === 'ArrowUp' || e.key === 'ArrowLeft') {
+														const prev = e.target.closest('[data-enter-container]')?.querySelector('[data-enter="3"]');
+														if (prev) prev.focus();
+													}
+												}}
 												className="focus:border-rose-500 focus:ring-rose-500/20 rounded-lg shadow-sm hover:shadow-md transition-all border-rose-200"
 											/>
 											<div className="absolute right-3 top-8 text-slate-700">
