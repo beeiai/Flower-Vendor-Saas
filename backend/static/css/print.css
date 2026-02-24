@@ -150,3 +150,166 @@ body {
         padding: 20px;
     }
 }
+
+/* ===== MULTI-PAGE REPORT STYLES ===== */
+
+/* Page break rules for multi-page reports */
+.page-break {
+    page-break-after: always;
+    page-break-inside: avoid;
+    margin-bottom: 20px;
+}
+
+/* Customer sections in group patti */
+.customer-section {
+    page-break-inside: avoid;
+    margin-bottom: 15px;
+    padding: 10px;
+    border: 1px solid #ccc;
+}
+
+.customer-section-header {
+    font-weight: bold;
+    border-bottom: 2px solid #000;
+    padding-bottom: 5px;
+    margin-bottom: 10px;
+}
+
+.customer-section-footer {
+    margin-top: 10px;
+    padding-top: 10px;
+    border-top: 1px solid #ccc;
+    font-weight: bold;
+}
+
+/* Ensure table headers repeat on each page */
+.report-table thead {
+    display: table-header-group;  /* Forces header to repeat on page breaks */
+}
+
+.report-table tfoot {
+    display: table-footer-group;  /* Footer repeats on pages */
+}
+
+/* Page counter badge styling (for preview mode) */
+.page-badge {
+    position: fixed;
+    bottom: 20px;
+    right: 20px;
+    background: #333;
+    color: white;
+    padding: 10px 15px;
+    border-radius: 4px;
+    font-size: 12px;
+    z-index: 1000;
+    box-shadow: 0 2px 8px rgba(0,0,0,0.2);
+}
+
+@media print {
+    .page-badge {
+        display: none;  /* Hide in print view */
+    }
+}
+
+/* Preview modal frame styling */
+.print-preview-container {
+    width: 100%;
+    height: 100%;
+    display: flex;
+    flex-direction: column;
+}
+
+.print-preview-toolbar {
+    display: flex;
+    gap: 10px;
+    padding: 10px;
+    background: #f5f5f5;
+    border-bottom: 1px solid #ccc;
+    justify-content: space-between;
+    align-items: center;
+    flex-wrap: wrap;
+}
+
+.print-preview-toolbar button {
+    padding: 8px 16px;
+    background: #007bff;
+    color: white;
+    border: none;
+    border-radius: 4px;
+    cursor: pointer;
+    font-size: 12px;
+}
+
+.print-preview-toolbar button:hover {
+    background: #0056b3;
+}
+
+.print-preview-toolbar button.secondary {
+    background: #6c757d;
+}
+
+.print-preview-toolbar button.secondary:hover {
+    background: #5a6268;
+}
+
+.print-preview-toolbar button.danger {
+    background: #dc3545;
+}
+
+.print-preview-toolbar button.danger:hover {
+    background: #c82333;
+}
+
+.zoom-controls {
+    display: flex;
+    gap: 5px;
+    align-items: center;
+}
+
+.zoom-controls button {
+    padding: 6px 10px;
+    font-size: 11px;
+}
+
+.zoom-display {
+    font-size: 12px;
+    min-width: 60px;
+    text-align: center;
+}
+
+.print-preview-content {
+    flex: 1;
+    overflow: auto;
+    display: flex;
+    justify-content: center;
+    align-items: flex-start;
+    padding: 20px;
+    background: #f5f5f5;
+}
+
+.print-preview-iframe {
+    width: 100%;
+    height: 100%;
+    border: none;
+    background: white;
+    box-shadow: 0 0 15px rgba(0,0,0,0.1);
+}
+
+/* Responsive styling for small screens */
+@media (max-width: 768px) {
+    .print-preview-toolbar {
+        flex-direction: column;
+    }
+    
+    .zoom-controls {
+        justify-content: center;
+        width: 100%;
+    }
+    
+    .page-badge {
+        bottom: 10px;
+        right: 10px;
+        padding: 8px 12px;
+        font-size: 11px;
+    }
+}

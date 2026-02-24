@@ -4,37 +4,215 @@
     <meta charset="UTF-8">
     <title>Daily Sales Report</title>
     <link rel="stylesheet" href="/static/css/print.css">
+    <style>
+        /* A4 page settings */
+        @page {
+            size: A4;
+            margin: 0.5cm;
+        }
+        body {
+            text-align: center;
+            font-family: Arial, sans-serif;
+            font-size: 12px;
+            margin: 0;
+            padding: 0;
+        }
+        .page {
+            margin: 0 auto;
+            text-align: left;
+            max-width: 19.5cm;
+            width: 100%;
+            padding: 5px;
+        }
+        /* Header with photo */
+        .header-container {
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            margin-bottom: 15px;
+            gap: 15px;
+            border-bottom: 2px solid #000;
+            padding-bottom: 10px;
+        }
+        .header-photo {
+            width: 100px;
+            height: 100px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            overflow: hidden;
+            flex-shrink: 0;
+        }
+        .header-photo img {
+            width: 100%;
+            height: 100%;
+            object-fit: contain;
+        }
+        .header-content {
+            text-align: center;
+            flex-grow: 1;
+        }
+        .header-content h2 {
+            margin: 0;
+            font-size: 20px;
+            line-height: 1.2;
+            color: #000;
+            font-weight: bold;
+        }
+        .header-content .sub {
+            margin: 5px 0 0 0;
+            font-size: 11px;
+            line-height: 1.2;
+        }
+        /* Report info in 2-column table */
+        .info-table {
+            width: 100%;
+            border-collapse: collapse;
+            margin-bottom: 15px;
+            font-size: 11px;
+        }
+        .info-table td {
+            padding: 5px 8px;
+            border: 1px solid #aaa;
+        }
+        .info-table td:first-child {
+            font-weight: bold;
+            width: 20%;
+            background-color: #f5f5f5;
+        }
+        /* Compact table */
+        .report-table {
+            width: 100%;
+            border-collapse: collapse;
+            margin: 0 auto 20px auto;
+            font-size: 10px;
+        }
+        .report-table th,
+        .report-table td {
+            padding: 4px 5px;
+            border: 1px solid #aaa;
+            text-align: center;
+        }
+        .report-table th {
+            background-color: #f0f0f0;
+            font-weight: bold;
+            white-space: nowrap;
+            font-size: 10px;
+        }
+        .report-table td {
+            text-align: center;
+            font-size: 10px;
+        }
+        .report-table td:nth-child(2),
+        .report-table td:nth-child(3) {
+            text-align: left;
+        }
+        /* Adjust column widths for A4 */
+        .report-table th:nth-child(1) { width: 15%; } /* Date */
+        .report-table th:nth-child(2) { width: 25%; } /* Party */
+        .report-table th:nth-child(3) { width: 20%; } /* Item */
+        .report-table th:nth-child(4) { width: 10%; } /* Qty */
+        .report-table th:nth-child(5) { width: 10%; } /* Rate */
+        .report-table th:nth-child(6) { width: 15%; } /* Total */
+        /* Sales summary in table format */
+        .summary-table {
+            width: 100%;
+            border-collapse: collapse;
+            margin-top: 25px;
+            font-size: 11px;
+        }
+        .summary-table td {
+            padding: 5px 8px;
+            border: 1px solid #aaa;
+        }
+        .summary-table td:first-child {
+            font-weight: bold;
+            width: 20%;
+            background-color: #f5f5f5;
+        }
+        .summary-table tr:last-child td {
+            font-weight: bold;
+            background-color: #e8e8e8;
+        }
+        .summary-table td:last-child {
+            text-align: right;
+            width: 20%;
+        }
+        /* Conditional item row styling */
+        .item-name-row td {
+            font-style: italic;
+            background-color: #f9f9f9;
+        }
+        /* Print optimization */
+        @media print {
+            body {
+                font-size: 11px;
+            }
+            .page {
+                max-width: 100%;
+                padding: 0;
+            }
+            .header-content h2 {
+                font-size: 18px;
+            }
+            .header-content .sub {
+                font-size: 10px;
+            }
+            .report-table {
+                font-size: 9.5px;
+            }
+            .report-table th,
+            .report-table td {
+                font-size: 9.5px;
+            }
+        }
+    </style>
 </head>
 <body>
 
 <div class="page">
 
-    <!-- HEADER -->
-    <div class="header">
-        <h2>SREE KRISHNA FLOWER STALL</h2>
-        <p class="sub">
-            PH: 8147848760 <br>
-            Proprietor: K.C.N & SONS | Mob: 9972878307 <br>
-            FLOWER MERCHANTS – 7795018307 <br>
-            Shop No: B-32, S.K.R Market, Bangalore - 560002 <br>
-            Trade Mark: <b>S.K.F.S</b>
-        </p>
+    <!-- HEADER WITH PHOTO -->
+    <div class="header-container">
+        <div class="header-photo">
+            <img src="SKFS_logo.png" alt="S.K.F.S Logo">
+        </div>
+        <div class="header-content">
+            <h2>SREE KRISHNA FLOWER STALL</h2>
+            <p class="sub">
+                PH: 8147848760 | Mob: 9972878307<br>
+                Proprietor: K.C.N & SONS <br>
+                FLOWER MERCHANTS – 7795018307<br>
+                Shop No: B-32, S.K.R Market, Bangalore - 560002<br>
+                Trade Mark: <b>S.K.F.S</b>
+            </p>
+        </div>
     </div>
 
-    <!-- REPORT INFO -->
-    <div class="info-grid">
-        <div><b>Period:</b> {{ from_date }} to {{ to_date }}</div>
+    <!-- REPORT INFO IN 2-COLUMN TABLE -->
+    <table class="info-table">
+        <tr>
+            <td>Period:</td>
+            <td>{{ from_date }} to {{ to_date }}</td>
+            <td>Date:</td>
+            <td>{{ current_date }}</td>
+        </tr>
         {% if item_name %}
-        <div><b>Item:</b> {{ item_name }}</div>
+        <tr class="item-name-row">
+            <td>Item:</td>
+            <td>{{ item_name }}</td>
+            <td></td>
+            <td></td>
+        </tr>
         {% endif %}
-        <div><b>Date:</b> {{ current_date }}</div>
-    </div>
+    </table>
 
     <!-- TABLE -->
     <table class="report-table">
         <thead>
             <tr>
                 <th>Date</th>
+                <th>Vehicle</th>
                 <th>Party</th>
                 <th>Item</th>
                 <th>Qty</th>
@@ -46,6 +224,7 @@
             {% for row in rows %}
             <tr>
                 <td>{{ row.date }}</td>
+                <td>{{ row.vehicle }}</td>
                 <td>{{ row.party }}</td>
                 <td>{{ row.itemName }}</td>
                 <td>{{ row.qty }}</td>
@@ -56,13 +235,21 @@
         </tbody>
     </table>
 
-    <!-- TOTALS -->
-    <div class="summary totals-section">
-        <div><b>Sales Summary</b></div>
-        <div>Total Records: {{ totals.record_count }}</div>
-        <div>Total Quantity: {{ totals.total_qty }}</div>
-        <div><b>Total Amount: ₹ {{ totals.total_amount }}</b></div>
-    </div>
+    <!-- SALES SUMMARY IN 2-COLUMN TABLE -->
+    <table class="summary-table">
+        <tr>
+            <td>Total Records:</td>
+            <td>{{ totals.record_count }}</td>
+            <td>Total Quantity:</td>
+            <td>{{ totals.total_qty }}</td>
+        </tr>
+        <tr>
+            <td><b>Total Amount:</b></td>
+            <td><b>₹ {{ totals.total_amount }}</b></td>
+            <td></td>
+            <td></td>
+        </tr>
+    </table>
 
 </div>
 

@@ -102,6 +102,7 @@ app.add_middleware(
 app.include_router(auth_router, prefix="/api")
 app.include_router(settlement_router, prefix="/api")
 app.mount("/static", StaticFiles(directory="static"), name="static")
+app.mount("/templates", StaticFiles(directory="templates"), name="templates")
 app.include_router(farmers.router, prefix="/api")
 app.include_router(farmer_groups.router, prefix="/api")
 app.include_router(vehicles.router, prefix="/api")

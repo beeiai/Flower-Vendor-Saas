@@ -4,70 +4,461 @@
     <meta charset="UTF-8">
     <title>Group Patti Report</title>
     <link rel="stylesheet" href="/static/css/print.css">
+    <style>
+        /* A4 page settings */
+        @page {
+            size: A4;
+            margin: 0.5cm;
+        }
+        
+        @page :first {
+            /* First page specific styles if needed */
+        }
+        
+        body {
+            text-align: center;
+            font-family: Arial, sans-serif;
+            font-size: 12px;
+            margin: 0;
+            padding: 0;
+        }
+        
+        .page {
+            margin: 0 auto;
+            text-align: left;
+            max-width: 19.5cm;
+            width: 100%;
+            padding: 5px;
+            page-break-after: always;
+        }
+        
+        .page:last-child {
+            page-break-after: auto;
+        }
+        
+        /* Header with photo */
+        .header-container {
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            margin-bottom: 15px;
+            gap: 15px;
+            border-bottom: 2px solid #000;
+            padding-bottom: 10px;
+        }
+        
+        .header-photo {
+            width: 100px;
+            height: 100px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            overflow: hidden;
+            flex-shrink: 0;
+        }
+        
+        .header-photo img {
+            width: 100%;
+            height: 100%;
+            object-fit: contain;
+        }
+        
+        .header-content {
+            text-align: center;
+            flex-grow: 1;
+        }
+        
+        .header-content h2 {
+            margin: 0;
+            font-size: 20px;
+            line-height: 1.2;
+            color: #000;
+            font-weight: bold;
+        }
+        
+        .header-content .sub {
+            margin: 5px 0 0 0;
+            font-size: 11px;
+            line-height: 1.2;
+        }
+        
+        /* GROUP SUMMARY PAGE STYLES */
+        .group-summary {
+            margin-top: 30px;
+            text-align: center;
+        }
+        
+        .group-summary h3 {
+            font-size: 18px;
+            color: #000;
+            margin-bottom: 20px;
+            text-decoration: underline;
+        }
+        
+        .summary-table {
+            width: 80%;
+            border-collapse: collapse;
+            margin: 0 auto 30px auto;
+            font-size: 13px;
+        }
+        
+        .summary-table td {
+            padding: 8px 12px;
+            border: 1px solid #aaa;
+        }
+        
+        .summary-table td:first-child {
+            font-weight: bold;
+            width: 40%;
+            background-color: #f5f5f5;
+            text-align: right;
+        }
+        
+        .summary-table td:last-child {
+            width: 60%;
+            text-align: left;
+        }
+        
+        .total-highlight td {
+            font-weight: bold;
+            background-color: #e8e8e8;
+        }
+        
+        /* LEDGER PAGE STYLES (for individual customers) */
+        .info-table {
+            width: 100%;
+            border-collapse: collapse;
+            margin-bottom: 12px;
+            font-size: 11px;
+        }
+        
+        .info-table td {
+            padding: 5px 8px;
+            border: 1px solid #aaa;
+        }
+        
+        .info-table td:nth-child(1),
+        .info-table td:nth-child(3) {
+            font-weight: bold;
+            width: 20%;
+            background-color: #f5f5f5;
+        }
+        
+        .report-table {
+            width: 100%;
+            border-collapse: collapse;
+            margin: 0 auto 20px auto;
+            font-size: 9.5px;
+        }
+        
+        .report-table th,
+        .report-table td {
+            padding: 3px 4px;
+            border: 1px solid #aaa;
+            text-align: center;
+        }
+        
+        .report-table th {
+            background-color: #f0f0f0;
+            font-weight: bold;
+            white-space: nowrap;
+            font-size: 9.5px;
+        }
+        
+        .report-table td {
+            text-align: center;
+            font-size: 9.5px;
+        }
+        
+        .report-table td:nth-child(2) {
+            text-align: left;
+        }
+        
+        /* Adjust column widths for A4 - 8 columns total */
+        .report-table th:nth-child(1) { width: 10%; }  /* Date */
+        .report-table th:nth-child(2) { width: 12%; }  /* Vehicle */
+        .report-table th:nth-child(3) { width: 8%; }   /* Qty */
+        .report-table th:nth-child(4) { width: 8%; }   /* Price */
+        .report-table th:nth-child(5) { width: 10%; }  /* Total */
+        .report-table th:nth-child(6) { width: 10%; }  /* Luggage */
+        .report-table th:nth-child(7) { width: 10%; }  /* Paid */
+        .report-table th:nth-child(8) { width: 10%; }  /* Amount */
+        
+        .total-row {
+            font-weight: bold;
+            background-color: #f9f9f9;
+        }
+        
+        .total-row td:first-child {
+            text-align: left;
+            padding-left: 10px;
+        }
+        
+        .customer-summary-table {
+            width: 100%;
+            border-collapse: collapse;
+            margin-top: 25px;
+            font-size: 11px;
+        }
+        
+        .customer-summary-table td {
+            padding: 5px 8px;
+            border: 1px solid #aaa;
+        }
+        
+        .customer-summary-table td:nth-child(1),
+        .customer-summary-table td:nth-child(3) {
+            font-weight: bold;
+            width: 20%;
+            background-color: #f5f5f5;
+        }
+        
+        .customer-summary-table tr:last-child td {
+            font-weight: bold;
+            background-color: #e8e8e8;
+        }
+        
+        .customer-summary-table td:last-child {
+            text-align: right;
+            width: 20%;
+        }
+        
+        .period-table {
+            width: 100%;
+            border-collapse: collapse;
+            margin-top: 30px;
+            font-size: 11px;
+        }
+        
+        .period-table td {
+            padding: 5px 8px;
+            border: none;
+            text-align: left;
+        }
+        
+        /* Page break for customer sections */
+        .customer-section {
+            page-break-before: always;
+        }
+        
+        .customer-section:first-child {
+            page-break-before: auto;
+        }
+        
+        /* Print optimization */
+        @media print {
+            body {
+                font-size: 11px;
+            }
+            
+            .page {
+                max-width: 100%;
+                padding: 0;
+            }
+            
+            .header-content h2 {
+                font-size: 18px;
+            }
+            
+            .header-content .sub {
+                font-size: 10px;
+            }
+            
+            .report-table {
+                font-size: 9px;
+            }
+            
+            .report-table th,
+            .report-table td {
+                font-size: 9px;
+            }
+        }
+    </style>
 </head>
 <body>
 
+<!-- PAGE 1: GROUP SUMMARY -->
 <div class="page">
+    <div class="header-container">
+        <div class="header-photo">
+            <img src="SKFS_logo.png" alt="S.K.F.S Logo">
+        </div>
+        <div class="header-content">
+            <h2>SREE KRISHNA FLOWER STALL</h2>
+            <p class="sub">
+                PH: 8147848760 | Mob: 9972878307<br>
+                Proprietor: K.C.N & SONS <br>
+                FLOWER MERCHANTS – 7795018307<br>
+                Shop No: B-32, S.K.R Market, Bangalore - 560002<br>
+                Trade Mark: <b>S.K.F.S</b>
+            </p>
+        </div>
+    </div>
 
-    <!-- HEADER -->
-    <div class="header">
-        <h2>SREE KRISHNA FLOWER STALL</h2>
-        <p class="sub">
-            PH: 8147848760 <br>
-            Proprietor: K.C.N & SONS | Mob: 9972878307 <br>
-            FLOWER MERCHANTS – 7795018307 <br>
-            Shop No: B-32, S.K.R Market, Bangalore - 560002 <br>
-            Trade Mark: <b>S.K.F.S</b>
+    <div class="group-summary">
+        <h3>GROUP PATTI SUMMARY REPORT</h3>
+        
+        <table class="summary-table">
+            <tr>
+                <td>Group Name:</td>
+                <td>{{ group_name }}</td>
+            </tr>
+            <tr>
+                <td>Period:</td>
+                <td>{{ from_date }} to {{ to_date }}</td>
+            </tr>
+            <tr>
+                <td>Report Date:</td>
+                <td>{{ current_date }}</td>
+            </tr>
+            <tr>
+                <td>Commission Percentage:</td>
+                <td>{{ commission_pct }}%</td>
+            </tr>
+            <tr>
+                <td>Total Customers:</td>
+                <td>{{ totals.customer_count }}</td>
+            </tr>
+            <tr class="total-highlight">
+                <td>Gross Total:</td>
+                <td>₹ {{ totals.gross_total }}</td>
+            </tr>
+            <tr>
+                <td>Commission Total:</td>
+                <td>₹ {{ totals.commission_total }}</td>
+            </tr>
+            <tr>
+                <td>Net Total:</td>
+                <td>₹ {{ totals.net_total }}</td>
+            </tr>
+            <tr>
+                <td>Paid Total:</td>
+                <td>₹ {{ totals.paid_total }}</td>
+            </tr>
+            <tr class="total-highlight">
+                <td>Balance Total:</td>
+                <td>₹ {{ totals.balance_total }}</td>
+            </tr>
+        </table>
+        
+        <p style="margin-top: 40px; font-style: italic;">
+            ** Individual customer ledgers follow on subsequent pages **
         </p>
     </div>
+</div>
 
-    <!-- REPORT INFO -->
-    <div class="info-grid">
-        <div><b>Group:</b> {{ group_name }}</div>
-        <div><b>Period:</b> {{ from_date }} to {{ to_date }}</div>
-        <div><b>Commission:</b> {{ commission_pct }}%</div>
-        <div><b>Date:</b> {{ current_date }}</div>
+<!-- INDIVIDUAL CUSTOMER LEDGER PAGES -->
+{% for customer in customers %}
+<div class="page customer-section">
+    <div class="header-container">
+        <div class="header-photo">
+            <img src="SKFS_logo.png" alt="S.K.F.S Logo">
+        </div>
+        <div class="header-content">
+            <h2>SREE KRISHNA FLOWER STALL</h2>
+            <p class="sub">
+                PH: 8147848760 | Mob: 9972878307<br>
+                Proprietor: K.C.N & SONS <br>
+                FLOWER MERCHANTS – 7795018307<br>
+                Shop No: B-32, S.K.R Market, Bangalore - 560002<br>
+                Trade Mark: <b>S.K.F.S</b>
+            </p>
+        </div>
     </div>
 
-    <!-- TABLE -->
+    <!-- CUSTOMER INFO IN 2-COLUMN TABLE -->
+    <table class="info-table">
+        <tr>
+            <td>Customer:</td>
+            <td>{{ customer.name }}</td>
+            <td>Group:</td>
+            <td>{{ group_name }}</td>
+        </tr>
+        <tr>
+            <td>Address:</td>
+            <td>{{ customer.address }}</td>
+            <td>Ledger:</td>
+            <td>{{ customer.ledger_name }}</td>
+        </tr>
+        <tr>
+            <td>Balance:</td>
+            <td>₹ {{ customer.balance }}</td>
+            <td>Date:</td>
+            <td>{{ current_date }}</td>
+        </tr>
+    </table>
+
+    <!-- TRANSACTIONS TABLE WITH TOTAL ROW -->
     <table class="report-table">
         <thead>
             <tr>
-                <th>Customer</th>
-                <th>Address</th>
-                <th>Gross</th>
-                <th>Commission</th>
-                <th>Net</th>
+                <th>Date</th>
+                <th>Vehicle</th>
+                <th>Qty</th>
+                <th>Price</th>
+                <th>Total</th>
+                <th>Luggage</th>
                 <th>Paid</th>
-                <th>Balance</th>
+                <th>Amount</th>
             </tr>
         </thead>
         <tbody>
-            {% for row in rows %}
+            {% for row in customer.transactions %}
             <tr>
-                <td>{{ row.customer }}</td>
-                <td>{{ row.address }}</td>
-                <td>₹ {{ row.gross }}</td>
-                <td>₹ {{ row.commission }}</td>
-                <td>₹ {{ row.net }}</td>
-                <td>₹ {{ row.paid }}</td>
-                <td>₹ {{ row.balance }}</td>
+                <td>{{ row.date }}</td>
+                <td>{{ row.vehicle }}</td>
+                <td>{{ row.qty }}</td>
+                <td>{{ row.price }}</td>
+                <td>{{ row.total }}</td>
+                <td>{{ row.luggage }}</td>
+                <td>{{ row.paid }}</td>
+                <td>{{ row.amount }}</td>
             </tr>
             {% endfor %}
+            <!-- TOTAL ROW as part of the table -->
+            <tr class="total-row">
+                <td><b>TOTAL</b></td>
+                <td></td>
+                <td>₹ {{ customer.total_qty }}</td>
+                <td></td>
+                <td>₹ {{ customer.total_amount }}</td>
+                <td></td>
+                <td></td>
+                <td></td>
+            </tr>
         </tbody>
     </table>
 
-    <!-- TOTALS -->
-    <div class="summary totals-section">
-        <div><b>Group Total Summary</b></div>
-        <div>Gross: ₹ {{ totals.gross_total }}</div>
-        <div>Commission: ₹ {{ totals.commission_total }}</div>
-        <div>Net: ₹ {{ totals.net_total }}</div>
-        <div>Paid: ₹ {{ totals.paid_total }}</div>
-        <div><b>Balance: ₹ {{ totals.balance_total }}</b></div>
-    </div>
+    <!-- CUSTOMER SUMMARY IN 2-COLUMN TABLE -->
+    <table class="customer-summary-table">
+        <tr>
+            <td>Commission:</td>
+            <td>₹ {{ customer.commission }}</td>
+            <td>Net Amount:</td>
+            <td>₹ {{ customer.net_amount }}</td>
+        </tr>
+        <tr>
+            <td>Luggage:</td>
+            <td>₹ {{ customer.luggage_total }}</td>
+            <td>Paid:</td>
+            <td>₹ {{ customer.paid_amount }}</td>
+        </tr>
+        <tr>
+            <td>Coolie:</td>
+            <td>₹ {{ customer.coolie }}</td>
+            <td>Total:</td>
+            <td>₹ {{ customer.final_total }}</td>
+        </tr>
+    </table>
 
+    <!-- PERIOD INFORMATION AT BOTTOM -->
+    <table class="period-table">
+        <tr>
+            <td><b>Period:</b> {{ from_date }} to {{ to_date }} | <b>Commission:</b> {{ commission_pct }}%</td>
+        </tr>
+    </table>
 </div>
+{% endfor %}
 
 </body>
 </html>
