@@ -1,400 +1,309 @@
-import React, { useState, useMemo, useEffect, useCallback } from 'react';
-import { Search, Printer, X, Send, Package, ChevronDown, AlertTriangle, CheckCircle, Clock } from 'lucide-react';
+import React, { useState, useMemo, useEffect, useCallback, useRef } from 'react';
+import { X, Printer, Send } from 'lucide-react';
 import { api } from '../../utils/api';
-import { DEFAULT_STATES } from '../../utils/stateManager';
 
-const DailySaleReport = ({ onCancel }) => {
-  const [state, setState] = useState(DEFAULT_STATES.dailySaleReport);
+function todayISO() {
+  return new Date().toISOString().split('T')[0];
+}
 
-  const {
-    fromDate,
-    toDate,
-    selectedGroup,
-    groups,
-    customers,
-    filteredData,
-    loading,
-    error
-  } = state;
+export default function DailySaleView({ onCancel }) {
+  const [fromDate, setFromDate] = useState(todayISO());
+  const [toDate, setToDate]     = useState(todayISO());
+  const [itemName, setItemName] = useState('');
+  const [useItem, setUseItem]   = useState(false); // checkbox
+  const [catalog, setCatalog]   = useState([]);
+  const [rows, setRows]         = useState([]);
+  const [loading, setLoading]   = useState(false);
 
-  const [commissionPct, setCommissionPct] = useState(12);
+  const itemRef   = useRef(null);
+  const fromRef   = useRef(null);
+  const toRef     = useRef(null);
+  const goRef     = useRef(null);
+  const smsRef    = useRef(null);
+  const printRef  = useRef(null);
+  const cancelRef = useRef(null);
 
-  const setFromDate     = useCallback((v) => setState(p => ({ ...p, fromDate: v })), []);
-  const setToDate       = useCallback((v) => setState(p => ({ ...p, toDate: v })), []);
-  const setSelectedGroup= useCallback((v) => setState(p => ({ ...p, selectedGroup: v })), []);
-  const setGroups       = useCallback((v) => setState(p => ({ ...p, groups: v })), []);
-  const setCustomers    = useCallback((v) => setState(p => ({ ...p, customers: v })), []);
-  const setFilteredData = useCallback((v) => setState(p => ({ ...p, filteredData: v })), []);
-  const setLoading      = useCallback((v) => setState(p => ({ ...p, loading: v })), []);
-  const setError        = useCallback((v) => setState(p => ({ ...p, error: v })), []);
-
-  const handleFilterKeyDown = (e, idx) => {
-    if (e.key === 'Enter' || e.key === 'ArrowDown' || e.key === 'ArrowRight') {
-      e.preventDefault();
-      const next = document.querySelector(`[data-enter-index="${idx + 1}"]`);
-      if (next) next.focus();
-    } else if (e.key === 'ArrowUp' || e.key === 'ArrowLeft') {
-      e.preventDefault();
-      const prev = document.querySelector(`[data-enter-index="${idx - 1}"]`);
-      if (prev) prev.focus();
-    }
-  };
-
-  // Fetch groups and customers on mount
   useEffect(() => {
-    const fetchMasterData = async () => {
-      try {
-        const [groupsData, customersData] = await Promise.all([
-          api.listGroups(),
-          api.listCustomers()
-        ]);
-        setGroups(groupsData || []);
-        setCustomers(customersData || []);
-      } catch (err) {
-        console.error('Failed to load master data:', err);
-      }
-    };
-    fetchMasterData();
+    api.listCatalog()
+      .then(data => setCatalog(Array.isArray(data) ? data : []))
+      .catch(() => {});
   }, []);
 
-  // ✅ FIX: handleFilter defined with useCallback so useEffect can safely depend on it
-  // This ensures customers is never stale when filter runs
-  const handleFilter = useCallback(async () => {
-    if (!selectedGroup) return;
-
+  const handleGo = useCallback(async () => {
     setLoading(true);
-    setError(null);
     try {
       const data = await api.getDailySales(fromDate, toDate, null);
-
-      // ✅ FIX: Read customers from state directly via functional setState to avoid stale closure
-      setState(prev => {
-        const groupCustomers = prev.customers.filter(c => c.group === selectedGroup);
-        const groupCustomerNames = groupCustomers.map(c => c.name);
-
-        const customerSalesMap = {};
-        data.forEach(sale => {
-          if (!customerSalesMap[sale.party]) {
-            customerSalesMap[sale.party] = {
-              party: sale.party,
-              items: [],
-              totalQty: 0,
-              totalAmount: 0,
-              totalCoolie: 0,     // ✅ FIX: track coolie
-              totalLaguage: 0,    // ✅ FIX: track laguage
-              totalPaid: 0,       // ✅ FIX: track paid
-              smsStatus: sale.smsStatus || 'pending'
-            };
-          }
-          customerSalesMap[sale.party].items.push(sale);
-          customerSalesMap[sale.party].totalQty    += Number(sale.qty || 0);
-          customerSalesMap[sale.party].totalAmount += Number(sale.total || 0);
-          customerSalesMap[sale.party].totalCoolie += Number(sale.coolie || 0);
-          customerSalesMap[sale.party].totalLaguage+= Number(sale.laguage || 0) * Number(sale.qty || 0);
-          customerSalesMap[sale.party].totalPaid   += Number(sale.paidAmt || 0);
-        });
-
-        const filteredSales = Object.values(customerSalesMap)
-          .filter(cs => groupCustomerNames.includes(cs.party));
-
-        return { ...prev, filteredData: filteredSales, loading: false, error: null };
+      const filtered = (Array.isArray(data) ? data : []).filter(r => {
+        if (useItem && itemName && String(r.itemName || '') !== itemName) return false;
+        return true;
       });
-    } catch (err) {
-      console.error('Failed to fetch daily sales:', err);
-      setError(err?.message || 'Failed to load sales data');
-      setFilteredData([]);
+      setRows(filtered);
+    } catch (e) {
+      console.error(e);
+      setRows([]);
+    } finally {
       setLoading(false);
     }
-  }, [selectedGroup, fromDate, toDate]); // ✅ customers NOT needed — read via setState callback
+  }, [fromDate, toDate, itemName, useItem]);
 
-  // ✅ FIX: handleFilter is now stable in deps, no eslint-disable needed
-  useEffect(() => {
-    if (selectedGroup) {
-      handleFilter();
-    }
-  }, [selectedGroup, fromDate, toDate, handleFilter]);
+  const totals = useMemo(() => rows.reduce((acc, r) => ({
+    qty:    acc.qty    + Number(r.qty   || 0),
+    amount: acc.amount + Number(r.total || 0),
+  }), { qty: 0, amount: 0 }), [rows]);
 
-  // ✅ FIX: totals now includes coolie, laguage, paid
-  const totals = useMemo(() => {
-    return filteredData.reduce((acc, curr) => ({
-      qty:          acc.qty          + (curr.totalQty     || 0),
-      amount:       acc.amount       + (curr.totalAmount  || 0),
-      coolieTotal:  acc.coolieTotal  + (curr.totalCoolie  || 0),
-      laguageTotal: acc.laguageTotal + (curr.totalLaguage || 0),
-      paidTotal:    acc.paidTotal    + (curr.totalPaid    || 0),
-    }), { qty: 0, amount: 0, coolieTotal: 0, laguageTotal: 0, paidTotal: 0 });
-  }, [filteredData]);
-
-  const netTotal = totals.amount - (totals.amount * commissionPct / 100) - totals.laguageTotal - totals.coolieTotal;
+  const handleSendSMS = async () => {
+    try {
+      const msg = [
+        'ITEMS DAILY SALE RATE',
+        `FROM: ${fromDate}  TO: ${toDate}`,
+        useItem && itemName ? `ITEM: ${itemName}` : 'ITEM: ALL',
+        `TOTAL QTY: ${totals.qty.toFixed(2)}`,
+        `AMOUNT: ₹${totals.amount.toFixed(2)}`,
+      ].join('\n');
+      await navigator.clipboard.writeText(msg);
+      alert('SMS summary copied to clipboard!');
+    } catch { alert('SMS prepared'); }
+  };
 
   const handlePrint = async () => {
     try {
       const response = await api.getDailySalesReport(fromDate, toDate);
-      const blob = response.data;
-      const url = window.URL.createObjectURL(blob);
-      const previewWindow = window.open(url, '_blank');
-      if (!previewWindow) {
+      const url = window.URL.createObjectURL(response.data);
+      const w = window.open(url, '_blank');
+      if (!w) {
         const a = document.createElement('a');
-        a.href = url;
-        a.download = `daily_sales_report_${fromDate}_to_${toDate}.pdf`;
-        document.body.appendChild(a);
-        a.click();
-        document.body.removeChild(a);
+        a.href = url; a.download = `daily_sale_${fromDate}_${toDate}.pdf`;
+        document.body.appendChild(a); a.click(); document.body.removeChild(a);
       }
       window.URL.revokeObjectURL(url);
-    } catch (error) {
-      console.error('Print error:', error);
-      alert(`Print failed: ${error.message}`);
+    } catch (e) { alert(`Print failed: ${e.message}`); }
+  };
+
+  const nav = (e, next, prev) => {
+    if (e.key === 'Enter' || e.key === 'ArrowRight' || e.key === 'ArrowDown') {
+      e.preventDefault(); next?.current?.focus();
+    } else if (e.key === 'ArrowLeft' || e.key === 'ArrowUp') {
+      e.preventDefault(); prev?.current?.focus();
     }
   };
 
-  const handleSendSMS = () => {
-    alert('SMS feature coming soon!');
-  };
+  const itemOptions = useMemo(() =>
+    [...new Set(catalog.map(i => i.itemName).filter(Boolean))], [catalog]);
 
-  const getSMSStatusIcon = (status) => {
-    if (status === 'sent') return <CheckCircle size={16} className="text-green-600" />;
-    return <Clock size={16} className="text-orange-500" />;
-  };
-
-  const getSMSStatusText = (status) => status === 'sent' ? 'Sent' : 'Pending';
-
-  useEffect(() => {
-    return () => { setState(DEFAULT_STATES.dailySaleReport); };
-  }, []);
-
-  const handleCancel = () => {
-    setState(DEFAULT_STATES.dailySaleReport);
-    onCancel && onCancel();
-  };
+  const emptyCount = Math.max(0, 18 - rows.length);
 
   return (
     <div className="flex-1 flex flex-col h-full bg-gradient-to-br from-slate-50 to-slate-100 overflow-hidden">
 
-      {/* Header */}
+      {/* ── Header (same purple gradient as rest of app) ── */}
       <div className="bg-gradient-to-r from-[#5B55E6] to-[#4A44D0] px-5 py-3 flex justify-between items-center text-white shrink-0 shadow-xl rounded-b-xl">
-        <h1 className="text-base font-bold uppercase flex items-center gap-2.5 tracking-wider">
-          <Package className="w-5 h-5 text-white" /> GROUP DAILY SALE
+        <h1 className="text-sm font-bold uppercase tracking-widest flex items-center gap-2.5">
+          <Printer className="w-4 h-4" /> ITEMS DAILY SALE RATE
         </h1>
-        {onCancel && (
-          <button onClick={handleCancel} className="p-1.5 rounded-lg hover:bg-white/20 transition-all">
-            <X className="w-5 h-5" />
-          </button>
-        )}
+        <button onClick={onCancel} className="p-1.5 rounded-lg hover:bg-white/20 transition-all">
+          <X className="w-5 h-5" />
+        </button>
       </div>
 
-      <div className="p-5 flex-1 flex flex-col gap-4 overflow-hidden">
+      <div className="flex-1 flex flex-col overflow-hidden p-5 gap-4">
 
-        {/* Filters */}
-        <div className="bg-white rounded-xl border border-slate-200 p-4 shadow-lg shrink-0">
-          <div className="grid grid-cols-12 gap-4 items-end">
-            <div className="col-span-4">
-              <label className="text-[10px] font-black uppercase text-slate-600 mb-1.5 block tracking-wider">Select Group</label>
-              <div className="relative">
+        {/* ── Filter Panel ── */}
+        <div className="bg-white rounded-2xl border border-slate-200 shadow-lg shrink-0 overflow-hidden">
+          {/* panel title bar */}
+          <div className="bg-gradient-to-r from-[#5B55E6] to-[#4A44D0] px-4 py-2 text-white text-xs font-bold uppercase tracking-widest">
+            Daily Sale Details
+          </div>
+          <div className="px-5 py-4 flex items-end gap-4 flex-wrap">
+
+            {/* Checkbox + Item dropdown (matches screenshot: checkbox on left) */}
+            <div className="flex items-end gap-2">
+              <div className="flex flex-col items-center gap-1 pb-1">
+                <input
+                  type="checkbox"
+                  checked={useItem}
+                  onChange={e => setUseItem(e.target.checked)}
+                  className="w-4 h-4 accent-[#5B55E6] cursor-pointer"
+                />
+              </div>
+              <div className="flex flex-col gap-1 w-56">
+                <label className="text-[10px] font-black uppercase text-slate-500 tracking-widest">Item Name</label>
                 <select
-                  value={selectedGroup}
-                  onChange={(e) => setSelectedGroup(e.target.value)}
-                  onKeyDown={e => handleFilterKeyDown(e, 1)}
-                  className="w-full bg-rose-50 border-2 border-rose-200 rounded-lg p-2.5 text-sm font-bold text-slate-800 outline-none transition-all hover:border-rose-300 focus:border-rose-400 focus:ring-2 focus:ring-rose-100 appearance-none"
-                  data-enter-index="1"
+                  ref={itemRef}
+                  value={itemName}
+                  onChange={e => setItemName(e.target.value)}
+                  disabled={!useItem}
+                  onKeyDown={e => nav(e, fromRef, null)}
+                  className="w-full border border-rose-200 rounded-lg px-3 text-sm font-medium bg-white outline-none focus:border-rose-500 focus:ring-2 focus:ring-rose-500/20 shadow-sm hover:shadow-md transition-all disabled:opacity-40 disabled:cursor-not-allowed appearance-none"
+                  style={{ height: '42px' }}
                 >
-                  <option value="">-- Select Group --</option>
-                  {groups.map(group => <option key={group.id} value={group.name}>{group.name}</option>)}
+                  <option value="">All Items</option>
+                  {itemOptions.map(n => <option key={n} value={n}>{n}</option>)}
                 </select>
-                <ChevronDown className="absolute right-3 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-700 pointer-events-none" />
               </div>
             </div>
 
-            <div className="col-span-3">
-              <label className="text-[10px] font-black uppercase text-slate-600 mb-1.5 block tracking-wider">From Date</label>
+            {/* From Date */}
+            <div className="flex flex-col gap-1">
+              <label className="text-[10px] font-black uppercase text-slate-500 tracking-widest">From Date</label>
               <input
+                ref={fromRef}
                 type="date"
                 value={fromDate}
-                onChange={(e) => setFromDate(e.target.value)}
-                onKeyDown={e => handleFilterKeyDown(e, 2)}
-                className="w-full bg-rose-50 border-2 border-rose-200 rounded-lg p-2.5 text-sm font-bold text-slate-800 outline-none transition-all hover:border-rose-300 focus:border-rose-400 focus:ring-2 focus:ring-rose-100"
-                data-enter-index="2"
+                onChange={e => setFromDate(e.target.value)}
+                onKeyDown={e => nav(e, toRef, itemRef)}
+                className="border border-rose-200 rounded-lg px-3 text-sm font-medium bg-white outline-none focus:border-rose-500 focus:ring-2 focus:ring-rose-500/20 shadow-sm hover:shadow-md transition-all"
+                style={{ height: '42px' }}
               />
             </div>
 
-            <div className="col-span-3">
-              <label className="text-[10px] font-black uppercase text-slate-600 mb-1.5 block tracking-wider">To Date</label>
+            {/* To label */}
+            <span className="text-sm font-bold text-slate-500 pb-2.5">To</span>
+
+            {/* To Date */}
+            <div className="flex flex-col gap-1">
+              <label className="text-[10px] font-black uppercase text-slate-500 tracking-widest">To Date</label>
               <input
+                ref={toRef}
                 type="date"
                 value={toDate}
-                onChange={(e) => setToDate(e.target.value)}
-                onKeyDown={e => handleFilterKeyDown(e, 3)}
-                className="w-full bg-rose-50 border-2 border-rose-200 rounded-lg p-2.5 text-sm font-bold text-slate-800 outline-none transition-all hover:border-rose-300 focus:border-rose-400 focus:ring-2 focus:ring-rose-100"
-                data-enter-index="3"
+                onChange={e => setToDate(e.target.value)}
+                onKeyDown={e => nav(e, goRef, fromRef)}
+                className="border border-rose-200 rounded-lg px-3 text-sm font-medium bg-white outline-none focus:border-rose-500 focus:ring-2 focus:ring-rose-500/20 shadow-sm hover:shadow-md transition-all"
+                style={{ height: '42px' }}
               />
             </div>
 
-            <div className="col-span-2 flex justify-end">
-              <button
-                onClick={handleFilter}
-                disabled={loading || !selectedGroup}
-                className="bg-gradient-to-r from-rose-500 to-rose-600 text-white px-6 py-2.5 font-black uppercase text-xs rounded-lg shadow-lg hover:from-rose-600 hover:to-rose-700 disabled:opacity-50 disabled:cursor-not-allowed transition-all flex items-center gap-2 tracking-wider"
-                data-enter-index="4"
-              >
-                <Search size={16} /> {loading ? 'Loading...' : 'GO'}
-              </button>
-            </div>
+            {/* Go button */}
+            <button
+              ref={goRef}
+              onClick={handleGo}
+              disabled={loading}
+              onKeyDown={e => {
+                if (e.key === 'Enter') { e.preventDefault(); handleGo(); }
+                else if (e.key === 'ArrowRight' || e.key === 'ArrowDown') { e.preventDefault(); smsRef.current?.focus(); }
+                else if (e.key === 'ArrowLeft' || e.key === 'ArrowUp') { e.preventDefault(); toRef.current?.focus(); }
+              }}
+              className="bg-gradient-to-r from-[#5B55E6] to-[#4A44D0] text-white font-bold text-sm px-6 rounded-xl shadow-lg hover:from-[#4A44D0] hover:to-[#3A34C0] disabled:opacity-50 transition-all hover:shadow-xl active:translate-y-0.5"
+              style={{ height: '42px' }}
+            >
+              {loading ? '...' : 'Go'}
+            </button>
           </div>
         </div>
 
-        {/* Error */}
-        {error && (
-          <div className="bg-red-50 border-2 border-red-200 rounded-lg p-4 text-red-700 text-sm font-bold flex items-center gap-2">
-            <AlertTriangle className="w-5 h-5 text-red-500" />
-            {error}
-          </div>
-        )}
-
-        {/* Table */}
-        <div className="flex-1 bg-white rounded-xl border-2 border-slate-200 overflow-auto shadow-lg">
-          <table className="w-full text-left text-sm border-collapse">
-            <thead className="bg-gradient-to-r from-[#5B55E6] to-[#4A44D0] sticky top-0 text-white uppercase font-bold text-xs z-10 border-b-2 border-black/20 shadow-lg">
-              <tr>
-                <th className="p-3.5 w-16 border-r border-black/20">Sl.No</th>
-                <th className="p-3.5 border-r border-black/20">Customer Name</th>
-                <th className="p-3.5 w-36 text-right border-r border-black/20">Total Qty</th>
-                <th className="p-3.5 w-44 text-right border-r border-black/20">Total Amount</th>
-                <th className="p-3.5 w-36 text-center">SMS Status</th>
-              </tr>
-            </thead>
-            <tbody>
-              {loading ? (
-                <tr>
-                  <td colSpan="5" className="p-16 text-center text-slate-500 text-sm font-bold">
-                    <div className="flex items-center justify-center gap-3">
-                      <div className="w-5 h-5 border-2 border-slate-300 border-t-transparent rounded-full animate-spin"></div>
-                      Loading data...
-                    </div>
-                  </td>
+        {/* ── Table (green header, grid lines — matches screenshot) ── */}
+        <div className="flex-1 bg-white rounded-2xl border border-slate-200 shadow-lg overflow-hidden flex flex-col">
+          <div className="flex-1 overflow-auto">
+            <table className="w-full border-collapse text-[12px]">
+              <thead className="sticky top-0 z-10">
+                <tr className="bg-green-600 text-white font-black uppercase text-[11px]">
+                  <th className="border border-green-700 px-3 py-2.5 w-14 text-center">Sl.No</th>
+                  <th className="border border-green-700 px-3 py-2.5 w-28 text-left">Date</th>
+                  <th className="border border-green-700 px-3 py-2.5 text-left">Party</th>
+                  <th className="border border-green-700 px-3 py-2.5 text-left">Item Name</th>
+                  <th className="border border-green-700 px-3 py-2.5 w-24 text-right">Qty</th>
+                  <th className="border border-green-700 px-3 py-2.5 w-24 text-right">Rate</th>
+                  <th className="border border-green-700 px-3 py-2.5 w-32 text-right">Total</th>
                 </tr>
-              ) : filteredData.length === 0 ? (
-                <tr>
-                  <td colSpan="5" className="p-16 text-center text-slate-500 text-sm font-bold">
-                    {selectedGroup ? 'No sales data found for the selected period' : 'Please select a group'}
-                  </td>
-                </tr>
-              ) : (
-                filteredData.map((row, idx) => (
-                  <tr key={row.party} className="border-b border-slate-100 hover:bg-slate-50 transition-all">
-                    <td className="p-3.5 font-bold text-slate-700 border-r border-slate-100">{idx + 1}</td>
-                    <td className="p-3.5 font-bold text-slate-800 border-r border-slate-100">{row.party}</td>
-                    <td className="p-3.5 text-right font-bold text-slate-800 border-r border-slate-100">{row.totalQty.toFixed(2)}</td>
-                    <td className="p-3.5 text-right font-black text-slate-900 border-r border-slate-100">₹{row.totalAmount.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</td>
-                    <td className="p-3.5 text-center">
-                      <div className="flex items-center justify-center gap-2">
-                        {getSMSStatusIcon(row.smsStatus)}
-                        <span className={`text-xs font-black uppercase ${row.smsStatus === 'sent' ? 'text-green-600' : 'text-orange-500'}`}>
-                          {getSMSStatusText(row.smsStatus)}
-                        </span>
-                      </div>
-                    </td>
+              </thead>
+              <tbody>
+                {rows.map((r, idx) => (
+                  <tr key={idx} className={`border-b border-slate-100 ${idx % 2 === 0 ? 'bg-white' : 'bg-slate-50/50'} hover:bg-indigo-50/40 transition-colors`}>
+                    <td className="border border-slate-200 px-3 py-2 text-center text-slate-500 font-bold">{idx + 1}</td>
+                    <td className="border border-slate-200 px-3 py-2 font-medium text-slate-700">{String(r.date || '')}</td>
+                    <td className="border border-slate-200 px-3 py-2 font-semibold text-slate-800">{String(r.party || '')}</td>
+                    <td className="border border-slate-200 px-3 py-2 font-medium text-slate-700">{String(r.itemName || '')}</td>
+                    <td className="border border-slate-200 px-3 py-2 text-right font-black text-[#5B55E6]">{Number(r.qty || 0).toFixed(2)}</td>
+                    <td className="border border-slate-200 px-3 py-2 text-right font-bold text-slate-700">{Number(r.rate || 0).toFixed(2)}</td>
+                    <td className="border border-slate-200 px-3 py-2 text-right font-black text-green-700">{Number(r.total || 0).toFixed(2)}</td>
                   </tr>
-                ))
-              )}
-            </tbody>
-          </table>
+                ))}
+                {Array.from({ length: emptyCount }).map((_, i) => (
+                  <tr key={`e-${i}`} style={{ height: '30px' }}>
+                    <td className="border border-slate-100 px-3">&nbsp;</td>
+                    <td className="border border-slate-100 px-3">&nbsp;</td>
+                    <td className="border border-slate-100 px-3">&nbsp;</td>
+                    <td className="border border-slate-100 px-3">&nbsp;</td>
+                    <td className="border border-slate-100 px-3">&nbsp;</td>
+                    <td className="border border-slate-100 px-3">&nbsp;</td>
+                    <td className="border border-slate-100 px-3">&nbsp;</td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
         </div>
 
-        {/* Footer */}
-        <div className="bg-white rounded-xl border border-slate-200 p-4 shadow-lg shrink-0">
-          <div className="grid grid-cols-12 gap-4 items-center">
+        {/* ── Footer (Send SMS | totals | Print | Cancel) ── */}
+        <div className="bg-white rounded-2xl border border-slate-200 shadow-lg px-5 py-3.5 shrink-0 flex items-center justify-between gap-4">
 
-            <div className="col-span-6 flex gap-3">
-              <button onClick={handleSendSMS} className="bg-gradient-to-r from-emerald-500 to-emerald-600 text-white px-5 py-2.5 font-black uppercase text-xs rounded-lg shadow-lg hover:from-emerald-600 hover:to-emerald-700 transition-all flex items-center gap-2 tracking-wider" data-enter-index="5">
-                <Send size={16} /> SEND SMS
-              </button>
-              <button onClick={handlePrint} className="bg-gradient-to-r from-slate-700 to-slate-800 text-white px-5 py-2.5 font-black uppercase text-xs rounded-lg shadow-lg hover:from-slate-800 hover:to-slate-900 transition-all flex items-center gap-2 tracking-wider" data-enter-index="6">
-                <Printer size={16} /> PRINT
-              </button>
-              {onCancel && (
-                <button onClick={handleCancel} className="bg-gradient-to-r from-slate-200 to-slate-300 text-slate-700 px-5 py-2.5 font-black uppercase text-xs rounded-lg shadow-lg hover:from-slate-300 hover:to-slate-400 transition-all flex items-center gap-2 tracking-wider border border-slate-300" data-enter-index="7">
-                  CANCEL
-                </button>
-              )}
+          {/* Send SMS */}
+          <button
+            ref={smsRef}
+            onClick={handleSendSMS}
+            onKeyDown={e => {
+              if (e.key === 'Enter') { e.preventDefault(); handleSendSMS(); }
+              else if (e.key === 'ArrowRight' || e.key === 'ArrowDown') { e.preventDefault(); printRef.current?.focus(); }
+              else if (e.key === 'ArrowLeft' || e.key === 'ArrowUp') { e.preventDefault(); goRef.current?.focus(); }
+            }}
+            className="bg-gradient-to-r from-emerald-500 to-emerald-600 text-white font-black uppercase text-[11px] px-6 rounded-xl shadow-lg hover:from-emerald-600 hover:to-emerald-700 transition-all tracking-wider flex items-center gap-2 hover:shadow-xl active:translate-y-0.5"
+            style={{ height: '40px' }}
+          >
+            <Send className="w-3.5 h-3.5" /> SEND SMS
+          </button>
+
+          {/* Totals */}
+          <div className="flex items-center gap-5">
+            <div className="flex items-center gap-2">
+              <span className="text-[10px] font-black text-slate-500 uppercase tracking-widest whitespace-nowrap">Total Quantity</span>
+              <input
+                readOnly
+                className="w-28 border border-slate-200 bg-slate-50 px-2 text-[13px] font-black text-right outline-none rounded-lg shadow-inner"
+                style={{ height: '36px' }}
+                value={totals.qty.toFixed(2)}
+              />
             </div>
-
-            <div className="col-span-6">
-              <div className="grid grid-cols-2 gap-4">
-                <div className="bg-gradient-to-br from-slate-50 to-slate-100 rounded-lg p-3 border border-slate-200 shadow-sm">
-                  <label className="text-[10px] font-black uppercase text-slate-600 mb-2 block tracking-wider">Total Quantity</label>
-                  <input type="text" readOnly className="w-full bg-white border-2 border-slate-200 rounded-lg p-2.5 text-sm font-black text-right text-slate-800 outline-none shadow-inner" value={totals.qty.toFixed(2)} />
-                </div>
-                <div className="bg-gradient-to-br from-rose-50 to-rose-100 rounded-lg p-3 border-2 border-rose-200 shadow-sm">
-                  <label className="text-[10px] font-black uppercase text-rose-700 mb-2 block tracking-wider">Amount Total</label>
-                  <input type="text" readOnly className="w-full bg-gradient-to-r from-rose-500 to-rose-600 text-white border-2 border-rose-600 rounded-lg p-2.5 text-sm font-black text-right outline-none shadow-lg" value={`₹ ${totals.amount.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`} />
-                </div>
-              </div>
-
-              {/* Financial Summary */}
-              <div className="mt-4 bg-gradient-to-b from-slate-800 to-slate-900 p-4 rounded-lg border border-slate-700 shadow-xl">
-                <div className="flex items-center gap-2 mb-3">
-                  <div className="w-6 h-6 rounded-md bg-gradient-to-br from-[#5B55E6] to-[#4A44D0] flex items-center justify-center">
-                    <svg xmlns="http://www.w3.org/2000/svg" className="h-3 w-3 text-white" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z" />
-                    </svg>
-                  </div>
-                  <h4 className="text-xs font-bold text-white uppercase tracking-wider">Financial Summary</h4>
-                </div>
-                <div className="space-y-2 text-white">
-                  <div className="bg-slate-700/30 rounded-xl p-2 border border-slate-600/50">
-                    <label className="text-xs font-bold text-slate-300 uppercase tracking-widest mb-1 block">Total Quantity</label>
-                    <input type="text" readOnly className="w-full bg-gradient-to-r from-slate-800 to-slate-700 px-2 py-1.5 text-base font-black text-right rounded-lg border border-slate-600/50 outline-none text-cyan-400" value={totals.qty.toFixed(2)} style={{ colorScheme: 'dark' }} />
-                  </div>
-                  <div className="bg-slate-700/30 rounded-xl p-2 border border-slate-600/50">
-                    <label className="text-xs font-bold text-slate-300 uppercase tracking-widest mb-1 block">Handling Charges</label>
-                    <input type="text" readOnly className="w-full bg-gradient-to-r from-slate-800 to-slate-700 px-2 py-1.5 text-base font-bold text-right rounded-lg border border-slate-600/50 outline-none text-amber-400" value={totals.coolieTotal.toFixed(2)} style={{ colorScheme: 'dark' }} />
-                  </div>
-                  <div className="bg-slate-700/30 rounded-xl p-2 border border-slate-600/50">
-                    <label className="text-xs font-bold text-slate-300 uppercase tracking-widest mb-1 block">Luggage Costs</label>
-                    <input type="text" readOnly className="w-full bg-gradient-to-r from-slate-800 to-slate-700 px-2 py-1.5 text-base font-bold text-right rounded-lg border border-slate-600/50 outline-none text-rose-400" value={totals.laguageTotal.toFixed(2)} style={{ colorScheme: 'dark' }} />
-                  </div>
-                  <div className="bg-gradient-to-br from-slate-800/50 to-slate-900/50 rounded-xl p-3 border border-[#5B55E6]/30">
-                    <h4 className="text-xs font-bold text-[#5B55E6] uppercase tracking-widest mb-2 flex items-center gap-2">
-                      <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8c-1.657 0-3 .895-3 2s1.343 2 3 2 3 .895 3 2-1.343 2-3 2m0-8c1.11 0 2.08.402 2.599 1M12 8V7m0 1v8m0 0v1m0-1c-1.11 0-2.08-.402-2.599-1M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
-                      </svg>
-                      Commission Details
-                    </h4>
-                    <div className="grid grid-cols-2 gap-2">
-                      <div className="flex flex-col gap-1">
-                        <label className="text-xs font-bold text-slate-300 uppercase tracking-wider">Commission %</label>
-                        <input type="number" className="bg-gradient-to-r from-slate-800 to-slate-700 px-2 py-1.5 font-bold text-right rounded-lg border border-slate-600/50 outline-none focus:border-[#5B55E6] text-white" value={String(commissionPct)} onChange={(e) => setCommissionPct(Number(e.target.value) || 0)} style={{ colorScheme: 'dark' }} />
-                      </div>
-                      <div className="flex flex-col gap-1">
-                        <label className="text-xs font-bold text-slate-300 uppercase tracking-wider">Total Commission</label>
-                        <input type="text" readOnly className="bg-gradient-to-r from-slate-800/50 to-slate-700/50 px-2 py-1.5 text-right rounded-lg border border-slate-600/30 outline-none text-rose-400 font-bold" value={(totals.amount * commissionPct / 100).toFixed(2)} style={{ colorScheme: 'dark' }} />
-                      </div>
-                    </div>
-                  </div>
-                  <div className="bg-slate-700/30 rounded-xl p-2 border border-slate-600/50">
-                    <label className="text-xs font-bold text-slate-300 uppercase tracking-widest mb-1 block">Gross Total</label>
-                    <input type="text" readOnly className="w-full bg-gradient-to-r from-slate-800 to-slate-700 px-2 py-1.5 text-lg font-black text-right rounded-lg border border-slate-600/50 outline-none text-emerald-400" value={totals.amount.toFixed(2)} style={{ colorScheme: 'dark' }} />
-                  </div>
-                  <div className="bg-slate-700/30 rounded-xl p-2 border border-slate-600/50">
-                    <label className="text-xs font-bold text-slate-300 uppercase tracking-widest mb-1 block">Amount Paid</label>
-                    <input type="text" readOnly className="w-full bg-gradient-to-r from-slate-800 to-slate-700 px-2 py-1.5 text-base font-bold text-right rounded-lg border border-slate-600/50 outline-none text-green-400" value={totals.paidTotal.toFixed(2)} style={{ colorScheme: 'dark' }} />
-                  </div>
-                  <div className="mt-2 pt-3 border-t border-white/20 text-center">
-                    <div className="inline-flex items-center gap-1 mb-1.5 px-2.5 py-1 bg-gradient-to-r from-[#5B55E6]/20 to-[#4A44D0]/20 rounded-full border border-[#5B55E6]/30">
-                      <span className="text-[9px] font-bold text-[#5B55E6] uppercase tracking-wider">Net Total</span>
-                    </div>
-                    <div className="bg-gradient-to-r from-[#5B55E6] to-[#4A44D0] p-3 rounded-lg shadow-xl border border-white/10">
-                      <p className="text-xl font-black text-white tabular-nums drop-shadow-lg">₹ {netTotal.toFixed(2)}</p>
-                    </div>
-                  </div>
-                </div>
-              </div>
+            <div className="flex items-center gap-2">
+              <span className="text-[10px] font-black text-slate-500 uppercase tracking-widest whitespace-nowrap">Amount Total</span>
+              <input
+                readOnly
+                className="w-40 bg-gradient-to-r from-rose-500 to-rose-600 text-white border-0 px-2 text-[14px] font-black text-right outline-none rounded-lg shadow-lg"
+                style={{ height: '36px' }}
+                value={`₹ ${totals.amount.toFixed(2)}`}
+              />
             </div>
+          </div>
+
+          {/* Print + Cancel */}
+          <div className="flex gap-2">
+            <button
+              ref={printRef}
+              onClick={handlePrint}
+              onKeyDown={e => {
+                if (e.key === 'Enter') { e.preventDefault(); handlePrint(); }
+                else if (e.key === 'ArrowRight' || e.key === 'ArrowDown') { e.preventDefault(); cancelRef.current?.focus(); }
+                else if (e.key === 'ArrowLeft' || e.key === 'ArrowUp') { e.preventDefault(); smsRef.current?.focus(); }
+              }}
+              className="bg-gradient-to-r from-slate-700 to-slate-800 text-white font-bold text-sm px-5 rounded-xl shadow-lg hover:from-slate-800 hover:to-slate-900 transition-all hover:shadow-xl active:translate-y-0.5 flex items-center gap-1.5"
+              style={{ height: '40px' }}
+            >
+              <Printer className="w-3.5 h-3.5" /> Print
+            </button>
+            <button
+              ref={cancelRef}
+              onClick={onCancel}
+              onKeyDown={e => {
+                if (e.key === 'Enter') { e.preventDefault(); onCancel?.(); }
+                else if (e.key === 'ArrowLeft' || e.key === 'ArrowUp') { e.preventDefault(); printRef.current?.focus(); }
+              }}
+              className="bg-gradient-to-r from-slate-100 to-slate-200 text-slate-700 font-bold text-sm px-5 rounded-xl border border-slate-300 shadow-md hover:from-slate-200 hover:to-slate-300 transition-all hover:shadow-lg active:translate-y-0.5"
+              style={{ height: '40px' }}
+            >
+              Cancel
+            </button>
           </div>
         </div>
       </div>
     </div>
   );
-};
-
-export default DailySaleReport;
+}
