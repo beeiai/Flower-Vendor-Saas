@@ -70,14 +70,44 @@ export default function ReportsView({ groups, customers, vehicles, advanceStore 
 
 		// Keyboard navigation handler
 		const handleFilterKeyDown = (e, field) => {
-			if (e.key === 'Enter' || e.key === 'ArrowRight') {
+			if (e.key === 'Enter') {
+				if (field === 'group') {
+					// For group field, if dropdown is open, let it handle Enter
+					// If dropdown is closed, move to next field
+					const groupInput = groupRef.current?.querySelector('input');
+					const dropdownOpen = groupInput?.closest('[data-open="true"]');
+					if (!dropdownOpen) {
+						e.preventDefault();
+						vehicleRef.current?.focus();
+					}
+				} else if (field === 'vehicle') {
+					// For vehicle field, if dropdown is open, let it handle Enter
+					// If dropdown is closed, move to next field
+					const vehicleInput = vehicleRef.current?.querySelector('input');
+					const dropdownOpen = vehicleInput?.closest('[data-open="true"]');
+					if (!dropdownOpen) {
+						e.preventDefault();
+						customerRef.current?.focus();
+					}
+				} else if (field === 'customer') {
+					// For customer field, if dropdown is open, let it handle Enter
+					// If dropdown is closed, move to next field
+					const customerInput = customerRef.current?.querySelector('input');
+					const dropdownOpen = customerInput?.closest('[data-open="true"]');
+					if (!dropdownOpen) {
+						e.preventDefault();
+						submitRef.current?.focus();
+					}
+				} else if (field === 'submit') {
+					e.preventDefault();
+					handleFilterSubmit();
+				}
+			} else if (e.key === 'ArrowRight') {
 				e.preventDefault();
 				if (field === 'group') vehicleRef.current?.focus();
 				else if (field === 'vehicle') customerRef.current?.focus();
 				else if (field === 'customer') submitRef.current?.focus();
-				else if (field === 'submit') {
-					handleFilterSubmit();
-				}
+				else if (field === 'submit') handleFilterSubmit();
 			} else if (e.key === 'ArrowLeft') {
 				e.preventDefault();
 				if (field === 'vehicle') groupRef.current?.focus();
@@ -438,7 +468,7 @@ export default function ReportsView({ groups, customers, vehicles, advanceStore 
 																				{filterError && (
 																					<div className="text-xs text-red-600 mt-2 font-semibold">{filterError}</div>
 																				)}
-																			{/* Submit Button for keyboard navigation */}
+																			{/* Hidden submit button for keyboard navigation */}
 																			<button
 																				ref={submitRef}
 																				style={{ position: 'absolute', left: '-9999px', width: 0, height: 0, opacity: 0 }}

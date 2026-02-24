@@ -110,36 +110,29 @@ export function SearchableSelect({ label, options, value, onChange, placeholder,
 				setHighlight(0);
 				return;
 			} else {
-				// Second Enter: Select highlighted option and move to next field
+				// Enter with open dropdown: Select highlighted option and close dropdown
 				e.preventDefault();
 				if (highlight >= 0 && filteredOptions[highlight]) {
 					handleSelect(filteredOptions[highlight]);
 					setOpen(false);
 					setHighlight(0);
-					// Notify parent component that selection is complete
+					// Keep focus on the input after selection
 					setTimeout(() => {
-						if (onSelectionComplete) {
-							onSelectionComplete();
-						}
+						actualInputRef.current?.focus();
 					}, 0);
 				} else if (filteredOptions.length > 0 && searchTerm) {
 					// If there's a search term but no highlighted option, select the first match
 					handleSelect(filteredOptions[0]);
 					setOpen(false);
 					setHighlight(0);
-					// Notify parent component that selection is complete
+					// Keep focus on the input after selection
 					setTimeout(() => {
-						if (onSelectionComplete) {
-							onSelectionComplete();
-						}
+						actualInputRef.current?.focus();
 					}, 0);
 				} else {
-					// If no options match, close dropdown and allow parent to handle navigation
+					// If no options match, just close dropdown and keep focus on input
 					setOpen(false);
 					setHighlight(0);
-					if (onSelectionComplete) {
-						onSelectionComplete();
-					}
 				}
 				return;
 			}
