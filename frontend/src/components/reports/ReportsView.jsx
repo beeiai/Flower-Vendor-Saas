@@ -14,113 +14,18 @@ function todayISO() {
 }
 
 export default function ReportsView({ groups, customers, vehicles, advanceStore = {}, onCancel }) {
-		// Keyboard navigation and validation state
-		const [filterError, setFilterError] = useState("");
-		const groupRef = useRef();
-		const vehicleRef = useRef();
-		const customerRef = useRef();
-		const submitRef = useRef();
+	const [filterError, setFilterError] = useState("");
 
-		// Move focus to first missing required field
-		const focusFirstMissing = () => {
-			if (!groupName) {
-				groupRef.current?.focus();
-				return;
-			}
-			if (!customerName) {
-				customerRef.current?.focus();
-				return;
-			}
-			submitRef.current?.focus();
-		};
+	// ✅ FIX: One ref per field, no duplicates
+	const fromDateRef = useRef(null);
+	const toDateRef = useRef(null);
+	const groupRef = useRef(null);
+	const vehicleRef = useRef(null);
+	const customerRef = useRef(null);
+	const submitRef = useRef(null);
 
-		// Submit handler with validation
-		const handleFilterSubmit = async () => {
-			setFilterError("");
-			if (!groupName) {
-				setFilterError("Group is required");
-				groupRef.current?.focus();
-				return;
-			}
-			if (!customerName) {
-				setFilterError("Customer is required");
-				customerRef.current?.focus();
-				return;
-			}
-			
-			// Set autoLoad to true to trigger data loading
-			setAutoLoadLocal(true);
-			setAutoLoad(true);
-			
-			// Fetch transactions for selected customer
-			try {
-				const selectedCustomerObj = customers.find(c => c.name === customerName);
-				if (selectedCustomerObj?.id) {
-					const data = await api.listTransactions(selectedCustomerObj.id);
-					setRows(Array.isArray(data) ? data : []);
-				} else {
-					setRows([]);
-				}
-			} catch (error) {
-				console.error('Error fetching transactions:', error);
-				setRows([]);
-				setFilterError("Failed to load report data. Please try again.");
-			}
-		};
-
-		// Keyboard navigation handler
-		const handleFilterKeyDown = (e, field) => {
-			if (e.key === 'Enter') {
-				if (field === 'group') {
-					// For group field, if dropdown is open, let it handle Enter
-					// If dropdown is closed, move to next field
-					const groupInput = groupRef.current?.querySelector('input');
-					const dropdownOpen = groupInput?.closest('[data-open="true"]');
-					if (!dropdownOpen) {
-						e.preventDefault();
-						vehicleRef.current?.focus();
-					}
-				} else if (field === 'vehicle') {
-					// For vehicle field, if dropdown is open, let it handle Enter
-					// If dropdown is closed, move to next field
-					const vehicleInput = vehicleRef.current?.querySelector('input');
-					const dropdownOpen = vehicleInput?.closest('[data-open="true"]');
-					if (!dropdownOpen) {
-						e.preventDefault();
-						customerRef.current?.focus();
-					}
-				} else if (field === 'customer') {
-					// For customer field, if dropdown is open, let it handle Enter
-					// If dropdown is closed, move to next field
-					const customerInput = customerRef.current?.querySelector('input');
-					const dropdownOpen = customerInput?.closest('[data-open="true"]');
-					if (!dropdownOpen) {
-						e.preventDefault();
-						submitRef.current?.focus();
-					}
-				} else if (field === 'submit') {
-					e.preventDefault();
-					handleFilterSubmit();
-				}
-			} else if (e.key === 'ArrowRight') {
-				e.preventDefault();
-				if (field === 'group') vehicleRef.current?.focus();
-				else if (field === 'vehicle') customerRef.current?.focus();
-				else if (field === 'customer') submitRef.current?.focus();
-				else if (field === 'submit') handleFilterSubmit();
-			} else if (e.key === 'ArrowLeft') {
-				e.preventDefault();
-				if (field === 'vehicle') groupRef.current?.focus();
-				else if (field === 'customer') vehicleRef.current?.focus();
-				else if (field === 'submit') customerRef.current?.focus();
-			} else if (e.key === 'ArrowDown' || e.key === 'ArrowUp') {
-				// For dropdowns, allow arrow keys to navigate the dropdown options
-				// The dropdown component will handle the actual navigation
-				return; // Don't prevent default for arrow up/down in dropdowns
-			}
-		};
 	const [state, setState] = useState(DEFAULT_STATES.reports);
-	
+
 	const {
 		fromDate,
 		toDate,
@@ -131,42 +36,17 @@ export default function ReportsView({ groups, customers, vehicles, advanceStore 
 		rows
 	} = state;
 
-	// Add ref for enter navigation
 	const containerRef = useRef(null);
 	useEnterController(containerRef);
-	
-	// Functions to update individual state properties
-	const setFromDate = useCallback((value) => {
-		setState(prev => ({ ...prev, fromDate: value }));
-	}, []);
-	
-	const setToDate = useCallback((value) => {
-		setState(prev => ({ ...prev, toDate: value }));
-	}, []);
-	
-	const setGroupName = useCallback((value) => {
-		setState(prev => ({ ...prev, groupName: value }));
-	}, []);
-	
-	const setCustomerName = useCallback((value) => {
-		setState(prev => ({ ...prev, customerName: value }));
-	}, []);
-	
-	const setVehicle = useCallback((value) => {
-		setState(prev => ({ ...prev, vehicle: value }));
-	}, []);
-	
-	const setCommissionPct = useCallback((value) => {
-		setState(prev => ({ ...prev, commissionPct: value }));
-	}, []);
-	
-	const setRows = useCallback((value) => {
-		setState(prev => ({ ...prev, rows: value }));
-	}, []);
-	
-	const setAutoLoad = useCallback((value) => {
-		setState(prev => ({ ...prev, autoLoad: value }));
-	}, []);
+
+	const setFromDate = useCallback((value) => setState(prev => ({ ...prev, fromDate: value })), []);
+	const setToDate = useCallback((value) => setState(prev => ({ ...prev, toDate: value })), []);
+	const setGroupName = useCallback((value) => setState(prev => ({ ...prev, groupName: value })), []);
+	const setCustomerName = useCallback((value) => setState(prev => ({ ...prev, customerName: value })), []);
+	const setVehicle = useCallback((value) => setState(prev => ({ ...prev, vehicle: value })), []);
+	const setCommissionPct = useCallback((value) => setState(prev => ({ ...prev, commissionPct: value })), []);
+	const setRows = useCallback((value) => setState(prev => ({ ...prev, rows: value })), []);
+	const setAutoLoad = useCallback((value) => setState(prev => ({ ...prev, autoLoad: value })), []);
 
 	const filteredCustomers = useMemo(() => {
 		return customers.filter(c => !groupName || c.group === groupName);
@@ -195,16 +75,11 @@ export default function ReportsView({ groups, customers, vehicles, advanceStore 
 		if (!stillValid) setCustomerName('');
 	}, [filteredCustomers, customerName]);
 
-	// autoLoad is now managed in our state system
 	const autoLoad = state.autoLoad;
-
-	// Note: autoLoad is now managed in state, but we need to maintain the original useEffect structure
-	// We'll update the state version of autoLoad separately
 	const [autoLoadLocal, setAutoLoadLocal] = useState(false);
-	
+
 	useEffect(() => {
 		let cancelled = false;
-
 		async function load() {
 			if (!selectedCustomer?.id || !autoLoadLocal) {
 				if (!autoLoadLocal) setRows([]);
@@ -217,15 +92,54 @@ export default function ReportsView({ groups, customers, vehicles, advanceStore 
 				if (!cancelled) setRows([]);
 			}
 		}
-
 		load();
-		return () => {
-			cancelled = true;
-		};
+		return () => { cancelled = true; };
 	}, [selectedCustomer?.id, autoLoadLocal]);
 
-	const handleSubmit = async () => {
-		handleFilterSubmit();
+	const handleFilterSubmit = async () => {
+		setFilterError("");
+		if (!groupName) {
+			setFilterError("Group is required");
+			groupRef.current?.focus();
+			return;
+		}
+		if (!customerName) {
+			setFilterError("Customer is required");
+			customerRef.current?.focus();
+			return;
+		}
+		setAutoLoadLocal(true);
+		setAutoLoad(true);
+		try {
+			const selectedCustomerObj = customers.find(c => c.name === customerName);
+			if (selectedCustomerObj?.id) {
+				const data = await api.listTransactions(selectedCustomerObj.id);
+				setRows(Array.isArray(data) ? data : []);
+			} else {
+				setRows([]);
+			}
+		} catch (error) {
+			console.error('Error fetching transactions:', error);
+			setRows([]);
+			setFilterError("Failed to load report data. Please try again.");
+		}
+	};
+
+	// ✅ FIX: Simple direct focus functions — no broken closest() checks
+	const focusNext = (field) => {
+		if (field === 'fromDate') toDateRef.current?.focus();
+		else if (field === 'toDate') groupRef.current?.querySelector('input')?.focus();
+		else if (field === 'group') vehicleRef.current?.querySelector('input')?.focus();
+		else if (field === 'vehicle') customerRef.current?.querySelector('input')?.focus();
+		else if (field === 'customer') submitRef.current?.focus();
+	};
+
+	const focusPrev = (field) => {
+		if (field === 'toDate') fromDateRef.current?.focus();
+		else if (field === 'group') toDateRef.current?.focus();
+		else if (field === 'vehicle') groupRef.current?.querySelector('input')?.focus();
+		else if (field === 'customer') vehicleRef.current?.querySelector('input')?.focus();
+		else if (field === 'submit') customerRef.current?.querySelector('input')?.focus();
 	};
 
 	const filteredRows = useMemo(() => {
@@ -279,16 +193,11 @@ export default function ReportsView({ groups, customers, vehicles, advanceStore 
 		setCustomerName(filteredCustomers[nextIdx].name);
 	};
 
-	// Reset state when component unmounts or is cancelled
 	useEffect(() => {
-		return () => {
-			// Reset to default state when component unmounts
-			setState(DEFAULT_STATES.reports);
-		};
+		return () => { setState(DEFAULT_STATES.reports); };
 	}, []);
 
 	const handleCancel = () => {
-		// Reset state before cancelling
 		setState(DEFAULT_STATES.reports);
 		onCancel && onCancel();
 	};
@@ -298,24 +207,17 @@ export default function ReportsView({ groups, customers, vehicles, advanceStore 
 			alert('Please select a customer first');
 			return;
 		}
-		
 		try {
-			// Generate the ledger report from backend
 			const response = await api.getLedgerReportPreview(
 				selectedCustomer.id,
 				fromDate || todayISO(),
 				toDate || todayISO(),
 				commissionPct
 			);
-			
-			// Handle PDF preview (open in new tab for print preview)
 			const blob = response.data;
 			const url = window.URL.createObjectURL(blob);
-			
-			// Open in new tab for preview and print
 			const previewWindow = window.open(url, '_blank');
 			if (!previewWindow) {
-				// Fallback to download if popup blocked
 				const a = document.createElement('a');
 				a.href = url;
 				a.download = `ledger_report_${selectedCustomer.name}_${new Date().toISOString().slice(0, 10)}.pdf`;
@@ -323,10 +225,7 @@ export default function ReportsView({ groups, customers, vehicles, advanceStore 
 				a.click();
 				document.body.removeChild(a);
 			}
-			
-			// Clean up the URL object
 			window.URL.revokeObjectURL(url);
-			
 		} catch (error) {
 			console.error('Print error:', error);
 			alert(`Print failed: ${error.message}`);
@@ -350,53 +249,42 @@ export default function ReportsView({ groups, customers, vehicles, advanceStore 
 						</div>
 						<div className="p-4">
 							<div className="space-y-4">
-								{/* First Line - Date and Group Filters */}
+								{/* First Line */}
 								<div className="grid grid-cols-12 gap-4 items-end">
 									<div className="col-span-3">
 										<label className="text-xs font-medium text-slate-600 block mb-1.5">From Date</label>
 										<input
+											ref={fromDateRef}
 											type="date"
 											className="w-full border-2 border-indigo-300 rounded-lg px-3 text-sm font-medium bg-gradient-to-r from-indigo-50 to-blue-50 focus:border-indigo-500 focus:ring-2 focus:ring-indigo-500/20 outline-none transition-all shadow-md hover:shadow-lg cursor-pointer"
 											style={{ height: '40px' }}
 											value={fromDate}
 											onChange={e => setFromDate(e.target.value)}
-											data-enter="2"
 											onKeyDown={e => {
-												if (e.key === 'Enter') {
+												if (e.key === 'Enter' || e.key === 'ArrowRight' || e.key === 'ArrowDown') {
 													e.preventDefault();
-													const next = e.target.closest('[data-enter-container]')?.querySelector('[data-enter="3"]');
-													if (next) next.focus();
-												} else if (e.key === 'ArrowDown' || e.key === 'ArrowRight') {
-													const next = e.target.closest('[data-enter-container]')?.querySelector('[data-enter="3"]');
-													if (next) next.focus();
-												} else if (e.key === 'ArrowUp' || e.key === 'ArrowLeft') {
-													const prev = e.target.closest('[data-enter-container]')?.querySelector('[data-enter="1"]');
-													if (prev) prev.focus();
+													focusNext('fromDate');
 												}
 											}}
 										/>
 									</div>
-																		
+
 									<div className="col-span-3">
 										<label className="text-xs font-medium text-slate-600 block mb-1.5">To Date</label>
 										<input
+											ref={toDateRef}
 											type="date"
 											className="w-full border-2 border-indigo-300 rounded-lg px-3 text-sm font-medium bg-gradient-to-r from-indigo-50 to-blue-50 focus:border-indigo-500 focus:ring-2 focus:ring-indigo-500/20 outline-none transition-all shadow-md hover:shadow-lg cursor-pointer"
 											style={{ height: '36px' }}
 											value={toDate}
 											onChange={e => setToDate(e.target.value)}
-											data-enter="3"
 											onKeyDown={e => {
-												if (e.key === 'Enter') {
+												if (e.key === 'Enter' || e.key === 'ArrowRight' || e.key === 'ArrowDown') {
 													e.preventDefault();
-													const next = e.target.closest('[data-enter-container]')?.querySelector('[data-enter="4"]');
-													if (next) next.focus();
-												} else if (e.key === 'ArrowDown' || e.key === 'ArrowRight') {
-													const next = e.target.closest('[data-enter-container]')?.querySelector('[data-enter="4"]');
-													if (next) next.focus();
-												} else if (e.key === 'ArrowUp' || e.key === 'ArrowLeft') {
-													const prev = e.target.closest('[data-enter-container]')?.querySelector('[data-enter="2"]');
-													if (prev) prev.focus();
+													focusNext('toDate');
+												} else if (e.key === 'ArrowLeft' || e.key === 'ArrowUp') {
+													e.preventDefault();
+													focusPrev('toDate');
 												}
 											}}
 										/>
@@ -404,6 +292,7 @@ export default function ReportsView({ groups, customers, vehicles, advanceStore 
 
 									<div className="col-span-4">
 										<div className="relative">
+											{/* ✅ FIX: onSelectionComplete moves focus forward after picking an option */}
 											<SearchableSelect
 												label="Group Name"
 												options={groups.map(g => g.name)}
@@ -411,12 +300,11 @@ export default function ReportsView({ groups, customers, vehicles, advanceStore 
 												onChange={setGroupName}
 												placeholder="Select group"
 												inputRef={groupRef}
-												onSelectionComplete={() => vehicleRef.current?.focus()}
-												onKeyDown={e => handleFilterKeyDown(e, 'group')}
+												onSelectionComplete={() => focusNext('group')}
 												className={`focus:border-rose-500 focus:ring-rose-500/20 rounded-lg shadow-sm hover:shadow-md transition-all border-rose-200 ${filterError && !groupName ? 'border-red-500 ring-2 ring-red-100' : ''}`}
 												error={filterError && !groupName}
 											/>
-											<div className="absolute right-3 top-8 text-slate-700">
+											<div className="absolute right-3 top-8 text-slate-700 pointer-events-none">
 												<svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
 													<path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
 												</svg>
@@ -433,11 +321,10 @@ export default function ReportsView({ groups, customers, vehicles, advanceStore 
 												onChange={setVehicle}
 												placeholder="(Opt)"
 												inputRef={vehicleRef}
-												onSelectionComplete={() => customerRef.current?.focus()}
-												onKeyDown={e => handleFilterKeyDown(e, 'vehicle')}
+												onSelectionComplete={() => focusNext('vehicle')}
 												className="focus:border-rose-500 focus:ring-rose-500/20 rounded-lg shadow-sm hover:shadow-md transition-all border-rose-200"
 											/>
-											<div className="absolute right-3 top-8 text-slate-700">
+											<div className="absolute right-3 top-8 text-slate-700 pointer-events-none">
 												<svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
 													<path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
 												</svg>
@@ -446,12 +333,12 @@ export default function ReportsView({ groups, customers, vehicles, advanceStore 
 									</div>
 								</div>
 
-								{/* Second Line - Customer and Info Filters */}
+								{/* Second Line */}
 								<div className="grid grid-cols-12 gap-4 items-end">
 									<div className="col-span-4">
 										<label className="text-xs font-medium text-slate-600 block mb-1">Customer Name</label>
 										<div className="flex items-end gap-1.5">
-											<div className="flex-1">
+											<div className="flex-1 relative">
 												<SearchableSelect
 													label={null}
 													options={filteredCustomers.map(c => c.name)}
@@ -459,27 +346,16 @@ export default function ReportsView({ groups, customers, vehicles, advanceStore 
 													onChange={setCustomerName}
 													placeholder="Select customer"
 													inputRef={customerRef}
-													onSelectionComplete={() => submitRef.current?.focus()}
-													onKeyDown={e => handleFilterKeyDown(e, 'customer')}
+													onSelectionComplete={() => focusNext('customer')}
 													className={`focus:border-rose-500 focus:ring-rose-500/20 rounded-lg shadow-sm hover:shadow-md transition-all border-rose-200 ${filterError && !customerName ? 'border-red-500 ring-2 ring-red-100' : ''}`}
 													error={filterError && !customerName}
 												/>
-																				{/* Inline validation error */}
-																				{filterError && (
-																					<div className="text-xs text-red-600 mt-2 font-semibold">{filterError}</div>
-																				)}
-																			{/* Hidden submit button for keyboard navigation */}
-																			<button
-																				ref={submitRef}
-																				style={{ position: 'absolute', left: '-9999px', width: 0, height: 0, opacity: 0 }}
-																				tabIndex={0}
-																				aria-hidden="true"
-																				onKeyDown={e => handleFilterKeyDown(e, 'submit')}
-																				onClick={handleFilterSubmit}
-																			>Submit</button>
+												{filterError && (
+													<div className="text-xs text-red-600 mt-2 font-semibold">{filterError}</div>
+												)}
 											</div>
-											<button type="button" className="w-8 border border-slate-300 bg-slate-100 font-semibold text-sm rounded-sm hover:bg-slate-200 transition-colors" style={{ height: '36px' }} onClick={goPrevCustomer} aria-label="Previous customer" data-enter-index="8">{'<'}</button>
-											<button type="button" className="w-8 border border-slate-300 bg-slate-100 font-semibold text-sm rounded-sm hover:bg-slate-200 transition-colors" style={{ height: '36px' }} onClick={goNextCustomer} aria-label="Next customer" data-enter-index="9">{'>'}</button>
+											<button type="button" className="w-8 border border-slate-300 bg-slate-100 font-semibold text-sm rounded-sm hover:bg-slate-200 transition-colors" style={{ height: '36px' }} onClick={goPrevCustomer} aria-label="Previous customer">{'<'}</button>
+											<button type="button" className="w-8 border border-slate-300 bg-slate-100 font-semibold text-sm rounded-sm hover:bg-slate-200 transition-colors" style={{ height: '36px' }} onClick={goNextCustomer} aria-label="Next customer">{'>'}</button>
 										</div>
 									</div>
 
@@ -513,17 +389,24 @@ export default function ReportsView({ groups, customers, vehicles, advanceStore 
 									</div>
 
 									<div className="col-span-1 flex items-end">
+										{/* ✅ FIX: Single submit button, single ref, Enter key works */}
 										<button
 											ref={submitRef}
 											type="button"
 											className="w-full bg-gradient-to-r from-rose-500 to-rose-600 text-white text-sm font-bold rounded-lg hover:from-rose-600 hover:to-rose-700 transition-all shadow-md hover:shadow-lg focus:outline-none focus:ring-2 focus:ring-rose-500 focus:ring-offset-2"
 											style={{ height: '36px' }}
 											onClick={handleFilterSubmit}
-											tabIndex="0"
-											onKeyDown={e => handleFilterKeyDown(e, 'submit')}
-											data-enter-index="8"
+											onKeyDown={e => {
+												if (e.key === 'Enter') {
+													e.preventDefault();
+													handleFilterSubmit();
+												} else if (e.key === 'ArrowLeft' || e.key === 'ArrowUp') {
+													e.preventDefault();
+													focusPrev('submit');
+												}
+											}}
 										>
-											Submit
+											Go
 										</button>
 									</div>
 								</div>
@@ -536,89 +419,76 @@ export default function ReportsView({ groups, customers, vehicles, advanceStore 
 							<div className="flex-1 overflow-auto bg-white custom-table-scroll">
 								<table className="w-full text-sm border-collapse relative">
 									<thead className="sticky top-0 bg-gradient-to-r from-[#5B55E6] to-[#4A44D0] text-white z-20 border-b-2 font-semibold uppercase text-xs shadow-lg rounded-t-lg">
-									<tr>
-											<th className="px-3 py-3.5 border-r border-l-0 border-t-0 border-b border-white/20 w-14 text-center font-bold tracking-wider">Sl.No</th>
-											<th className="px-3 py-3.5 border-r border-l-0 border-t-0 border-b border-white/20 w-24 text-center font-bold tracking-wider">Date</th>
-											<th className="px-3 py-3.5 border-r border-l-0 border-t-0 border-b border-white/20 w-28 font-bold tracking-wider">Vehicle</th>
-											<th className="px-3 py-3.5 border-r border-l-0 border-t-0 border-b border-white/20 w-24 font-bold tracking-wider">Item Code</th>
-											<th className="px-3 py-3.5 border-r border-l-0 border-t-0 border-b border-white/20 font-bold tracking-wider">Item Name</th>
-											<th className="px-3 py-3.5 border-r border-l-0 border-t-0 border-b border-white/20 w-16 text-right font-bold tracking-wider">Qty</th>
-											<th className="px-3 py-3.5 border-r border-l-0 border-t-0 border-b border-white/20 w-16 text-right font-bold tracking-wider">Rate</th>
-											<th className="px-3 py-3.5 border-r border-l-0 border-t-0 border-b border-white/20 w-24 text-right font-bold tracking-wider">Total</th>
-											<th className="px-3 py-3.5 border-r border-l-0 border-t-0 border-b border-white/20 w-20 text-right font-bold tracking-wider">Luggage</th>
-											<th className="px-3 py-3.5 border-r border-l-0 border-t-0 border-b border-white/20 w-24 text-right font-bold tracking-wider">L. Amount</th>
-											<th className="px-3 py-3.5 border-r border-l-0 border-t-0 border-b border-white/20 w-16 text-right font-bold tracking-wider">Coolie</th>
-											<th className="px-3 py-3.5 border-r border-l-0 border-t-0 border-b border-white/20 w-24 text-right font-bold tracking-wider">Paid Amount</th>
-											<th className="px-3 py-3.5 border-r-0 border-l-0 border-t-0 border-b border-white/20 w-36 text-left font-bold tracking-wider">Remarks</th>
-									</tr>
-								</thead>
-								<tbody>
-									{filteredRows.map((r, idx) => {
-										const total = r.qty * r.rate;
-										const lagAmt = r.qty * r.laguage;
-										return (
-											<tr key={r.id ?? `${r.date}-${idx}`} className="hover:bg-gradient-to-r hover:from-[#5B55E6]/5 hover:to-[#4A44D0]/5 border-b border-slate-200 group transition-all duration-200">
-												<td className="px-3 py-3 border-r border-slate-200 text-center text-slate-500 font-semibold">{idx + 1}</td>
-												<td className="px-3 py-3 border-r border-slate-200 text-center text-slate-700 font-medium">{String(r.date || '')}</td>
-												<td className="px-3 py-3 border-r border-slate-200 font-semibold text-slate-800">{String(r.vehicle || '--')}</td>
-												<td className="px-3 py-3 border-r border-slate-200 text-slate-600">{String(r.itemCode || '--')}</td>
-												<td className="px-3 py-3 border-r border-slate-200 font-semibold text-slate-900">{String(r.itemName || '')}</td>
-												<td className="px-3 py-3 border-r border-slate-200 text-right font-bold text-[#5B55E6]">{r.qty}</td>
-												<td className="px-3 py-3 border-r border-slate-200 text-right font-mono text-slate-700">{String(r.rate)}</td>
-												<td className="px-3 py-3 border-r border-slate-200 text-right font-bold text-green-600">{total.toLocaleString()}</td>
-												<td className="px-3 py-3 border-r border-slate-200 text-right text-slate-500">{String(r.laguage)}</td>
-												<td className="px-3 py-3 border-r border-slate-200 text-right font-semibold text-blue-600">{lagAmt.toLocaleString()}</td>
-												<td className="px-3 py-3 border-r border-slate-200 text-right text-slate-500">{r.coolie.toLocaleString()}</td>
-												<td className="px-3 py-3 border-r border-slate-200 text-right font-semibold text-emerald-600">{r.paidAmt.toLocaleString()}</td>
-												<td className="px-3 py-3 text-slate-500">{String(r.remarks || '--')}</td>
-											</tr>
-										);
-									})}
-
+										<tr>
+											<th className="px-3 py-3.5 border-r border-white/20 w-14 text-center font-bold tracking-wider">Sl.No</th>
+											<th className="px-3 py-3.5 border-r border-white/20 w-24 text-center font-bold tracking-wider">Date</th>
+											<th className="px-3 py-3.5 border-r border-white/20 w-28 font-bold tracking-wider">Vehicle</th>
+											<th className="px-3 py-3.5 border-r border-white/20 w-24 font-bold tracking-wider">Item Code</th>
+											<th className="px-3 py-3.5 border-r border-white/20 font-bold tracking-wider">Item Name</th>
+											<th className="px-3 py-3.5 border-r border-white/20 w-16 text-right font-bold tracking-wider">Qty</th>
+											<th className="px-3 py-3.5 border-r border-white/20 w-16 text-right font-bold tracking-wider">Rate</th>
+											<th className="px-3 py-3.5 border-r border-white/20 w-24 text-right font-bold tracking-wider">Total</th>
+											<th className="px-3 py-3.5 border-r border-white/20 w-20 text-right font-bold tracking-wider">Luggage</th>
+											<th className="px-3 py-3.5 border-r border-white/20 w-24 text-right font-bold tracking-wider">L. Amount</th>
+											<th className="px-3 py-3.5 border-r border-white/20 w-16 text-right font-bold tracking-wider">Coolie</th>
+											<th className="px-3 py-3.5 border-r border-white/20 w-24 text-right font-bold tracking-wider">Paid Amount</th>
+											<th className="px-3 py-3.5 w-36 text-left font-bold tracking-wider">Remarks</th>
+										</tr>
+									</thead>
+									<tbody>
+										{filteredRows.map((r, idx) => {
+											const total = r.qty * r.rate;
+											const lagAmt = r.qty * r.laguage;
+											return (
+												<tr key={r.id ?? `${r.date}-${idx}`} className="hover:bg-gradient-to-r hover:from-[#5B55E6]/5 hover:to-[#4A44D0]/5 border-b border-slate-200 group transition-all duration-200">
+													<td className="px-3 py-3 border-r border-slate-200 text-center text-slate-500 font-semibold">{idx + 1}</td>
+													<td className="px-3 py-3 border-r border-slate-200 text-center text-slate-700 font-medium">{String(r.date || '')}</td>
+													<td className="px-3 py-3 border-r border-slate-200 font-semibold text-slate-800">{String(r.vehicle || '--')}</td>
+													<td className="px-3 py-3 border-r border-slate-200 text-slate-600">{String(r.itemCode || '--')}</td>
+													<td className="px-3 py-3 border-r border-slate-200 font-semibold text-slate-900">{String(r.itemName || '')}</td>
+													<td className="px-3 py-3 border-r border-slate-200 text-right font-bold text-[#5B55E6]">{r.qty}</td>
+													<td className="px-3 py-3 border-r border-slate-200 text-right font-mono text-slate-700">{String(r.rate)}</td>
+													<td className="px-3 py-3 border-r border-slate-200 text-right font-bold text-green-600">{total.toLocaleString()}</td>
+													<td className="px-3 py-3 border-r border-slate-200 text-right text-slate-500">{String(r.laguage)}</td>
+													<td className="px-3 py-3 border-r border-slate-200 text-right font-semibold text-blue-600">{lagAmt.toLocaleString()}</td>
+													<td className="px-3 py-3 border-r border-slate-200 text-right text-slate-500">{r.coolie.toLocaleString()}</td>
+													<td className="px-3 py-3 border-r border-slate-200 text-right font-semibold text-emerald-600">{r.paidAmt.toLocaleString()}</td>
+													<td className="px-3 py-3 text-slate-500">{String(r.remarks || '--')}</td>
+												</tr>
+											);
+										})}
 										{emptyRows.map(i => (
 											<tr key={`empty-${i}`} className="border-b border-slate-100 bg-slate-50">
-												<td className="px-3 py-3 border-r border-slate-100 text-center text-slate-300">&nbsp;</td>
-												<td className="px-3 py-3 border-r border-slate-100 text-center text-slate-300">&nbsp;</td>
-												<td className="px-3 py-3 border-r border-slate-100 text-slate-300">&nbsp;</td>
-												<td className="px-3 py-3 border-r border-slate-100 text-slate-300">&nbsp;</td>
-												<td className="px-3 py-3 border-r border-slate-100 text-slate-300">&nbsp;</td>
-												<td className="px-3 py-3 border-r border-slate-100 text-right text-slate-300">&nbsp;</td>
-												<td className="px-3 py-3 border-r border-slate-100 text-right text-slate-300">&nbsp;</td>
-												<td className="px-3 py-3 border-r border-slate-100 text-right text-slate-300">&nbsp;</td>
-												<td className="px-3 py-3 border-r border-slate-100 text-right text-slate-300">&nbsp;</td>
-												<td className="px-3 py-3 border-r border-slate-100 text-right text-slate-300">&nbsp;</td>
-												<td className="px-3 py-3 border-r border-slate-100 text-right text-slate-300">&nbsp;</td>
-												<td className="px-3 py-3 border-r border-slate-100 text-right text-slate-300">&nbsp;</td>
-												<td className="px-3 py-3 text-slate-300">&nbsp;</td>
+												{Array.from({ length: 13 }).map((_, ci) => (
+													<td key={ci} className="px-3 py-3 border-r border-slate-100 text-slate-300">&nbsp;</td>
+												))}
 											</tr>
 										))}
-								</tbody>
-							</table>
+									</tbody>
+								</table>
 							</div>
 						</div>
 					</div>
 				</div>
 
-				   <aside className="w-[380px] bg-gradient-to-b from-slate-800 to-slate-900 flex flex-col p-4 shrink-0 shadow-2xl rounded-r-lg border-l-2 border-[#5B55E6]/30 max-h-full overflow-y-auto">
-					   <div className="flex items-center gap-2 mb-6 sticky top-0 z-10 bg-gradient-to-b from-slate-800 to-slate-900 pb-2">
-						   <div className="w-8 h-8 rounded-lg bg-gradient-to-br from-[#5B55E6] to-[#4A44D0] flex items-center justify-center shadow-lg">
-							   <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4 text-white" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-								   <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z" />
-							   </svg>
-						   </div>
-						   <h3 className="text-sm font-bold text-white uppercase tracking-wider">Financial Summary</h3>
-					   </div>
-					   <div className="space-y-2 flex-1 text-white pb-2 min-h-[600px]">
+				<aside className="w-[380px] bg-gradient-to-b from-slate-800 to-slate-900 flex flex-col p-4 shrink-0 shadow-2xl rounded-r-lg border-l-2 border-[#5B55E6]/30 max-h-full overflow-y-auto">
+					<div className="flex items-center gap-2 mb-6 sticky top-0 z-10 bg-gradient-to-b from-slate-800 to-slate-900 pb-2">
+						<div className="w-8 h-8 rounded-lg bg-gradient-to-br from-[#5B55E6] to-[#4A44D0] flex items-center justify-center shadow-lg">
+							<svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4 text-white" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+								<path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z" />
+							</svg>
+						</div>
+						<h3 className="text-sm font-bold text-white uppercase tracking-wider">Financial Summary</h3>
+					</div>
+					<div className="space-y-2 flex-1 text-white pb-2 min-h-[600px]">
 						<div className="bg-slate-700/30 backdrop-blur-sm rounded-xl p-2 border border-slate-600/50 shadow-lg">
 							<label className="text-xs font-bold text-slate-300 uppercase tracking-widest mb-1 block">Total Quantity</label>
 							<input type="text" readOnly className="w-full bg-gradient-to-r from-slate-800 to-slate-700 px-2 py-1.5 text-base font-black text-right rounded-lg border border-slate-600/50 outline-none text-cyan-400 shadow-inner" value={String(summary.qty)} style={{ colorScheme: 'dark' }} />
 						</div>
-						
 						<div className="bg-slate-700/30 backdrop-blur-sm rounded-xl p-2 border border-slate-600/50 shadow-lg">
 							<label className="text-xs font-bold text-slate-300 uppercase tracking-widest mb-1 block">Handling Charges</label>
 							<input type="text" readOnly className="w-full bg-gradient-to-r from-slate-800 to-slate-700 px-2 py-1.5 text-base font-bold text-right rounded-lg border border-slate-600/50 outline-none text-amber-400 shadow-inner" value={summary.coolie.toFixed(2)} style={{ colorScheme: 'dark' }} />
 						</div>
-						
 						<div className="bg-slate-700/30 backdrop-blur-sm rounded-xl p-2 border border-slate-600/50 shadow-lg">
 							<label className="text-xs font-bold text-slate-300 uppercase tracking-widest mb-1 block">Luggage Costs</label>
 							<input type="text" readOnly className="w-full bg-gradient-to-r from-slate-800 to-slate-700 px-2 py-1.5 text-base font-bold text-right rounded-lg border border-slate-600/50 outline-none text-rose-400 shadow-inner" value={summary.luggageTotal.toFixed(2)} style={{ colorScheme: 'dark' }} />
@@ -645,7 +515,6 @@ export default function ReportsView({ groups, customers, vehicles, advanceStore 
 							<label className="text-xs font-bold text-slate-300 uppercase tracking-widest mb-1 block">Gross Total</label>
 							<input type="text" readOnly className="w-full bg-gradient-to-r from-slate-800 to-slate-700 px-2 py-1.5 text-lg font-black text-right rounded-lg border border-slate-600/50 outline-none text-emerald-400 shadow-inner" value={summary.total.toFixed(2)} style={{ colorScheme: 'dark' }} />
 						</div>
-						
 						<div className="bg-slate-700/30 backdrop-blur-sm rounded-xl p-2 border border-slate-600/50 shadow-lg">
 							<label className="text-xs font-bold text-slate-300 uppercase tracking-widest mb-1 block">Amount Paid</label>
 							<input type="text" readOnly className="w-full bg-gradient-to-r from-slate-800 to-slate-700 px-2 py-1.5 text-base font-bold text-right rounded-lg border border-slate-600/50 outline-none text-green-400 shadow-inner" value={summary.paid.toFixed(2)} style={{ colorScheme: 'dark' }} />
@@ -671,7 +540,6 @@ export default function ReportsView({ groups, customers, vehicles, advanceStore 
 					className="px-6 bg-gradient-to-r from-emerald-600 to-emerald-700 text-white text-sm font-bold rounded-lg hover:from-emerald-500 hover:to-emerald-600 transition-all shadow-md hover:shadow-lg flex items-center gap-2"
 					style={{ height: '44px' }}
 					onClick={handlePrint}
-					data-enter-index="4"
 				>
 					<svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
 						<path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17 17h2a2 2 0 002-2v-4a2 2 0 00-2-2H5a2 2 0 00-2 2v4a2 2 0 002 2h2m2 4h6a2 2 0 002-2v-4a2 2 0 00-2-2H9a2 2 0 00-2 2v4a2 2 0 002 2zm8-12V5a2 2 0 00-2-2H9a2 2 0 00-2 2v4h10z" />
@@ -682,8 +550,7 @@ export default function ReportsView({ groups, customers, vehicles, advanceStore 
 					type="button"
 					className="px-6 border-2 border-rose-300 bg-white text-rose-700 text-sm font-bold rounded-lg hover:bg-rose-50 hover:border-rose-400 transition-all shadow-sm hover:shadow-md flex items-center gap-2"
 					style={{ height: '44px' }}
-					onClick={onCancel}
-					data-enter-index="5"
+					onClick={handleCancel}
 				>
 					<svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
 						<path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
