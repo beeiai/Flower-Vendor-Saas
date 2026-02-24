@@ -1,7 +1,8 @@
-import React, { useEffect, useMemo, useState, useCallback } from 'react';
+import React, { useEffect, useMemo, useState, useCallback, useRef } from 'react';
 import SearchableSelect from '../shared/SearchableSelect';
 import { api } from '../../utils/api';
 import { DEFAULT_STATES } from '../../utils/stateManager';
+import { useEnterController } from '../../hooks/useEnterController';
 
 function toNum(value) {
 	const n = Number(value);
@@ -24,6 +25,10 @@ export default function ReportsView({ groups, customers, vehicles, advanceStore 
 		commissionPct,
 		rows
 	} = state;
+
+	// Add ref for enter navigation
+	const containerRef = useRef(null);
+	useEnterController(containerRef);
 	
 	// Functions to update individual state properties
 	const setFromDate = useCallback((value) => {
@@ -232,7 +237,7 @@ export default function ReportsView({ groups, customers, vehicles, advanceStore 
 	};
 
 	return (
-		<div className="flex-1 flex flex-col h-full overflow-hidden bg-white">
+		<div className="flex-1 flex flex-col h-full overflow-hidden bg-white" ref={containerRef}>
 			<div className="bg-slate-800 px-5 py-3 text-white shrink-0">
 				<h2 className="text-base font-semibold tracking-wide">Reports</h2>
 			</div>
