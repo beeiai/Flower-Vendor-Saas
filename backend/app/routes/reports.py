@@ -106,18 +106,60 @@ def get_ledger_report(
     record_count = ledger_data.get("record_count", 0)
     page_count = estimate_pdf_page_count("ledger", record_count=record_count)
     generated_at = datetime.now().isoformat()
+    current_date = datetime.now().strftime("%d-%m-%Y")
+    
+    # Transform entries to match template expectations
+    rows = []
+    gross_total = 0
+    commission_total = 0
+    net_total = 0
+    paid_total = 0
+    balance_total = 0
+    
+    for entry in ledger_data.get("entries", []):
+        gross = float(entry.get("total", 0))
+        commission = float(entry.get("commission", 0))
+        net = gross - commission
+        paid = float(entry.get("paid", 0))
+        balance = net - paid
+        
+        rows.append({
+            "customer": entry.get("customer", "N/A"),
+            "address": entry.get("address", "N/A"),
+            "gross": f"{gross:.2f}",
+            "commission": f"{commission:.2f}",
+            "net": f"{net:.2f}",
+            "paid": f"{paid:.2f}",
+            "balance": f"{balance:.2f}"
+        })
+        
+        gross_total += gross
+        commission_total += commission
+        net_total += net
+        paid_total += paid
+        balance_total += balance
+    
+    # Get group name
+    customer_obj = ledger_data.get("customer", {})
+    group_name = "N/A"
+    if isinstance(customer_obj, dict):
+        group_name = customer_obj.get("group_name", "N/A")
     
     # Prepare template data
     template_data = {
-        "customer": ledger_data["customer"],
-        "entries": ledger_data["entries"],
+        "rows": rows,
         "totals": {
-            "qty": ledger_data["total_qty"],
-            "kg": ledger_data["total_kg"],
-            "amount": ledger_data["total_amount"]
+            "gross_total": f"{gross_total:.2f}",
+            "commission_total": f"{commission_total:.2f}",
+            "net_total": f"{net_total:.2f}",
+            "paid_total": f"{paid_total:.2f}",
+            "balance_total": f"{balance_total:.2f}"
         },
-        "from_date": from_date.isoformat(),
-        "to_date": to_date.isoformat(),
+        "group_name": group_name,
+        "commission_pct": 12.0,
+        "from_date": from_date.strftime("%d-%m-%Y"),
+        "to_date": to_date.strftime("%d-%m-%Y"),
+        "current_date": current_date,
         "generated_at": generated_at
     }
     
@@ -183,13 +225,46 @@ def get_group_total_report(
     group_count = group_data.get("group_count", 0)
     page_count = estimate_pdf_page_count("group_total", group_count=group_count)
     generated_at = datetime.now().isoformat()
+    current_date = datetime.now().strftime("%d-%m-%Y")
+    
+    # Transform groups to match template expectations
+    rows = []
+    overall_qty = 0
+    overall_amount = 0
+    overall_paid = 0
+    overall_balance = 0
+    
+    for group in group_data.get("groups", []):
+        total_qty = float(group.get("total_qty", 0))
+        total_amount = float(group.get("total_amount", 0))
+        total_paid = float(group.get("total_paid", 0))
+        balance = total_amount - total_paid
+        customer_count = group.get("customer_count", 0)
+        
+        rows.append({
+            "group_name": group.get("name", "N/A"),
+            "customer_count": customer_count,
+            "total_qty": f"{total_qty:.2f}",
+            "total_amount": f"{total_amount:.2f}",
+            "total_paid": f"{total_paid:.2f}",
+            "balance": f"{balance:.2f}"
+        })
+        
+        overall_qty += total_qty
+        overall_amount += total_amount
+        overall_paid += total_paid
+        overall_balance += balance
     
     # Prepare template data
     template_data = {
-        "groups": group_data["groups"],
-        "grand_total": group_data["grand_total_amount"],
-        "from_date": from_date.isoformat(),
-        "to_date": to_date.isoformat(),
+        "rows": rows,
+        "overall_qty": f"{overall_qty:.2f}",
+        "overall_amount": f"{overall_amount:.2f}",
+        "overall_paid": f"{overall_paid:.2f}",
+        "overall_balance": f"{overall_balance:.2f}",
+        "from_date": from_date.strftime("%d-%m-%Y"),
+        "to_date": to_date.strftime("%d-%m-%Y"),
+        "current_date": current_date,
         "generated_at": generated_at,
         "group_count": group_count
     }
@@ -271,18 +346,109 @@ def get_group_patti_report(
         avg_records_per_group=(entry_count / farmer_count if farmer_count > 0 else 0)
     )
     generated_at = datetime.now().isoformat()
+    current_date = datetime.now().strftime("%d-%m-%Y")
+    group_name = patti_data.get("group", {}).get("name", "Unknown Group")
+    
+    # Transform farmers data to match template expectations
+    customers = []
+    grand_total_qty = 0
+    grand_total_amount = 0
+    grand_total_paid = 0
+    grand_total_balance = 0
+    
+    # Summary rows for the summary table
+    summary_rows = []
+    summary_qty = 0
+    summary_amount = 0
+    summary_paid = 0
+    summary_balance = 0
+    
+    for farmer in patti_data.get("farmers", []):
+        farmer_name = farmer.get("name", "Unknown")
+        farmer_id = farmer.get("id", 0)
+        
+        # Transform transactions
+        transactions = []
+        farmer_qty = 0
+        farmer_amount = 0
+        farmer_paid = 0
+        farmer_balance = 0
+        
+        for trans in farmer.get("transactions", []):
+            qty = float(trans.get("qty", 0))
+            price = float(trans.get("price", 0))
+            total = qty * price
+            luggage = float(trans.get("luggage", 0))
+            paid = float(trans.get("paid", 0))
+            amount = total + luggage - paid
+            
+            transactions.append({
+                "date": trans.get("date", "").strftime("%d-%m-%Y") if hasattr(trans.get("date"), "strftime") else trans.get("date", ""),
+                "vehicle": trans.get("vehicle", "N/A"),
+                "qty": f"{qty:.2f}",
+                "price": f"{price:.2f}",
+                "total": f"{total:.2f}",
+                "luggage": f"{luggage:.2f}",
+                "paid": f"{paid:.2f}",
+                "amount": f"{amount:.2f}"
+            })
+            
+            farmer_qty += qty
+            farmer_amount += total
+            farmer_paid += paid
+            farmer_balance += amount
+        
+        customers.append({
+            "id": farmer_id,
+            "name": farmer_name,
+            "address": farmer.get("address", "N/A"),
+            "ledger_name": farmer.get("ledger_name", "N/A"),
+            "balance": f"{farmer_balance:.2f}",
+            "transactions": transactions
+        })
+        
+        # Add to summary
+        summary_rows.append({
+            "customer": farmer_name,
+            "address": farmer.get("address", "N/A"),
+            "qty": f"{farmer_qty:.2f}",
+            "total": f"{farmer_amount:.2f}",
+            "paid": f"{farmer_paid:.2f}",
+            "balance": f"{farmer_balance:.2f}"
+        })
+        
+        grand_total_qty += farmer_qty
+        grand_total_amount += farmer_amount
+        grand_total_paid += farmer_paid
+        grand_total_balance += farmer_balance
+        summary_qty += farmer_qty
+        summary_amount += farmer_amount
+        summary_paid += farmer_paid
+        summary_balance += farmer_balance
     
     # Prepare template data
     template_data = {
-        "group": patti_data["group"],
-        "farmers": patti_data["farmers"],
-        "grand_total_qty": patti_data["grand_total_qty"],
-        "grand_total_amount": patti_data["grand_total_amount"],
-        "from_date": from_date.isoformat(),
-        "to_date": to_date.isoformat(),
+        "customers": customers,
+        "rows": summary_rows,  # For summary table
+        "totals": {
+            "qty": f"{summary_qty:.2f}",
+            "amount": f"{summary_amount:.2f}",
+            "paid": f"{summary_paid:.2f}",
+            "balance": f"{summary_balance:.2f}",
+            "qty_total": f"{grand_total_qty:.2f}",
+            "amount_total": f"{grand_total_amount:.2f}",
+            "paid_total": f"{grand_total_paid:.2f}",
+            "balance_total": f"{grand_total_balance:.2f}"
+        },
+        "group_name": group_name,
+        "from_date": from_date.strftime("%d-%m-%Y"),
+        "to_date": to_date.strftime("%d-%m-%Y"),
+        "current_date": current_date,
         "generated_at": generated_at,
         "farmer_count": farmer_count,
-        "entry_count": entry_count
+        "entry_count": entry_count,
+        "grand_total_qty": f"{grand_total_qty:.2f}",
+        "grand_total_amount": f"{grand_total_amount:.2f}"
     }
     
     # Render HTML
@@ -351,14 +517,39 @@ def get_daily_sales_report(
     record_count = sales_data.get("record_count", 0)
     page_count = estimate_pdf_page_count("daily_sales", record_count=record_count)
     generated_at = datetime.now().isoformat()
+    current_date = datetime.now().strftime("%d-%m-%Y")
+    
+    # Transform entries to match template expectations
+    rows = []
+    total_qty = 0
+    total_amount = 0
+    
+    for entry in sales_data.get("entries", []):
+        qty = float(entry.get("qty", 0))
+        rate = float(entry.get("rate", 0))
+        total = qty * rate
+        
+        rows.append({
+            "date": entry.get("date", "").strftime("%d-%m-%Y") if hasattr(entry.get("date"), "strftime") else entry.get("date", ""),
+            "vehicle": entry.get("vehicle", "N/A"),
+            "party": entry.get("party", "N/A"),
+            "itemName": entry.get("item_name", "N/A"),
+            "qty": f"{qty:.2f}",
+            "rate": f"{rate:.2f}",
+            "total": f"{total:.2f}"
+        })
+        
+        total_qty += qty
+        total_amount += total
     
     # Prepare template data
     template_data = {
-        "entries": sales_data["entries"],
-        "grand_total_qty": sales_data["grand_total_qty"],
-        "grand_total_amount": sales_data["grand_total_amount"],
-        "from_date": from_date.isoformat(),
-        "to_date": to_date.isoformat(),
+        "rows": rows,
+        "total_qty": f"{total_qty:.2f}",
+        "total_amount": f"{total_amount:.2f}",
+        "from_date": from_date.strftime("%d-%m-%Y"),
+        "to_date": to_date.strftime("%d-%m-%Y"),
+        "current_date": current_date,
         "generated_at": generated_at,
         "item_filter": item_name or "All Items"
     }
