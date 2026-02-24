@@ -133,10 +133,16 @@ def get_ledger_report(
         gross = float(entry.get("amount", 0))  # Use "amount" from ledger_data
         commission = gross * (commission_pct / 100)  # Calculate commission
         net = gross - commission
-        paid = float(entry.get("paid", 0))
+        paid = float(entry.get("paid", 0)) if entry.get("paid") is not None else 0.0
         balance = net - paid
-        
+        # Vehicle and date fields
+        date_val = entry.get("date", "")
+        if isinstance(date_val, str):
+            date_val = date_val.split("T")[0]
+        vehicle_val = entry.get("vehicle", "N/A")
         rows.append({
+            "date": date_val,
+            "vehicle": vehicle_val,
             "customer": ledger_data.get("customer", {}).get("name", "N/A"),
             "address": ledger_data.get("customer", {}).get("phone", "N/A"),
             "gross": f"{gross:.2f}",
@@ -145,7 +151,6 @@ def get_ledger_report(
             "paid": f"{paid:.2f}",
             "balance": f"{balance:.2f}"
         })
-        
         gross_total += gross
         commission_total += commission
         net_total += net
@@ -342,6 +347,15 @@ def get_group_patti_report(
         to_date=to_date,
         db=db
     )
+    # Set commission default to 12 if missing or 0
+    commission_pct = 12.0
+    group_commission = patti_data.get("group", {}).get("commission_percent")
+    try:
+        group_commission = float(group_commission)
+        if group_commission > 0:
+            commission_pct = group_commission
+    except (TypeError, ValueError):
+        pass
     
     if not patti_data.get("group"):
         return JSONResponse(
@@ -379,57 +393,52 @@ def get_group_patti_report(
     for farmer in patti_data.get("farmers", []):
         farmer_name = farmer.get("name", "Unknown")
         farmer_id = farmer.get("id", 0)
-        
+        # Use phone as address if available
+        farmer_address = farmer.get("phone", "N/A")
         # Transform entries (from reports_db) to transactions (for template)
         transactions = []
         farmer_qty = 0
         farmer_amount = 0
         farmer_paid = 0
         farmer_balance = 0
-        
         for entry in farmer.get("entries", []):
             qty = float(entry.get("qty", 0))
             rate = float(entry.get("rate", 0))
             total = qty * rate
-            luggage = 0  # Not available in silk ledger entries
-            paid = 0  # Not available in silk ledger entries
-            amount = total
-            
+            # If vehicle is available in entry, use it, else N/A
+            vehicle = entry.get("vehicle", "N/A")
+            date_val = entry.get("date", "")
+            if isinstance(date_val, str):
+                date_val = date_val.split("T")[0]
             transactions.append({
-                "date": entry.get("date", "").split("T")[0] if isinstance(entry.get("date"), str) else entry.get("date", ""),
-                "vehicle": "N/A",
+                "date": date_val,
+                "vehicle": vehicle,
                 "qty": f"{qty:.2f}",
                 "price": f"{rate:.2f}",
                 "total": f"{total:.2f}",
-                "luggage": f"{luggage:.2f}",
-                "paid": f"{paid:.2f}",
-                "amount": f"{amount:.2f}"
+                "luggage": "0.00",
+                "paid": "0.00",
+                "amount": f"{total:.2f}"
             })
-            
             farmer_qty += qty
             farmer_amount += total
-            farmer_paid += paid
-            farmer_balance += amount
-        
+            # paid and luggage not available in current data
         customers.append({
             "id": farmer_id,
             "name": farmer_name,
-            "address": farmer.get("phone", "N/A"),
+            "address": farmer_address,
             "ledger_name": farmer.get("code", "N/A"),
-            "balance": f"{farmer_balance:.2f}",
+            "balance": f"{farmer_amount:.2f}",
             "transactions": transactions
         })
-        
-        # Add to summary
         summary_rows.append({
             "customer": farmer_name,
-            "address": farmer.get("address", "N/A"),
+            "address": farmer_address,
             "qty": f"{farmer_qty:.2f}",
             "total": f"{farmer_amount:.2f}",
             "paid": f"{farmer_paid:.2f}",
             "balance": f"{farmer_balance:.2f}"
         })
-        
         grand_total_qty += farmer_qty
         grand_total_amount += farmer_amount
         grand_total_paid += farmer_paid
@@ -454,6 +463,7 @@ def get_group_patti_report(
             "balance_total": f"{grand_total_balance:.2f}"
         },
         "group_name": group_name,
+        "commission_pct": commission_pct,
         "from_date": from_date.strftime("%d-%m-%Y"),
         "to_date": to_date.strftime("%d-%m-%Y"),
         "current_date": current_date,
