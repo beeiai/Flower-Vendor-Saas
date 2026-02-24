@@ -9,7 +9,6 @@ from app.dependencies import get_current_user
 from app.models.collection_item import CollectionItem
 from app.models.farmer import Farmer
 from app.models.farmer_group import FarmerGroup
-from app.services.docx_report_service import DocxReportService
 
 
 router = APIRouter(
@@ -29,8 +28,16 @@ def get_ledger_report_pdf(
     user = Depends(get_current_user)
 ):
     """
+    LEGACY ENDPOINT - Redirects to new HTML-based report system
     Generate PDF preview of ledger report for a specific farmer
+    
+    Note: This endpoint now uses the new HTML template system instead of DOCX.
+    Use /api/reports/ledger/{farmer_id}?format=html for future integrations.
     """
+    from fastapi.responses import HTMLResponse
+    from jinja2 import Template
+    import os
+    
     try:
         # Fetch farmer details
         farmer = db.query(Farmer).filter(
@@ -88,27 +95,43 @@ def get_ledger_report_pdf(
         net_amount = total_amount - commission
         final_total = net_amount + total_luggage - total_paid
         
-        # Generate and return PDF preview
-        return DocxReportService.generate_ledger_pdf_preview(
+        # Load and render HTML template
+        template_path = os.path.join("templates", "ledger_report.html")
+        
+        if not os.path.exists(template_path):
+            raise HTTPException(status_code=500, detail=f"Template not found: {template_path}")
+        
+        with open(template_path, 'r', encoding='utf-8') as f:
+            template_content = f.read()
+        
+        template = Template(template_content)
+        html_content = template.render(
             farmer_name=farmer.name,
             ledger_name=farmer.farmer_code or "N/A",
             address=farmer.address or "N/A",
             group_name=group_name,
             balance=final_total,
             commission_pct=commission_pct,
-            from_date=from_date.strftime("%d-%m-%Y"),
-            to_date=to_date.strftime("%d-%m-%Y"),
+            from_date=from_date.isoformat(),
+            to_date=to_date.isoformat(),
             rows=rows,
             total_qty=total_qty,
             total_amount=total_amount,
             commission=commission,
             luggage_total=total_luggage,
-            coolie=0.0,
             net_amount=net_amount,
             paid_amount=total_paid,
             final_total=final_total,
+            generated_at=__import__('datetime').datetime.now().isoformat()
         )
         
+        # Fix logo path
+        html_content = html_content.replace('src="SKFS_logo.png"', 'src="/templates/SKFS_logo.png"')
+        
+        return HTMLResponse(content=html_content)
+        
+    except HTTPException:
+        raise
     except Exception as e:
         raise HTTPException(status_code=500, detail=f"Failed to generate report: {str(e)}")
 
@@ -123,8 +146,16 @@ def get_ledger_report_docx(
     user = Depends(get_current_user)
 ):
     """
-    Generate DOCX ledger report for a specific farmer and return as downloadable file
+    LEGACY ENDPOINT - Redirects to new HTML-based report system
+    Generate ledger report for a specific farmer and return as HTML (viewable/printable)
+    
+    Note: This endpoint now uses the new HTML template system instead of DOCX.
+    Use /api/reports/ledger/{farmer_id}?format=html for future integrations.
     """
+    from fastapi.responses import HTMLResponse
+    from jinja2 import Template
+    import os
+    
     try:
         # Fetch farmer details
         farmer = db.query(Farmer).filter(
@@ -182,27 +213,43 @@ def get_ledger_report_docx(
         net_amount = total_amount - commission
         final_total = net_amount + total_luggage - total_paid
         
-        # Generate and return DOCX report
-        return DocxReportService.generate_ledger_pdf(
+        # Load and render HTML template
+        template_path = os.path.join("templates", "ledger_report.html")
+        
+        if not os.path.exists(template_path):
+            raise HTTPException(status_code=500, detail=f"Template not found: {template_path}")
+        
+        with open(template_path, 'r', encoding='utf-8') as f:
+            template_content = f.read()
+        
+        template = Template(template_content)
+        html_content = template.render(
             farmer_name=farmer.name,
             ledger_name=farmer.farmer_code or "N/A",
             address=farmer.address or "N/A",
             group_name=group_name,
             balance=final_total,
             commission_pct=commission_pct,
-            from_date=from_date.strftime("%d-%m-%Y"),
-            to_date=to_date.strftime("%d-%m-%Y"),
+            from_date=from_date.isoformat(),
+            to_date=to_date.isoformat(),
             rows=rows,
             total_qty=total_qty,
             total_amount=total_amount,
             commission=commission,
             luggage_total=total_luggage,
-            coolie=0.0,
             net_amount=net_amount,
             paid_amount=total_paid,
             final_total=final_total,
+            generated_at=__import__('datetime').datetime.now().isoformat()
         )
         
+        # Fix logo path
+        html_content = html_content.replace('src="SKFS_logo.png"', 'src="/templates/SKFS_logo.png"')
+        
+        return HTMLResponse(content=html_content)
+        
+    except HTTPException:
+        raise
     except Exception as e:
         raise HTTPException(status_code=500, detail=f"Failed to generate report: {str(e)}")
 
@@ -217,10 +264,19 @@ def get_group_patti_report_docx(
     user = Depends(get_current_user)
 ):
     """
-    Generate DOCX group patti report and return as downloadable file
+    LEGACY ENDPOINT - Redirects to new HTML-based report system
+    Generate group patti report and return as HTML (viewable/printable)
+    
+    Note: This endpoint now uses the new HTML template system instead of DOCX.
+    Use /api/reports/group-patti/{group_id}?format=html for future integrations.
     """
+    # Import here to avoid circular imports
+    from fastapi.responses import HTMLResponse
+    from jinja2 import Template
+    import os
+    
     try:
-        # Fetch group details
+        # Verify group exists and user has access
         group = db.query(FarmerGroup).filter(
             FarmerGroup.id == group_id,
             FarmerGroup.vendor_id == user.vendor_id
@@ -308,16 +364,32 @@ def get_group_patti_report_docx(
             totals['paid'] += farmer_paid
             totals['balance'] += farmer_balance
         
-        # Generate and return DOCX report
-        return DocxReportService.generate_group_patti_pdf(
-            group_name=group.name,
-            from_date=from_date.strftime("%d-%m-%Y"),
-            to_date=to_date.strftime("%d-%m-%Y"),
-            commission_pct=commission_pct,
-            rows=rows,
+        # Load and render HTML template
+        template_path = os.path.join("templates", "group_patti_report.html")
+        
+        if not os.path.exists(template_path):
+            raise HTTPException(status_code=500, detail=f"Template not found: {template_path}")
+        
+        with open(template_path, 'r', encoding='utf-8') as f:
+            template_content = f.read()
+        
+        template = Template(template_content)
+        html_content = template.render(
+            group=group,
+            farmers=rows,
             totals=totals,
+            from_date=from_date.isoformat(),
+            to_date=to_date.isoformat(),
+            generated_at=__import__('datetime').datetime.now().isoformat()
         )
         
+        # Fix logo path
+        html_content = html_content.replace('src="SKFS_logo.png"', 'src="/templates/SKFS_logo.png"')
+        
+        return HTMLResponse(content=html_content)
+        
+    except HTTPException:
+        raise
     except Exception as e:
         raise HTTPException(status_code=500, detail=f"Failed to generate group patti report: {str(e)}")
 
@@ -331,8 +403,16 @@ def get_group_total_report_docx(
     user = Depends(get_current_user)
 ):
     """
-    Generate DOCX group total report and return as downloadable file
+    LEGACY ENDPOINT - Redirects to new HTML-based report system
+    Generate group total report and return as HTML (viewable/printable)
+    
+    Note: This endpoint now uses the new HTML template system instead of DOCX.
+    Use /api/reports/group-total?format=html for future integrations.
     """
+    from fastapi.responses import HTMLResponse
+    from jinja2 import Template
+    import os
+    
     try:
         # Fetch group details
         group = db.query(FarmerGroup).filter(
@@ -401,21 +481,36 @@ def get_group_total_report_docx(
         # Calculate group total
         group_total = total_amount - total_paid
         
-        # Generate and return DOCX report
-        return DocxReportService.generate_group_total_pdf(
-            group_name=group.name,
-            from_date=from_date.strftime("%d-%m-%Y"),
-            to_date=to_date.strftime("%d-%m-%Y"),
+        # Load and render HTML template
+        template_path = os.path.join("templates", "group_total_report.html")
+        
+        if not os.path.exists(template_path):
+            raise HTTPException(status_code=500, detail=f"Template not found: {template_path}")
+        
+        with open(template_path, 'r', encoding='utf-8') as f:
+            template_content = f.read()
+        
+        template = Template(template_content)
+        html_content = template.render(
+            group=group,
             rows=rows,
             total_qty=total_qty,
             total_amount=total_amount,
             total_paid=total_paid,
             total_luggage=total_luggage,
             group_total=group_total,
+            from_date=from_date.isoformat(),
+            to_date=to_date.isoformat(),
+            generated_at=__import__('datetime').datetime.now().isoformat()
         )
         
-    except Exception as e:
-        raise HTTPException(status_code=500, detail=f"Failed to generate group total report: {str(e)}")
+        # Fix logo path
+        html_content = html_content.replace('src="SKFS_logo.png"', 'src="/templates/SKFS_logo.png"')
+        
+        return HTMLResponse(content=html_content)
+        
+    except HTTPException:
+        raise
 
 
 @router.get("/daily-sales-report")
@@ -427,8 +522,16 @@ def get_daily_sales_report_docx(
     user = Depends(get_current_user)
 ):
     """
-    Generate DOCX daily sales report and return as downloadable file
+    LEGACY ENDPOINT - Redirects to new HTML-based report system
+    Generate daily sales report and return as HTML (viewable/printable)
+    
+    Note: This endpoint now uses the new HTML template system instead of DOCX.
+    Use /api/reports/daily-sales?format=html for future integrations.
     """
+    from fastapi.responses import HTMLResponse
+    from jinja2 import Template
+    import os
+    
     try:
         # Base query for collection items
         query = db.query(CollectionItem).filter(
@@ -463,15 +566,32 @@ def get_daily_sales_report_docx(
             total_qty += qty
             total_amount += total
         
-        # Generate and return DOCX report
-        return DocxReportService.generate_daily_sales_pdf(
-            from_date=from_date.strftime("%d-%m-%Y"),
-            to_date=to_date.strftime("%d-%m-%Y"),
-            item_name=item_name or "All Items",
+        # Load and render HTML template
+        template_path = os.path.join("templates", "daily_sales_report.html")
+        
+        if not os.path.exists(template_path):
+            raise HTTPException(status_code=500, detail=f"Template not found: {template_path}")
+        
+        with open(template_path, 'r', encoding='utf-8') as f:
+            template_content = f.read()
+        
+        template = Template(template_content)
+        html_content = template.render(
             rows=rows,
             total_qty=total_qty,
             total_amount=total_amount,
+            item_name_filter=item_name or "All Items",
+            from_date=from_date.isoformat(),
+            to_date=to_date.isoformat(),
+            generated_at=__import__('datetime').datetime.now().isoformat()
         )
         
+        # Fix logo path
+        html_content = html_content.replace('src="SKFS_logo.png"', 'src="/templates/SKFS_logo.png"')
+        
+        return HTMLResponse(content=html_content)
+        
+    except HTTPException:
+        raise
     except Exception as e:
         raise HTTPException(status_code=500, detail=f"Failed to generate daily sales report: {str(e)}")
