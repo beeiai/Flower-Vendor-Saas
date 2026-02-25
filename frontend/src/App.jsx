@@ -942,14 +942,29 @@ export default function App() {
   };
 
   const handleGroupTotalPrint = async () => {
+    if (groupTotalForm.groupName && groups.length === 0) {
+      alert('No groups available. Please create a group first.');
+      return;
+    }
+    
     setIsGroupTotalPrinting(true);
     try {
-      // Use the existing api service which now calls the correct endpoint
-      const response = await api.getGroupTotalReport(
-        null, // group_id = null means "all groups"
-        groupTotalForm.fromDate,
-        groupTotalForm.toDate
-      );
+      let response;
+      if (groupTotalForm.groupName) {
+        // If a specific group is selected, use the new endpoint for group-specific report
+        response = await api.getGroupTotalReportByGroup(
+          groupTotalForm.groupName,
+          groupTotalForm.fromDate,
+          groupTotalForm.toDate
+        );
+      } else {
+        // If no group is selected, use the existing endpoint for all groups
+        response = await api.getGroupTotalReport(
+          null, // group_id = null means "all groups"
+          groupTotalForm.fromDate,
+          groupTotalForm.toDate
+        );
+      }
       
       // Open preview in new tab
       const previewWindow = window.open('about:blank', '_blank');
@@ -978,7 +993,7 @@ export default function App() {
       } else {
         // Fallback: open in current window
         const newWindow = window.open('about:blank');
-        newWindow.document.write(response.data);
+        newWindow.document.write(response);
         newWindow.document.close();
       }
     } catch (error) {
@@ -1384,20 +1399,36 @@ export default function App() {
             </div>
           </div>
 
+          <div>
+            <label className="text-xs font-bold uppercase text-slate-600 tracking-widest block mb-2">Group Name (Optional)</label>
+            <SearchableSelect
+              placeholder={groups.length > 0 ? "Select Group (Leave empty for all groups)" : "No Groups Available"}
+              options={[{ label: "All Groups", value: "" }, ...groups.map(g => ({ label: g.name, value: g.name }))]
+              value={groupTotalForm.groupName}
+              onChange={(value) => setGroupTotalForm({ ...groupTotalForm, groupName: value })}
+              data-enter="3"
+              data-enter-type="select"
+              disabled={groups.length === 0}
+            />
+            {groups.length === 0 && (
+              <p className="text-xs text-red-500 mt-1">No groups available. Please create a group first.</p>
+            )}
+          </div>
+
           <div className="flex gap-4 pt-3">
             <button 
               onClick={handleGroupTotalPrint} 
               disabled={isGroupTotalPrinting} 
               className="flex-1 bg-gradient-to-r from-[#5B55E6] to-[#4A44D0] text-white py-3.5 font-bold uppercase text-sm rounded-xl shadow-lg disabled:opacity-50 hover:from-[#4A44D0] hover:to-[#3A34C0] transition-all hover:shadow-xl active:translate-y-0.5" 
-              data-enter="3"
+              data-enter="4"
               data-enter-type="submit"
             >
-              {isGroupTotalPrinting ? 'Printing...' : 'Print All Groups'}
+              {isGroupTotalPrinting ? 'Printing...' : groupTotalForm.groupName ? 'Print Selected Group' : 'Print All Groups'}
             </button>
             <button 
               onClick={() => { setIsGroupTotalPrinting(false); setActiveSection('daily'); }} 
               className="flex-1 bg-gradient-to-r from-slate-100 to-slate-200 text-slate-700 py-3.5 font-bold uppercase text-sm border border-slate-300 rounded-xl shadow-md hover:from-slate-200 hover:to-slate-300 transition-all hover:shadow-lg" 
-              data-enter="4"
+              data-enter="5"
               data-enter-type="button"
             >
               Cancel
@@ -1405,7 +1436,9 @@ export default function App() {
           </div>
 
           <div className="text-center text-sm font-medium text-slate-500 min-h-[24px]">
-            {isGroupTotalPrinting ? 'Preparing report for all groups...' : 'Report will include all groups in the selected date range'}
+            {isGroupTotalPrinting ? 'Preparing report...' : 
+             groupTotalForm.groupName ? `Report will include only "${groupTotalForm.groupName}" group` : 
+             'Report will include all groups in the selected date range'}
           </div>
         </div>
       </div>
