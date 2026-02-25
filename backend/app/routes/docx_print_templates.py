@@ -38,10 +38,6 @@ def get_ledger_report_pdf(
     Note: This endpoint now uses the new HTML template system instead of DOCX.
     Use /api/reports/ledger/{farmer_id}?format=html for future integrations.
     """
-    from fastapi.responses import HTMLResponse
-    from jinja2 import Template
-    import os
-    
     try:
         # Fetch farmer details
         farmer = db.query(Farmer).filter(
@@ -141,6 +137,19 @@ def get_ledger_report_pdf(
         </div>
         '''
         
+        # Add script to automatically trigger print when page loads
+        auto_print_script = '''
+        <script>
+            // Auto-print when page loads
+            window.onload = function() {
+                // Small delay to ensure page is fully loaded
+                setTimeout(function() {
+                    window.print();
+                }, 500);
+            };
+        </script>
+        '''
+        
         template = Template(template_content)
         html_content = template.render(
             group_name=group_name,
@@ -194,10 +203,6 @@ def get_ledger_report_docx(
     Note: This endpoint now uses the new HTML template system instead of DOCX.
     Use /api/reports/ledger/{farmer_id}?format=html for future integrations.
     """
-    from fastapi.responses import HTMLResponse
-    from jinja2 import Template
-    import os
-    
     try:
         # Fetch farmer details
         farmer = db.query(Farmer).filter(
@@ -575,10 +580,6 @@ def get_group_total_report_docx(
     Note: This endpoint now uses the new HTML template system instead of DOCX.
     Use /api/reports/group-total?format=html for future integrations.
     """
-    from fastapi.responses import HTMLResponse
-    from jinja2 import Template
-    import os
-    
     try:
         # Fetch group details
         group = db.query(FarmerGroup).filter(
@@ -715,10 +716,6 @@ def get_daily_sales_report_docx(
     Note: This endpoint now uses the new HTML template system instead of DOCX.
     Use /api/reports/daily-sales?format=html for future integrations.
     """
-    from fastapi.responses import HTMLResponse
-    from jinja2 import Template
-    import os
-    
     try:
         # Base query for collection items
         query = db.query(CollectionItem).filter(
@@ -769,6 +766,19 @@ def get_daily_sales_report_docx(
         <div style="position: fixed; top: 10px; right: 10px; z-index: 1000; background: white; padding: 10px; border-radius: 5px; box-shadow: 0 2px 10px rgba(0,0,0,0.2);">
             <button onclick="window.print()" style="padding: 10px 20px; background-color: #007bff; color: white; border: none; border-radius: 4px; cursor: pointer; font-size: 14px; font-weight: bold;">🖨️ Print</button>
         </div>
+        '''
+        
+        # Add script to automatically trigger print when page loads
+        auto_print_script = '''
+        <script>
+            // Auto-print when page loads
+            window.onload = function() {
+                // Small delay to ensure page is fully loaded
+                setTimeout(function() {
+                    window.print();
+                }, 500);
+            };
+        </script>
         '''
         
         template = Template(template_content)
