@@ -352,12 +352,12 @@ export const api = {
   
   getGroupPattiReport: async (groupId, fromDate, toDate, commissionPct = 12.0) => {
     const params = { 
-      group_id: groupId, 
       from_date: fromDate, 
       to_date: toDate, 
-      commission_pct: commissionPct 
+      commission_pct: commissionPct,
+      format: 'html'
     };
-    return request('/print-docx/group-patti-report/', { params });
+    return request(`/reports/group-patti/${groupId}`, { params });
   },
   
   getGroupTotalReport: async (groupId, startDate, endDate) => {
