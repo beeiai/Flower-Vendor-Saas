@@ -1184,8 +1184,12 @@ export default function App() {
     moreMenu: useRef(null)
   };
 
-  const GroupPattiPrintingPage = () => (
-    <div className="flex-1 flex flex-col h-full bg-gradient-to-br from-slate-50 to-slate-100 overflow-hidden">
+  const GroupPattiPrintingPage = () => {
+    const containerRef = useRef(null);
+    useEnterController(containerRef);
+    
+    return (
+    <div className="flex-1 flex flex-col h-full bg-gradient-to-br from-slate-50 to-slate-100 overflow-hidden" ref={containerRef}>
       <div className="bg-gradient-to-r from-[#5B55E6] to-[#4A44D0] px-5 py-3 flex justify-between items-center text-white shrink-0 shadow-xl rounded-b-xl">
         <h1 className="text-base font-bold uppercase flex items-center gap-2.5 tracking-wider"><Printer className="w-5 h-5 text-white" /> GROUP PATTI PRINTING</h1>
         <button onClick={() => setActiveSection('daily')} className="p-1.5 rounded-lg hover:bg-white/20 transition-all"><X className="w-5 h-5" /></button>
@@ -1203,18 +1207,8 @@ export default function App() {
                 style={{ height: '46px' }} 
                 value={groupPattiForm.fromDate} 
                 onChange={e => setGroupPattiForm({ ...groupPattiForm, fromDate: e.target.value })} 
-                onKeyDown={(e) => {
-                  if (e.key === 'Enter' || e.key === 'ArrowRight') {
-                    e.preventDefault();
-                    groupPattiToDateRef.current?.focus();
-                  } else if (e.key === 'ArrowLeft') {
-                    // No previous field, so do nothing or go to a previous section if applicable
-                  } else if (e.key === 'ArrowDown') {
-                    e.preventDefault();
-                    groupPattiToDateRef.current?.focus();
-                  }
-                }}
-                data-enter-index="1" 
+                data-enter="1" 
+                data-enter-type="input"
               />
             </div>
             <div>
@@ -1226,19 +1220,8 @@ export default function App() {
                 style={{ height: '46px' }} 
                 value={groupPattiForm.toDate} 
                 onChange={e => setGroupPattiForm({ ...groupPattiForm, toDate: e.target.value })} 
-                onKeyDown={(e) => {
-                  if (e.key === 'Enter' || e.key === 'ArrowRight') {
-                    e.preventDefault();
-                    groupPattiGroupRef.current?.querySelector('input')?.focus();
-                  } else if (e.key === 'ArrowLeft') {
-                    e.preventDefault();
-                    groupPattiFromDateRef.current?.focus();
-                  } else if (e.key === 'ArrowDown') {
-                    e.preventDefault();
-                    groupPattiGroupRef.current?.querySelector('input')?.focus();
-                  }
-                }}
-                data-enter-index="2" 
+                data-enter="2" 
+                data-enter-type="input"
               />
             </div>
           </div>
@@ -1257,24 +1240,8 @@ export default function App() {
                   groupPattiCommissionRef.current?.focus();
                 }, 0);
               }}
-              onKeyDown={(e) => {
-                if (e.key === 'Enter') {
-                  // Check if dropdown is open, then let it handle Enter
-                  // If dropdown is closed, move to next field
-                  const dropdownOpen = groupPattiGroupContainerRef.current?.closest('[data-open="true"]');
-                  if (!dropdownOpen) {
-                    e.preventDefault();
-                    groupPattiCommissionRef.current?.focus();
-                  }
-                } else if (e.key === 'ArrowRight' || e.key === 'ArrowDown') {
-                  e.preventDefault();
-                  groupPattiCommissionRef.current?.focus();
-                } else if (e.key === 'ArrowLeft' || e.key === 'ArrowUp') {
-                  e.preventDefault();
-                  groupPattiToDateRef.current?.focus();
-                }
-              }}
-              data-enter-index="3" 
+              data-enter="3" 
+              data-enter-type="dropdown"
               className="focus:border-rose-500 focus:ring-rose-500/20 rounded-lg shadow-sm hover:shadow-md transition-all border-rose-200" 
             />
             <div className="absolute right-3 top-8 text-slate-700">
@@ -1293,19 +1260,8 @@ export default function App() {
               style={{ height: '46px' }} 
               value={groupPattiForm.commissionPct} 
               onChange={e => setGroupPattiForm({ ...groupPattiForm, commissionPct: e.target.value })} 
-              onKeyDown={(e) => {
-                if (e.key === 'Enter' || e.key === 'ArrowRight') {
-                  e.preventDefault();
-                  groupPattiPrintBtnRef.current?.focus();
-                } else if (e.key === 'ArrowLeft') {
-                  e.preventDefault();
-                  groupPattiGroupRef.current?.querySelector('input')?.focus();
-                } else if (e.key === 'ArrowDown') {
-                  e.preventDefault();
-                  groupPattiPrintBtnRef.current?.focus();
-                }
-              }}
-              data-enter-index="4" 
+              data-enter="4" 
+              data-enter-type="input"
             />
           </div>
 
@@ -1315,19 +1271,8 @@ export default function App() {
               onClick={handleGroupPattiPrint} 
               disabled={!groupPattiForm.groupName || isGroupPattiPrinting} 
               className="flex-1 bg-gradient-to-r from-[#5B55E6] to-[#4A44D0] text-white py-3.5 font-bold uppercase text-sm rounded-xl shadow-lg disabled:opacity-50 hover:from-[#4A44D0] hover:to-[#3A34C0] transition-all hover:shadow-xl active:translate-y-0.5" 
-              data-enter-index="5"
-              onKeyDown={(e) => {
-                if (e.key === 'Enter') {
-                  e.preventDefault();
-                  handleGroupPattiPrint();
-                } else if (e.key === 'ArrowLeft') {
-                  e.preventDefault();
-                  groupPattiCommissionRef.current?.focus();
-                } else if (e.key === 'ArrowRight' || e.key === 'ArrowDown') {
-                  e.preventDefault();
-                  groupPattiCancelBtnRef.current?.focus();
-                }
-              }}
+              data-enter="5"
+              data-enter-type="submit"
             >
               {isGroupPattiPrinting ? 'Printing...' : 'Print'}
             </button>
@@ -1335,18 +1280,8 @@ export default function App() {
               ref={groupPattiCancelBtnRef}
               onClick={() => { setIsGroupPattiPrinting(false); setActiveSection('daily'); }} 
               className="flex-1 bg-gradient-to-r from-slate-100 to-slate-200 text-slate-700 py-3.5 font-bold uppercase text-sm border border-slate-300 rounded-xl shadow-md hover:from-slate-200 hover:to-slate-300 transition-all hover:shadow-lg" 
-              data-enter-index="6"
-              onKeyDown={(e) => {
-                if (e.key === 'Enter') {
-                  e.preventDefault();
-                  setActiveSection('daily');
-                } else if (e.key === 'ArrowLeft') {
-                  e.preventDefault();
-                  groupPattiPrintBtnRef.current?.focus();
-                } else if (e.key === 'ArrowRight' || e.key === 'ArrowUp') {
-                  // No next field, so do nothing or cycle back to first field
-                }
-              }}
+              data-enter="6"
+              data-enter-type="button"
             >Cancel</button>
           </div>
 
@@ -1356,10 +1291,14 @@ export default function App() {
         </div>
       </div>
     </div>
-  );
+  );};
 
-  const GroupTotalReportPage = () => (
-    <div className="flex-1 flex flex-col h-full bg-gradient-to-br from-slate-50 to-slate-100 overflow-hidden">
+  const GroupTotalReportPage = () => {
+    const containerRef = useRef(null);
+    useEnterController(containerRef);
+    
+    return (
+    <div className="flex-1 flex flex-col h-full bg-gradient-to-br from-slate-50 to-slate-100 overflow-hidden" ref={containerRef}>
       <div className="bg-gradient-to-r from-[#5B55E6] to-[#4A44D0] px-5 py-3 flex justify-between items-center text-white shrink-0 shadow-xl rounded-b-xl">
         <h1 className="text-base font-bold uppercase flex items-center gap-2.5 tracking-wider"><Layers className="w-5 h-5 text-white" /> GROUP TOTAL REPORT</h1>
         <button onClick={() => setActiveSection('daily')} className="p-1.5 rounded-lg hover:bg-white/20 transition-all"><X className="w-5 h-5" /></button>
@@ -1370,11 +1309,11 @@ export default function App() {
           <div className="grid grid-cols-2 gap-5">
             <div>
               <label className="text-xs font-bold uppercase text-slate-600 tracking-widest block mb-2">From Date</label>
-              <input type="date" className="w-full border border-rose-200 rounded-lg px-4 py-3 text-sm font-medium bg-white outline-none focus:border-rose-500 focus:ring-2 focus:ring-rose-500/20 shadow-sm hover:shadow-md transition-all" style={{ height: '46px' }} value={groupTotalForm.fromDate} onChange={e => setGroupTotalForm({ ...groupTotalForm, fromDate: e.target.value })} data-enter-index="1" />
+              <input type="date" className="w-full border border-rose-200 rounded-lg px-4 py-3 text-sm font-medium bg-white outline-none focus:border-rose-500 focus:ring-2 focus:ring-rose-500/20 shadow-sm hover:shadow-md transition-all" style={{ height: '46px' }} value={groupTotalForm.fromDate} onChange={e => setGroupTotalForm({ ...groupTotalForm, fromDate: e.target.value })} data-enter="1" data-enter-type="input" />
             </div>
             <div>
               <label className="text-xs font-bold uppercase text-slate-600 tracking-widest block mb-2">To Date</label>
-              <input type="date" className="w-full border border-rose-200 rounded-lg px-4 py-3 text-sm font-medium bg-white outline-none focus:border-rose-500 focus:ring-2 focus:ring-rose-500/20 shadow-sm hover:shadow-md transition-all" style={{ height: '46px' }} value={groupTotalForm.toDate} onChange={e => setGroupTotalForm({ ...groupTotalForm, toDate: e.target.value })} data-enter-index="2" />
+              <input type="date" className="w-full border border-rose-200 rounded-lg px-4 py-3 text-sm font-medium bg-white outline-none focus:border-rose-500 focus:ring-2 focus:ring-rose-500/20 shadow-sm hover:shadow-md transition-all" style={{ height: '46px' }} value={groupTotalForm.toDate} onChange={e => setGroupTotalForm({ ...groupTotalForm, toDate: e.target.value })} data-enter="2" data-enter-type="input" />
             </div>
           </div>
 
@@ -1383,14 +1322,16 @@ export default function App() {
               onClick={handleGroupTotalPrint} 
               disabled={isGroupTotalPrinting} 
               className="flex-1 bg-gradient-to-r from-[#5B55E6] to-[#4A44D0] text-white py-3.5 font-bold uppercase text-sm rounded-xl shadow-lg disabled:opacity-50 hover:from-[#4A44D0] hover:to-[#3A34C0] transition-all hover:shadow-xl active:translate-y-0.5" 
-              data-enter-index="3"
+              data-enter="3"
+              data-enter-type="submit"
             >
               {isGroupTotalPrinting ? 'Printing...' : 'Print All Groups'}
             </button>
             <button 
               onClick={() => { setIsGroupTotalPrinting(false); setActiveSection('daily'); }} 
               className="flex-1 bg-gradient-to-r from-slate-100 to-slate-200 text-slate-700 py-3.5 font-bold uppercase text-sm border border-slate-300 rounded-xl shadow-md hover:from-slate-200 hover:to-slate-300 transition-all hover:shadow-lg" 
-              data-enter-index="4"
+              data-enter="4"
+              data-enter-type="button"
             >
               Cancel
             </button>
@@ -1402,7 +1343,7 @@ export default function App() {
         </div>
       </div>
     </div>
-  );
+  );};
 
   return (
     <div className="h-screen flex flex-col bg-white overflow-hidden text-slate-900 font-sans">
