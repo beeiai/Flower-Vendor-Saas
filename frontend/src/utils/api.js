@@ -361,17 +361,15 @@ export const api = {
   },
   
   getGroupTotalReport: async (groupId, startDate, endDate) => {
+    // For group total report (all groups), use the reports endpoint
+    // This endpoint doesn't require group_id parameter
     const params = { 
       from_date: startDate, 
-      to_date: endDate 
+      to_date: endDate,
+      format: 'html'
     };
     
-    // Only add group_id if it's provided (not null/undefined)
-    if (groupId !== null && groupId !== undefined) {
-      params.group_id = groupId;
-    }
-    
-    return request('/print-docx/group-total-report/', { params });
+    return request('/reports/group-total', { params });
   },
   
   getDailySalesReport: async (fromDate, toDate, itemName = null) => {

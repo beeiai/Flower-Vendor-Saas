@@ -941,8 +941,7 @@ export default function App() {
   const handleGroupTotalPrint = async () => {
     setIsGroupTotalPrinting(true);
     try {
-      // Call the group total report API with correct parameters
-      // For "all groups", pass null as the first parameter
+      // Use the existing api service which now calls the correct endpoint
       const response = await api.getGroupTotalReport(
         null, // group_id = null means "all groups"
         groupTotalForm.fromDate,
@@ -952,7 +951,7 @@ export default function App() {
       // Open preview in new tab
       const previewWindow = window.open('about:blank', '_blank');
       if (previewWindow) {
-        previewWindow.document.write(response.data);
+        previewWindow.document.write(response); // The new endpoint returns text directly
         previewWindow.document.close();
         previewWindow.focus();
         // Add print button to the preview

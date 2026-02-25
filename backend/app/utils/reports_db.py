@@ -136,10 +136,10 @@ def get_ledger_data(
     
     entries_list = []
     for entry in entries:
-        qty = Decimal(str(entry.qty_kg or 0))
-        rate = Decimal(str(entry.rate_per_kg or 0))
+        qty = Decimal(str(entry.qty_kg)) if entry.qty_kg is not None else Decimal("0")
+        rate = Decimal(str(entry.rate_per_kg)) if entry.rate_per_kg is not None else Decimal("0")
         amount = qty * rate
-        paid = Decimal(str(entry.paid_amount or 0))
+        paid = Decimal(str(entry.paid_amount)) if entry.paid_amount is not None else Decimal("0")
         
         total_qty += qty
         total_amount += amount
@@ -376,31 +376,28 @@ def get_group_patti_data(
             CollectionItem.date >= from_date,
             CollectionItem.date <= to_date
         ).order_by(CollectionItem.date.asc()).all()
-        
-        if not entries:
-            continue  # Skip farmers with no entries
-        
+                
         farmer_total_qty = Decimal("0")
         farmer_total_amount = Decimal("0")
         farmer_total_paid = Decimal("0")
         entries_list = []
-        
+                
         for entry in entries:
-            qty = Decimal(str(entry.qty_kg or 0))
-            rate = Decimal(str(entry.rate_per_kg or 0))
+            qty = Decimal(str(entry.qty_kg)) if entry.qty_kg is not None else Decimal("0")
+            rate = Decimal(str(entry.rate_per_kg)) if entry.rate_per_kg is not None else Decimal("0")
             amount = qty * rate
-            paid = Decimal(str(entry.paid_amount or 0))
-            
+            paid = Decimal(str(entry.paid_amount)) if entry.paid_amount is not None else Decimal("0")
+                    
             farmer_total_qty += qty
             farmer_total_amount += amount
             farmer_total_paid += paid
-            
+                    
             # Format date as DD-MM-YYYY
             date_str = entry.date.strftime("%d-%m-%Y") if entry.date else "N/A"
-            
+                    
             # Get vehicle info
             vehicle_info = entry.vehicle_name or entry.vehicle_number or "N/A"
-            
+                    
             entries_list.append({
                 "id": entry.id,
                 "date": date_str,
@@ -411,14 +408,14 @@ def get_group_patti_data(
                 "amount": str(amount),
                 "paid": str(paid)
             })
-        
+                
         grand_total_qty += farmer_total_qty
         grand_total_amount += farmer_total_amount
         total_entry_count += len(entries_list)
-        
+                
         # Calculate farmer's commission (using default 12% as requested)
         farmer_commission = (farmer_total_amount * Decimal("12") / 100).quantize(Decimal("0.01"))
-        
+                
         farmers_list.append({
             "id": farmer.id,
             "name": farmer.name,
