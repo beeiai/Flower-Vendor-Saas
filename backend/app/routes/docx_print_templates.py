@@ -1,6 +1,6 @@
 from fastapi import APIRouter, Depends, Query, HTTPException
 from fastapi.responses import HTMLResponse
-from sqlalchemy.orm import Session
+from sqlalchemy.orm import Session, joinedload
 from sqlalchemy import func
 from datetime import date
 from typing import Optional
@@ -52,8 +52,8 @@ def get_ledger_report_pdf(
         group = db.query(FarmerGroup).filter(FarmerGroup.id == farmer.group_id).first()
         group_name = group.name if group else "N/A"
         
-        # Fetch collection items for the date range
-        items = db.query(CollectionItem).filter(
+        # Fetch collection items for the date range with vehicle relationship
+        items = db.query(CollectionItem).options(joinedload(CollectionItem.vehicle)).filter(
             CollectionItem.farmer_id == farmer_id,
             CollectionItem.date >= from_date,
             CollectionItem.date <= to_date,
@@ -98,20 +98,30 @@ def get_ledger_report_pdf(
         
         # Transform rows to match template structure
         transformed_rows = []
-        for row in rows:
-            qty = float(row["qty"])
-            price = float(row["price"])
-            total = float(row["total"])
-            luggage = float(row["luggage"])
-            paid = float(row["paid_amount"])
-            amount = float(row["amount"])
+        for item in items:  # Use the original items to get date and vehicle
+            qty = float(item.qty_kg or 0)
+            rate = float(item.rate_per_kg or 0)
+            luggage = float(item.transport_cost or 0)
+            paid = float(item.paid_amount or 0)
+            total = qty * rate
             
             # Commission calculation per row
             row_commission = total * commission_rate
             row_net = total - row_commission
             row_balance = row_net + luggage - paid
             
+            # Get vehicle information
+            vehicle_info = "N/A"
+            if hasattr(item, 'vehicle') and item.vehicle:
+                vehicle_info = item.vehicle.vehicle_number or item.vehicle.vehicle_name or "N/A"
+            elif hasattr(item, 'vehicle_number') and item.vehicle_number:
+                vehicle_info = item.vehicle_number
+            elif hasattr(item, 'vehicle_name') and item.vehicle_name:
+                vehicle_info = item.vehicle_name
+            
             transformed_rows.append({
+                "date": item.date.strftime("%d-%m-%Y") if item.date else "N/A",
+                "vehicle": vehicle_info,
                 "customer": farmer.name,
                 "address": farmer.address or "N/A",
                 "gross": f"{total:.2f}",
@@ -217,8 +227,8 @@ def get_ledger_report_docx(
         group = db.query(FarmerGroup).filter(FarmerGroup.id == farmer.group_id).first()
         group_name = group.name if group else "N/A"
         
-        # Fetch collection items for the date range
-        items = db.query(CollectionItem).filter(
+        # Fetch collection items for the date range with vehicle relationship
+        items = db.query(CollectionItem).options(joinedload(CollectionItem.vehicle)).filter(
             CollectionItem.farmer_id == farmer_id,
             CollectionItem.date >= from_date,
             CollectionItem.date <= to_date,
@@ -263,19 +273,30 @@ def get_ledger_report_docx(
         
         # Transform rows to match template structure
         transformed_rows = []
-        for row in rows:
-            qty = float(row["qty"])
-            price = float(row["price"])
-            total = float(row["total"])
-            luggage = float(row["luggage"])
-            paid = float(row["paid_amount"])
+        for item in items:  # Use the original items to get date and vehicle
+            qty = float(item.qty_kg or 0)
+            rate = float(item.rate_per_kg or 0)
+            luggage = float(item.transport_cost or 0)
+            paid = float(item.paid_amount or 0)
+            total = qty * rate
             
             # Commission calculation per row
             row_commission = total * commission_rate
             row_net = total - row_commission
             row_balance = row_net + luggage - paid
             
+            # Get vehicle information
+            vehicle_info = "N/A"
+            if hasattr(item, 'vehicle') and item.vehicle:
+                vehicle_info = item.vehicle.vehicle_number or item.vehicle.vehicle_name or "N/A"
+            elif hasattr(item, 'vehicle_number') and item.vehicle_number:
+                vehicle_info = item.vehicle_number
+            elif hasattr(item, 'vehicle_name') and item.vehicle_name:
+                vehicle_info = item.vehicle_name
+            
             transformed_rows.append({
+                "date": item.date.strftime("%d-%m-%Y") if item.date else "N/A",
+                "vehicle": vehicle_info,
                 "customer": farmer.name,
                 "address": farmer.address or "N/A",
                 "gross": f"{total:.2f}",
@@ -391,9 +412,9 @@ def get_group_patti_report_docx(
         if not farmers:
             raise HTTPException(status_code=404, detail="No farmers found in group")
         
-        # Fetch all collection items for all farmers in one query
+        # Fetch all collection items for all farmers in one query with vehicle relationship
         farmer_ids = [f.id for f in farmers]
-        all_items = db.query(CollectionItem).filter(
+        all_items = db.query(CollectionItem).options(joinedload(CollectionItem.vehicle)).filter(
             CollectionItem.farmer_id.in_(farmer_ids),
             CollectionItem.date >= from_date,
             CollectionItem.date <= to_date,
@@ -567,9 +588,9 @@ def get_group_patti_report_docx(
 
 @router.get("/group-total-report/")
 def get_group_total_report_docx(
-    group_id: int = Query(..., description="Group ID"),
-    start_date: date = Query(..., description="Start date"),
-    end_date: date = Query(..., description="End date"),
+    group_id: Optional[int] = Query(None, description="Group ID (if None, aggregates all groups)"),
+    from_date: date = Query(..., description="Start date"),
+    to_date: date = Query(..., description="End date"),
     db: Session = Depends(get_db),
     user = Depends(get_current_user)
 ):
@@ -581,63 +602,142 @@ def get_group_total_report_docx(
     Use /api/reports/group-total?format=html for future integrations.
     """
     try:
-        # Fetch group details
-        group = db.query(FarmerGroup).filter(
-            FarmerGroup.id == group_id,
-            FarmerGroup.vendor_id == user.vendor_id
-        ).first()
-        
-        if not group:
-            raise HTTPException(status_code=404, detail="Group not found")
-        
-        # Fetch all farmers in the group
-        farmers = db.query(Farmer).filter(
-            Farmer.group_id == group_id,
-            Farmer.vendor_id == user.vendor_id
-        ).all()
-        
-        if not farmers:
-            raise HTTPException(status_code=404, detail="No farmers found in group")
-        
-        # Fetch all collection items for all farmers in one query
-        farmer_ids = [f.id for f in farmers]
-        all_items = db.query(CollectionItem).filter(
-            CollectionItem.farmer_id.in_(farmer_ids),
-            CollectionItem.date >= start_date,
-            CollectionItem.date <= end_date,
-            CollectionItem.vendor_id == user.vendor_id
-        ).order_by(CollectionItem.date).all()
-        
-        # Calculate group totals
-        total_qty = 0
-        total_amount = 0
-        total_paid = 0
-        total_luggage = 0
-        
-        # Process all items to calculate totals
-        for item in all_items:
-            qty = float(item.qty_kg or 0)
-            rate = float(item.rate_per_kg or 0)
-            total = qty * rate
-            paid = float(item.paid_amount or 0)
-            luggage = float(item.transport_cost or 0)
+        # Check if a specific group is requested
+        if group_id is not None:
+            # Fetch specific group details
+            group = db.query(FarmerGroup).filter(
+                FarmerGroup.id == group_id,
+                FarmerGroup.vendor_id == user.vendor_id
+            ).first()
             
-            total_qty += qty
-            total_amount += total
-            total_paid += paid
-            total_luggage += luggage
-        
-        # Calculate group total
-        group_total = total_amount - total_paid
-        
-        # Prepare data for the group_total_report.html template
-        # The template expects rows with: group_name, customer_count, total_qty, total_amount
-        rows = [{
-            "group_name": group.name,
-            "customer_count": len(farmers),
-            "total_qty": f"{total_qty:.2f}",
-            "total_amount": f"{total_amount:.2f}"
-        }]
+            if not group:
+                raise HTTPException(status_code=404, detail="Group not found")
+            
+            # Fetch all farmers in the specific group
+            farmers = db.query(Farmer).filter(
+                Farmer.group_id == group_id,
+                Farmer.vendor_id == user.vendor_id
+            ).all()
+            
+            if not farmers:
+                raise HTTPException(status_code=404, detail="No farmers found in group")
+            
+            # Fetch all collection items for all farmers in the specific group
+            farmer_ids = [f.id for f in farmers]
+            all_items = db.query(CollectionItem).filter(
+                CollectionItem.farmer_id.in_(farmer_ids),
+                CollectionItem.date >= from_date,
+                CollectionItem.date <= to_date,
+                CollectionItem.vendor_id == user.vendor_id
+            ).order_by(CollectionItem.date).all()
+            
+            # Calculate group totals
+            total_qty = 0
+            total_amount = 0
+            total_paid = 0
+            total_luggage = 0
+            
+            # Process all items to calculate totals
+            for item in all_items:
+                qty = float(item.qty_kg or 0)
+                rate = float(item.rate_per_kg or 0)
+                total = qty * rate
+                paid = float(item.paid_amount or 0)
+                luggage = float(item.transport_cost or 0)
+                
+                total_qty += qty
+                total_amount += total
+                total_paid += paid
+                total_luggage += luggage
+            
+            # Calculate group total
+            group_total = total_amount - total_paid
+            
+            # Prepare data for the group_total_report.html template
+            # The template expects rows with: group_name, customer_count, total_qty, total_amount
+            rows = [{
+                "group_name": group.name,
+                "customer_count": len(farmers),
+                "total_qty": f"{total_qty:.2f}",
+                "total_amount": f"{total_amount:.2f}"
+            }]
+            
+            group_count = 1  # Showing one specific group
+            overall_qty = total_qty
+            overall_amount = total_amount
+            overall_paid = total_paid
+            overall_balance = group_total
+        else:
+            # Aggregate data for ALL groups for the vendor
+            # Fetch all groups for the vendor
+            all_groups = db.query(FarmerGroup).filter(
+                FarmerGroup.vendor_id == user.vendor_id
+            ).all()
+            
+            if not all_groups:
+                raise HTTPException(status_code=404, detail="No groups found for vendor")
+            
+            rows = []
+            overall_qty = 0
+            overall_amount = 0
+            overall_paid = 0
+            overall_balance = 0
+            group_count = 0
+            
+            # Process each group individually to get detailed breakdown
+            for group in all_groups:
+                # Fetch all farmers in this group
+                farmers = db.query(Farmer).filter(
+                    Farmer.group_id == group.id,
+                    Farmer.vendor_id == user.vendor_id
+                ).all()
+                
+                if not farmers:
+                    continue
+                
+                # Fetch all collection items for all farmers in this group with vehicle relationship
+                farmer_ids = [f.id for f in farmers]
+                group_items = db.query(CollectionItem).options(joinedload(CollectionItem.vehicle)).filter(
+                    CollectionItem.farmer_id.in_(farmer_ids),
+                    CollectionItem.date >= from_date,
+                    CollectionItem.date <= to_date,
+                    CollectionItem.vendor_id == user.vendor_id
+                ).all()
+                
+                # Calculate totals for this specific group
+                group_qty = 0
+                group_amount = 0
+                group_paid = 0
+                group_luggage = 0
+                
+                for item in group_items:
+                    qty = float(item.qty_kg or 0)
+                    rate = float(item.rate_per_kg or 0)
+                    total = qty * rate
+                    paid = float(item.paid_amount or 0)
+                    luggage = float(item.transport_cost or 0)
+                    
+                    group_qty += qty
+                    group_amount += total
+                    group_paid += paid
+                    group_luggage += luggage
+                
+                group_total = group_amount - group_paid
+                
+                # Add this group's data to rows
+                rows.append({
+                    "group_name": group.name,
+                    "customer_count": len(farmers),
+                    "total_qty": f"{group_qty:.2f}",
+                    "total_amount": f"{group_amount:.2f}"
+                })
+                
+                # Add to overall totals
+                overall_qty += group_qty
+                overall_amount += group_amount
+                overall_paid += group_paid
+                overall_balance += group_total
+                group_count += 1
         
         # Load and render HTML template
         template_path = os.path.join("templates", "group_total_report.html")
@@ -671,15 +771,15 @@ def get_group_total_report_docx(
         template = Template(template_content)
         html_content = template.render(
             rows=rows,
-            overall_qty=f"{total_qty:.2f}",
-            overall_amount=f"{total_amount:.2f}",
-            overall_paid=f"{total_paid:.2f}",
-            overall_balance=f"{group_total:.2f}",
-            from_date=start_date.strftime("%d-%m-%Y"),
-            to_date=end_date.strftime("%d-%m-%Y"),
+            overall_qty=f"{overall_qty:.2f}",
+            overall_amount=f"{overall_amount:.2f}",
+            overall_paid=f"{overall_paid:.2f}",
+            overall_balance=f"{overall_balance:.2f}",
+            from_date=from_date.strftime("%d-%m-%Y"),
+            to_date=to_date.strftime("%d-%m-%Y"),
             current_date=__import__('datetime').datetime.now().strftime("%d-%m-%Y"),
             generated_at=__import__('datetime').datetime.now().isoformat(),
-            group_count=1  # Since we're showing only one group
+            group_count=group_count
         )
         
         # Insert print button before </body> tag
@@ -717,8 +817,8 @@ def get_daily_sales_report_docx(
     Use /api/reports/daily-sales?format=html for future integrations.
     """
     try:
-        # Base query for collection items
-        query = db.query(CollectionItem).filter(
+        # Base query for collection items with vehicle relationship
+        query = db.query(CollectionItem).options(joinedload(CollectionItem.vehicle)).filter(
             CollectionItem.date >= from_date,
             CollectionItem.date <= to_date,
             CollectionItem.vendor_id == user.vendor_id

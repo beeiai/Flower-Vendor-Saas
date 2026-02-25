@@ -361,10 +361,15 @@ export const api = {
   
   getGroupTotalReport: async (groupId, startDate, endDate) => {
     const params = { 
-      group_id: groupId, 
-      start_date: startDate, 
-      end_date: endDate 
+      from_date: startDate, 
+      to_date: endDate 
     };
+    
+    // Only add group_id if it's provided (not null/undefined)
+    if (groupId !== null && groupId !== undefined) {
+      params.group_id = groupId;
+    }
+    
     return request('/print-docx/group-total-report/', { params });
   },
   
