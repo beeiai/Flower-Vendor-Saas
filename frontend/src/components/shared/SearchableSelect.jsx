@@ -68,14 +68,21 @@ export function SearchableSelect({ label, options, value, onChange, placeholder,
 		return () => window.removeEventListener('blur', handleWindowBlur);
 	}, []);
 
-	const filteredOptions = useMemo(() => {
-		if (!searchTerm) return options || [];
-		const lower = String(searchTerm).toLowerCase();
-		return (options || []).filter(option =>
-			String(option).toLowerCase().startsWith(lower) ||
-			String(option).toLowerCase().includes(lower)
+	const highlightMatch = (text, searchTerm) => {
+		if (!searchTerm) return text;
+		const regex = new RegExp(`(${searchTerm.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')})`, 'gi');
+		const parts = text.split(regex);
+		return parts.map((part, index) => 
+			regex.test(part) ? 
+				<span key={index} className="font-bold text-primary-600 bg-primary-100">{part}</span> : 
+				part
 		);
-	}, [options, searchTerm]);
+	};
+
+	const filteredOptions = useMemo(() => {
+		// Always show all options - industry standard dropdown behavior
+		return options || [];
+	}, [options]);
 
 	const handleFocus = () => {
 		if (!open && !disabled) {
@@ -179,7 +186,7 @@ export function SearchableSelect({ label, options, value, onChange, placeholder,
 						}`}
 						onMouseDown={(e) => { e.preventDefault(); handleSelect(opt); }}
 					>
-						{String(opt)}
+						{highlightMatch(String(opt), searchTerm)}
 					</button>
 				))
 				: <div className="px-3 py-3 text-sm text-slate-400 italic bg-slate-50">No matches found</div>
