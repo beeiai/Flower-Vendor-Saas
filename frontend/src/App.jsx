@@ -1403,7 +1403,7 @@ export default function App() {
             <label className="text-xs font-bold uppercase text-slate-600 tracking-widest block mb-2">Group Name (Optional)</label>
             <SearchableSelect
               placeholder={groups.length > 0 ? "Select Group (Leave empty for all groups)" : "No Groups Available"}
-              options={[{ label: "All Groups", value: "" }, ...groups.map(g => ({ label: g.name, value: g.name }))]
+              options={[{ label: "All Groups", value: "" }, ...groups.map(g => ({ label: g.name, value: g.name }))]}
               value={groupTotalForm.groupName}
               onChange={(value) => setGroupTotalForm({ ...groupTotalForm, groupName: value })}
               data-enter="3"
