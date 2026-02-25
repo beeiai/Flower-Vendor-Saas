@@ -159,9 +159,11 @@ export default function DailySaleView({ onCancel }) {
 
   const nav = (e, next, prev) => {
     if (e.key === 'Enter' || e.key === 'ArrowRight' || e.key === 'ArrowDown') {
-      e.preventDefault(); next?.current?.focus();
+      e.preventDefault(); 
+      setTimeout(() => next?.current?.focus(), 0);
     } else if (e.key === 'ArrowLeft' || e.key === 'ArrowUp') {
-      e.preventDefault(); prev?.current?.focus();
+      e.preventDefault(); 
+      setTimeout(() => prev?.current?.focus(), 0);
     }
   };
 
@@ -254,8 +256,8 @@ export default function DailySaleView({ onCancel }) {
               disabled={loading}
               onKeyDown={e => {
                 if (e.key === 'Enter') { e.preventDefault(); handleGo(); }
-                else if (e.key === 'ArrowRight' || e.key === 'ArrowDown') { e.preventDefault(); smsRef.current?.focus(); }
-                else if (e.key === 'ArrowLeft' || e.key === 'ArrowUp') { e.preventDefault(); toRef.current?.focus(); }
+                else if (e.key === 'ArrowRight' || e.key === 'ArrowDown') { e.preventDefault(); setTimeout(() => smsRef.current?.focus(), 0); }
+                else if (e.key === 'ArrowLeft' || e.key === 'ArrowUp') { e.preventDefault(); setTimeout(() => toRef.current?.focus(), 0); }
               }}
               className="bg-gradient-to-r from-[#5B55E6] to-[#4A44D0] text-white font-bold text-sm px-7 rounded-xl shadow-lg hover:from-[#4A44D0] hover:to-[#3A34C0] disabled:opacity-50 transition-all hover:shadow-xl active:translate-y-0.5"
               style={{ height: '42px' }}
@@ -312,11 +314,11 @@ export default function DailySaleView({ onCancel }) {
         )}
 
         {/* Footer */}
-        <div className="bg-white rounded-2xl border border-slate-200 shadow-lg px-5 py-3.5 shrink-0">
-          <div className="flex items-center justify-between gap-4 flex-wrap">
+        <div className="bg-white rounded-2xl border border-slate-200 shadow-lg px-4 py-3 shrink-0">
+          <div className="flex items-center justify-between gap-3 flex-wrap">
 
             {/* SMS buttons */}
-            <div className="flex gap-2">
+            <div className="flex gap-1.5">
               {/* Send to selected group */}
               <button
                 ref={smsRef}
@@ -325,13 +327,13 @@ export default function DailySaleView({ onCancel }) {
                 title="Send SMS for selected group only"
                 onKeyDown={e => {
                   if (e.key === 'Enter') { e.preventDefault(); handleSendSMS(); }
-                  else if (e.key === 'ArrowRight' || e.key === 'ArrowDown') { e.preventDefault(); smsAllRef.current?.focus(); }
-                  else if (e.key === 'ArrowLeft' || e.key === 'ArrowUp') { e.preventDefault(); goRef.current?.focus(); }
+                  else if (e.key === 'ArrowRight' || e.key === 'ArrowDown') { e.preventDefault(); setTimeout(() => smsAllRef.current?.focus(), 0); }
+                  else if (e.key === 'ArrowLeft' || e.key === 'ArrowUp') { e.preventDefault(); setTimeout(() => goRef.current?.focus(), 0); }
                 }}
-                className="bg-gradient-to-r from-emerald-500 to-emerald-600 text-white font-black uppercase text-[11px] px-4 rounded-xl shadow-lg hover:from-emerald-600 hover:to-emerald-700 disabled:opacity-50 transition-all tracking-wider flex items-center gap-1.5 hover:shadow-xl active:translate-y-0.5"
-                style={{ height: '40px' }}
+                className="bg-gradient-to-r from-emerald-500 to-emerald-600 text-white font-black uppercase text-[10px] px-3 rounded-lg shadow-md hover:from-emerald-600 hover:to-emerald-700 disabled:opacity-50 transition-all tracking-wider flex items-center gap-1 hover:shadow-lg active:translate-y-0.5"
+                style={{ height: '36px' }}
               >
-                <Send className="w-3.5 h-3.5" /> SEND SMS
+                <Send className="w-3 h-3" /> SMS
               </button>
 
               {/* Send to ALL groups */}
@@ -342,62 +344,62 @@ export default function DailySaleView({ onCancel }) {
                 title="Send SMS for ALL groups at once"
                 onKeyDown={e => {
                   if (e.key === 'Enter') { e.preventDefault(); handleSendAllSMS(); }
-                  else if (e.key === 'ArrowRight' || e.key === 'ArrowDown') { e.preventDefault(); printRef.current?.focus(); }
-                  else if (e.key === 'ArrowLeft' || e.key === 'ArrowUp') { e.preventDefault(); smsRef.current?.focus(); }
+                  else if (e.key === 'ArrowRight' || e.key === 'ArrowDown') { e.preventDefault(); setTimeout(() => printRef.current?.focus(), 0); }
+                  else if (e.key === 'ArrowLeft' || e.key === 'ArrowUp') { e.preventDefault(); setTimeout(() => smsRef.current?.focus(), 0); }
                 }}
-                className="bg-gradient-to-r from-blue-500 to-blue-600 text-white font-black uppercase text-[11px] px-4 rounded-xl shadow-lg hover:from-blue-600 hover:to-blue-700 disabled:opacity-50 transition-all tracking-wider flex items-center gap-1.5 hover:shadow-xl active:translate-y-0.5"
-                style={{ height: '40px' }}
+                className="bg-gradient-to-r from-blue-500 to-blue-600 text-white font-black uppercase text-[10px] px-3 rounded-lg shadow-md hover:from-blue-600 hover:to-blue-700 disabled:opacity-50 transition-all tracking-wider flex items-center gap-1 hover:shadow-lg active:translate-y-0.5"
+                style={{ height: '36px' }}
               >
-                <Users className="w-3.5 h-3.5" /> SEND ALL
+                <Users className="w-3 h-3" /> ALL
               </button>
             </div>
 
             {/* Totals */}
-            <div className="flex items-center gap-5">
-              <div className="flex items-center gap-2">
-                <span className="text-[10px] font-black text-slate-500 uppercase tracking-widest whitespace-nowrap">Total Quantity</span>
+            <div className="flex items-center gap-3">
+              <div className="flex items-center gap-1.5">
+                <span className="text-[9px] font-black text-slate-500 uppercase tracking-widest whitespace-nowrap">Total Qty</span>
                 <input
                   readOnly
-                  className="w-28 border border-slate-200 bg-slate-50 px-2 text-[13px] font-black text-right outline-none rounded-lg shadow-inner"
-                  style={{ height: '36px' }}
+                  className="w-24 border border-slate-200 bg-slate-50 px-2 text-[11px] font-black text-right outline-none rounded-lg shadow-inner"
+                  style={{ height: '32px' }}
                   value={totals.qty.toFixed(2)}
                 />
               </div>
-              <div className="flex items-center gap-2">
-                <span className="text-[10px] font-black text-slate-500 uppercase tracking-widest whitespace-nowrap">Amount Total</span>
+              <div className="flex items-center gap-1.5">
+                <span className="text-[9px] font-black text-slate-500 uppercase tracking-widest whitespace-nowrap">Amount</span>
                 <input
                   readOnly
-                  className="w-40 bg-gradient-to-r from-rose-500 to-rose-600 text-white border-0 px-2 text-[14px] font-black text-right outline-none rounded-lg shadow-lg"
-                  style={{ height: '36px' }}
+                  className="w-32 bg-gradient-to-r from-rose-500 to-rose-600 text-white border-0 px-2 text-[11px] font-black text-right outline-none rounded-lg shadow-lg"
+                  style={{ height: '32px' }}
                   value={`₹ ${totals.amount.toFixed(2)}`}
                 />
               </div>
             </div>
 
             {/* Print + Cancel */}
-            <div className="flex gap-2">
+            <div className="flex gap-1.5">
               <button
                 ref={printRef}
                 onClick={handlePrint}
                 onKeyDown={e => {
                   if (e.key === 'Enter') { e.preventDefault(); handlePrint(); }
-                  else if (e.key === 'ArrowRight' || e.key === 'ArrowDown') { e.preventDefault(); cancelRef.current?.focus(); }
-                  else if (e.key === 'ArrowLeft' || e.key === 'ArrowUp') { e.preventDefault(); smsAllRef.current?.focus(); }
+                  else if (e.key === 'ArrowRight' || e.key === 'ArrowDown') { e.preventDefault(); setTimeout(() => cancelRef.current?.focus(), 0); }
+                  else if (e.key === 'ArrowLeft' || e.key === 'ArrowUp') { e.preventDefault(); setTimeout(() => smsAllRef.current?.focus(), 0); }
                 }}
-                className="bg-gradient-to-r from-slate-700 to-slate-800 text-white font-bold text-sm px-5 rounded-xl shadow-lg hover:from-slate-800 hover:to-slate-900 transition-all hover:shadow-xl active:translate-y-0.5 flex items-center gap-1.5"
-                style={{ height: '40px' }}
+                className="bg-gradient-to-r from-slate-700 to-slate-800 text-white font-bold text-xs px-4 rounded-lg shadow-md hover:from-slate-800 hover:to-slate-900 transition-all hover:shadow-lg active:translate-y-0.5 flex items-center gap-1"
+                style={{ height: '36px' }}
               >
-                <Printer className="w-3.5 h-3.5" /> Print
+                <Printer className="w-3 h-3" /> Print
               </button>
               <button
                 ref={cancelRef}
                 onClick={onCancel}
                 onKeyDown={e => {
                   if (e.key === 'Enter') { e.preventDefault(); onCancel?.(); }
-                  else if (e.key === 'ArrowLeft' || e.key === 'ArrowUp') { e.preventDefault(); printRef.current?.focus(); }
+                  else if (e.key === 'ArrowLeft' || e.key === 'ArrowUp') { e.preventDefault(); setTimeout(() => printRef.current?.focus(), 0); }
                 }}
-                className="bg-gradient-to-r from-slate-100 to-slate-200 text-slate-700 font-bold text-sm px-5 rounded-xl border border-slate-300 shadow-md hover:from-slate-200 hover:to-slate-300 transition-all hover:shadow-lg active:translate-y-0.5"
-                style={{ height: '40px' }}
+                className="bg-gradient-to-r from-slate-100 to-slate-200 text-slate-700 font-bold text-xs px-4 rounded-lg border border-slate-300 shadow-md hover:from-slate-200 hover:to-slate-300 transition-all hover:shadow-lg active:translate-y-0.5"
+                style={{ height: '36px' }}
               >
                 Cancel
               </button>
