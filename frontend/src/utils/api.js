@@ -71,7 +71,8 @@ async function request(path, options = {}) {
     const axiosOptions = { url, method };
     
     // Handle response type for DOCX files - default to blob for download
-    if (path.includes('print-docx')) {
+    // But exclude group-patti-report which returns HTML with auto-print
+    if (path.includes('print-docx') && !path.includes('group-patti-report')) {
       axiosOptions.responseType = 'blob';
     }
     
