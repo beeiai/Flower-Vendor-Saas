@@ -102,11 +102,6 @@ export default function DailyTransactionsView({
                 className="focus:border-rose-500 focus:ring-rose-500/20 rounded-lg shadow-sm hover:shadow-md transition-all border-rose-200 w-full"
                 autoFocus
               />
-              <div className="absolute right-3 top-8 text-slate-700">
-                <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
-                </svg>
-              </div>
             </div>
             <div className="flex gap-1.5 items-end overflow-visible">
               <div className="relative flex-1">
@@ -120,11 +115,6 @@ export default function DailyTransactionsView({
                   placeholder="Search Party" 
                   className="focus:border-rose-500 focus:ring-rose-500/20 rounded-lg shadow-sm hover:shadow-md transition-all border-rose-200 w-full"
                 />
-                <div className="absolute right-3 top-8 text-slate-700">
-                  <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
-                  </svg>
-                </div>
               </div>
               <button 
                 onClick={() => onOpenQuickAdd('customer')} 
@@ -167,7 +157,7 @@ export default function DailyTransactionsView({
           </div>
         </section>
         
-        <section className="bg-white border border-slate-200 shadow-lg rounded-xl flex flex-col relative z-30 shrink-0 overflow-visible">
+        <section className="bg-white border border-slate-200 shadow-lg rounded-xl flex flex-col relative z-30 shrink-0 overflow-visible flex-1 min-h-0">
           <div className="bg-gradient-to-r from-[#5B55E6] to-[#4A44D0] px-4 py-2.5 border-b border-[#4A44D0] text-white font-bold text-xs uppercase flex items-center gap-2 tracking-wider rounded-t-xl">
             <Database className="w-4 h-4 text-slate-400" /> Data Entry Row
           </div>
@@ -185,75 +175,54 @@ export default function DailyTransactionsView({
                   />
                 </div>
                 <div className="w-[120px]">
-                  <div className="relative">
-                    <SearchableSelect 
-                      inputRef={vRef} 
-                      label="Vehicle" 
-                      options={vehicles.map(v => v.name)} 
-                      value={currentEntry.vehicle} 
-                      onChange={(v) => setCurrentEntry({...currentEntry, vehicle: v})} 
-                      onSelectionComplete={() => setTimeout(() => icRef.current?.focus(), 0)}
-                      className="focus:border-rose-500 focus:ring-rose-500/20 rounded-lg shadow-sm hover:shadow-md transition-all border-rose-200 w-full"
-                    />
-                    <div className="absolute right-3 top-8 text-slate-700">
-                      <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
-                      </svg>
-                    </div>
-                  </div>
+                  <SearchableSelect 
+                    inputRef={vRef} 
+                    label="Vehicle" 
+                    options={vehicles.map(v => v.name)} 
+                    value={currentEntry.vehicle} 
+                    onChange={(v) => setCurrentEntry({...currentEntry, vehicle: v})} 
+                    onSelectionComplete={() => setTimeout(() => icRef.current?.focus(), 0)}
+                    className="focus:border-rose-500 focus:ring-rose-500/20 rounded-lg shadow-sm hover:shadow-md transition-all border-rose-200 w-full"
+                  />
                 </div>
                 <div className="w-[110px] flex items-end gap-1">
-                  <div className="relative">
-                    <SearchableSelect 
-                      inputRef={icRef} 
-                      label="Item Code" 
-                      options={catalog.map(i => i.itemCode)} 
-                      value={currentEntry.itemCode} 
-                      onChange={(c) => { 
-                        const item = catalog.find(x => x.itemCode === c); 
-                        setCurrentEntry({
-                          ...currentEntry, 
-                          itemCode: c, 
-                          itemName: item?.itemName || currentEntry.itemName
-                        }); 
-                      }} 
-                      onSelectionComplete={() => setTimeout(() => nRef.current?.focus(), 0)}
-                      className="focus:border-rose-500 focus:ring-rose-500/20 rounded-lg shadow-sm hover:shadow-md transition-all border-rose-200 w-full"
-                    />
-                    <div className="absolute right-3 top-8 text-slate-700">
-                      <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
-                      </svg>
-                    </div>
-                  </div>
+                  <SearchableSelect 
+                    inputRef={icRef} 
+                    label="Item Code" 
+                    options={catalog.map(i => i.itemCode)} 
+                    value={currentEntry.itemCode} 
+                    onChange={(c) => { 
+                      const item = catalog.find(x => x.itemCode === c); 
+                      setCurrentEntry({
+                        ...currentEntry, 
+                        itemCode: c, 
+                        itemName: item?.itemName || currentEntry.itemName
+                      }); 
+                    }} 
+                    onSelectionComplete={() => setTimeout(() => nRef.current?.focus(), 0)}
+                    className="focus:border-rose-500 focus:ring-rose-500/20 rounded-lg shadow-sm hover:shadow-md transition-all border-rose-200 w-full flex-1"
+                  />
                   <button 
                     onClick={() => onOpenQuickAdd('item')} 
                     className="bg-slate-100 border border-rose-300 rounded-lg p-1.5 hover:bg-rose-500 hover:text-white hover:border-rose-500 transition-all shadow-md hover:shadow-lg" 
-                    style={{height: '36px'}}
+                    style={{height: '36px', width: '36px'}}
                   >
                     <PackagePlus className="w-4 h-4" />
                   </button>
                 </div>
                 <div className="w-[130px]">
-                  <div className="relative">
-                    <SearchableSelect 
-                      inputRef={nRef} 
-                      label="Product" 
-                      options={catalog.map(i => i.itemName)} 
-                      value={currentEntry.itemName} 
-                      onChange={(n) => { 
-                        const item = catalog.find(x => x.itemName === n); 
-                        setCurrentEntry({...currentEntry, itemName: n, itemCode: item?.itemCode || currentEntry.itemCode}); 
-                      }} 
-                      onSelectionComplete={() => setTimeout(() => qRef.current?.focus(), 0)}
-                      className="focus:border-rose-500 focus:ring-rose-500/20 rounded-lg shadow-sm hover:shadow-md transition-all border-rose-200 w-full"
-                    />
-                    <div className="absolute right-3 top-8 text-slate-700">
-                      <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
-                      </svg>
-                    </div>
-                  </div>
+                  <SearchableSelect 
+                    inputRef={nRef} 
+                    label="Product" 
+                    options={catalog.map(i => i.itemName)} 
+                    value={currentEntry.itemName} 
+                    onChange={(n) => { 
+                      const item = catalog.find(x => x.itemName === n); 
+                      setCurrentEntry({...currentEntry, itemName: n, itemCode: item?.itemCode || currentEntry.itemCode}); 
+                    }} 
+                    onSelectionComplete={() => setTimeout(() => qRef.current?.focus(), 0)}
+                    className="focus:border-rose-500 focus:ring-rose-500/20 rounded-lg shadow-sm hover:shadow-md transition-all border-rose-200 w-full"
+                  />
                 </div>
                 <div className="w-[70px]">
                   <label className="text-xs font-semibold uppercase text-slate-600 block text-center mb-1">Qty</label>
@@ -316,26 +285,19 @@ export default function DailyTransactionsView({
                   />
                 </div>
                 <div className="w-[130px]">
-                  <div className="relative">
-                    <SearchableSelect 
-                      inputRef={remRef} 
-                      label="Remarks" 
-                      options={['Regular', 'Urgent', 'Special']} 
-                      value={currentEntry.remarks} 
-                      onChange={(rem) => setCurrentEntry({...currentEntry, remarks: rem})} 
-                      onSelectionComplete={() => setTimeout(() => {
-                        // Focus the ADD/UPDATE button
-                        const addButton = document.querySelector('.submit-button');
-                        if (addButton) addButton.focus();
-                      }, 0)}
-                      className="focus:border-rose-500 focus:ring-rose-500/20 rounded-lg shadow-sm hover:shadow-md transition-all border-rose-200 w-full"
-                    />
-                    <div className="absolute right-3 top-8 text-slate-700">
-                      <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
-                      </svg>
-                    </div>
-                  </div>
+                  <SearchableSelect 
+                    inputRef={remRef} 
+                    label="Remarks" 
+                    options={['Regular', 'Urgent', 'Special']} 
+                    value={currentEntry.remarks} 
+                    onChange={(rem) => setCurrentEntry({...currentEntry, remarks: rem})} 
+                    onSelectionComplete={() => setTimeout(() => {
+                      // Focus the ADD/UPDATE button
+                      const addButton = document.querySelector('.submit-button');
+                      if (addButton) addButton.focus();
+                    }, 0)}
+                    className="focus:border-rose-500 focus:ring-rose-500/20 rounded-lg shadow-sm hover:shadow-md transition-all border-rose-200 w-full"
+                  />
                 </div>
                 <div className="ml-auto pr-1">
                   <button 
@@ -351,7 +313,7 @@ export default function DailyTransactionsView({
             </form>
           </div>
           
-          <div className="flex-1 overflow-auto bg-white custom-table-scroll rounded-b-xl" style={{ maxHeight: '400px' }}>
+          <div className="flex-1 overflow-auto bg-white custom-table-scroll rounded-b-xl" style={{ minHeight: '200px' }}>
             <table className="w-full text-left text-sm border-collapse relative min-w-full">
               <thead className="sticky top-0 bg-gradient-to-r from-[#5B55E6] to-[#4A44D0] text-white z-20 border-b-2 border-black/20 font-bold uppercase text-xs shadow-lg rounded-t-lg">
                 <tr>
@@ -421,31 +383,31 @@ export default function DailyTransactionsView({
           </div>
         </section>
       </div>
-      <div className="w-[340px] bg-gradient-to-b from-slate-800 to-slate-900 flex flex-col p-5 shrink-0 shadow-2xl rounded-r-lg border-l-2 border-[#5B55E6]/30">
-        <div className="flex items-center gap-2 mb-6">
-          <div className="w-8 h-8 rounded-lg bg-gradient-to-br from-[#5B55E6] to-[#4A44D0] flex items-center justify-center shadow-lg">
+      <div className="w-[340px] bg-gradient-to-b from-slate-800 to-slate-900 flex flex-col p-5 shrink-0 shadow-2xl rounded-r-lg border-l-2 border-[#5B55E6]/30 h-full overflow-y-auto custom-table-scroll">
+        <div className="flex items-center gap-2 mb-6 shrink-0">
+          <div className="w-8 h-8 rounded-lg bg-gradient-to-br from-[#5B55E6] to-[#4A44D0] flex items-center justify-center shadow-lg shrink-0">
             <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4 text-white" fill="none" viewBox="0 0 24 24" stroke="currentColor">
               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z" />
             </svg>
           </div>
           <h3 className="text-sm font-bold text-white uppercase tracking-wider">Financial Summary</h3>
         </div>
-        <div className="space-y-2 flex-1 text-white pb-4">
-          <div className="bg-slate-700/30 backdrop-blur-sm rounded-xl p-2 border border-slate-600/50 shadow-lg">
+        <div className="space-y-2 flex-1 text-white pb-4 overflow-y-auto">
+          <div className="bg-slate-700/30 backdrop-blur-sm rounded-xl p-2 border border-slate-600/50 shadow-lg shrink-0">
             <label className="text-xs font-bold text-slate-300 uppercase tracking-widest mb-1 block">Total Quantity</label>
             <input type="text" readOnly className="w-full bg-gradient-to-r from-slate-800 to-slate-700 px-2 py-1.5 text-lg font-black text-right rounded-lg border border-slate-600/50 outline-none text-cyan-400 shadow-inner" value={String(summary.qty || 0)} style={{ colorScheme: 'dark' }} />
           </div>
-          <div className="bg-slate-700/30 backdrop-blur-sm rounded-xl p-2 border border-slate-600/50 shadow-lg">
+          <div className="bg-slate-700/30 backdrop-blur-sm rounded-xl p-2 border border-slate-600/50 shadow-lg shrink-0">
             <label className="text-xs font-bold text-slate-300 uppercase tracking-widest mb-1 block">Handling Charges</label>
             <input type="text" readOnly className="w-full bg-gradient-to-r from-slate-800 to-slate-700 px-2 py-1.5 text-base font-bold text-right rounded-lg border border-slate-600/50 outline-none text-amber-400 shadow-inner" value={Number(summary.coolieTotal || 0).toFixed(2)} style={{ colorScheme: 'dark' }} />
           </div>
-          <div className="bg-slate-700/30 backdrop-blur-sm rounded-xl p-2 border border-slate-600/50 shadow-lg">
+          <div className="bg-slate-700/30 backdrop-blur-sm rounded-xl p-2 border border-slate-600/50 shadow-lg shrink-0">
             <label className="text-xs font-bold text-slate-300 uppercase tracking-widest mb-1 block">Luggage Costs</label>
             <input type="text" readOnly className="w-full bg-gradient-to-r from-slate-800 to-slate-700 px-2 py-1.5 text-base font-bold text-right rounded-lg border border-slate-600/50 outline-none text-rose-400 shadow-inner" value={Number(summary.laguageTotal || 0).toFixed(2)} style={{ colorScheme: 'dark' }} />
           </div>
-          <div className="bg-gradient-to-br from-slate-800/50 to-slate-900/50 backdrop-blur-sm rounded-xl p-3 border border-[#5B55E6]/30 shadow-lg">
+          <div className="bg-gradient-to-br from-slate-800/50 to-slate-900/50 backdrop-blur-sm rounded-xl p-3 border border-[#5B55E6]/30 shadow-lg shrink-0">
             <h4 className="text-xs font-bold text-[#5B55E6] uppercase tracking-widest mb-2 flex items-center gap-2">
-              <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+              <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4 shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8c-1.657 0-3 .895-3 2s1.343 2 3 2 3 .895 3 2-1.343 2-3 2m0-8c1.11 0 2.08.402 2.599 1M12 8V7m0 1v8m0 0v1m0-1c-1.11 0-2.08-.402-2.599-1M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
               </svg>
               Commission Details
@@ -461,17 +423,17 @@ export default function DailyTransactionsView({
               </div>
             </div>
           </div>
-          <div className="bg-slate-700/30 backdrop-blur-sm rounded-xl p-2 border border-slate-600/50 shadow-lg">
+          <div className="bg-slate-700/30 backdrop-blur-sm rounded-xl p-2 border border-slate-600/50 shadow-lg shrink-0">
             <label className="text-xs font-bold text-slate-300 uppercase tracking-widest mb-1 block">Gross Total</label>
             <input type="text" readOnly className="w-full bg-gradient-to-r from-slate-800 to-slate-700 px-2 py-1.5 text-lg font-black text-right rounded-lg border border-slate-600/50 outline-none text-emerald-400 shadow-inner" value={Number(summary.itemTotal || 0).toFixed(2)} style={{ colorScheme: 'dark' }} />
           </div>
-          <div className="bg-slate-700/30 backdrop-blur-sm rounded-xl p-2 border border-slate-600/50 shadow-lg">
+          <div className="bg-slate-700/30 backdrop-blur-sm rounded-xl p-2 border border-slate-600/50 shadow-lg shrink-0">
             <label className="text-xs font-bold text-slate-300 uppercase tracking-widest mb-1 block">Amount Paid</label>
             <input type="text" readOnly className="w-full bg-gradient-to-r from-slate-800 to-slate-700 px-2 py-1.5 text-base font-bold text-right rounded-lg border border-slate-600/50 outline-none text-green-400 shadow-inner" value={Number(totalPaidAmount || 0).toFixed(2)} style={{ colorScheme: 'dark' }} />
           </div>
-          <div className="mt-2 pt-3 border-t border-white/20 text-center">
+          <div className="mt-2 pt-3 border-t border-white/20 text-center shrink-0">
             <div className="inline-flex items-center gap-1 mb-1.5 px-2.5 py-1 bg-gradient-to-r from-[#5B55E6]/20 to-[#4A44D0]/20 rounded-full border border-[#5B55E6]/30">
-              <svg xmlns="http://www.w3.org/2000/svg" className="h-3 w-3 text-[#5B55E6]" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+              <svg xmlns="http://www.w3.org/2000/svg" className="h-3 w-3 text-[#5B55E6] shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8c-1.657 0-3 .895-3 2s1.343 2 3 2 3 .895 3 2-1.343 2-3 2m0-8c1.11 0 2.08.402 2.599 1M12 8V7m0 1v8m0 0v1m0-1c-1.11 0-2.08-.402-2.599-1M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
               </svg>
               <span className="text-[9px] font-bold text-[#5B55E6] uppercase tracking-wider">Net Total</span>
@@ -480,17 +442,17 @@ export default function DailyTransactionsView({
               <p className="text-xl font-black text-white tabular-nums drop-shadow-lg">₹ {Number((summary.itemTotal || 0) - (summary.totalCommission || 0) - (summary.laguageTotal || 0) - (summary.coolieTotal || 0)).toFixed(2)}</p>
             </div>
           </div>
-          
-          <div className="mt-4">
-              <button 
-                type="button" 
-                onClick={handleSaveRecord} 
-                className="bg-gradient-to-r from-emerald-600 to-emerald-700 text-white px-6 py-2.5 font-bold uppercase text-xs shadow-lg hover:from-emerald-500 hover:to-emerald-600 rounded-lg transition-all active:translate-y-px w-full"
-              >
-                Save Record
-              </button>
-            </div>
-          </div>
+        </div>
+        
+        <div className="mt-4 shrink-0">
+          <button 
+            type="button" 
+            onClick={handleSaveRecord} 
+            className="bg-gradient-to-r from-emerald-600 to-emerald-700 text-white px-6 py-2.5 font-bold uppercase text-xs shadow-lg hover:from-emerald-500 hover:to-emerald-600 rounded-lg transition-all active:translate-y-px w-full"
+          >
+            Save Record
+          </button>
+        </div>
       </div>
     </div>
   );
