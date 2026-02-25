@@ -602,6 +602,12 @@ def get_group_total_report_docx(
     Use /api/reports/group-total?format=html for future integrations.
     """
     try:
+        # Handle the case where group_id might be passed as string "null" or empty
+        if group_id is not None and str(group_id).lower() == 'null':
+            group_id = None
+        elif group_id is not None and str(group_id).strip() == '':
+            group_id = None
+            
         # Check if a specific group is requested
         if group_id is not None:
             # Fetch specific group details

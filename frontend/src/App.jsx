@@ -434,7 +434,7 @@ function GroupPrintingView({ groups, customers, ledgerStore, onCancel }) {
         throw new Error('Group not found');
       }
       
-      // Generate the print report from backend
+      // Use the new preview system instead of direct PDF download
       const response = await api.getGroupPattiReport(
         selectedGroup.id,
         fromDate,
@@ -442,24 +442,32 @@ function GroupPrintingView({ groups, customers, ledgerStore, onCancel }) {
         commissionPct
       );
       
-      // Handle PDF preview (open in new tab for print preview)
-      const blob = response.data;
-      const url = window.URL.createObjectURL(blob);
-      
-      // Open in new tab for preview and print
-      const previewWindow = window.open(url, '_blank');
-      if (!previewWindow) {
-        // Fallback to download if popup blocked
-        const a = document.createElement('a');
-        a.href = url;
-        a.download = `group_patti_report_${selGroup}_${new Date().toISOString().slice(0, 10)}.pdf`;
-        document.body.appendChild(a);
-        a.click();
-        document.body.removeChild(a);
+      // Open preview in new tab (similar to group total report)
+      const previewWindow = window.open('about:blank', '_blank');
+      if (previewWindow) {
+        previewWindow.document.write(response.data);
+        previewWindow.document.close();
+        previewWindow.focus();
+        // Add print button to the preview
+        previewWindow.document.addEventListener('DOMContentLoaded', () => {
+          const printButton = previewWindow.document.createElement('button');
+          printButton.innerHTML = '🖨️ Print';
+          printButton.style.position = 'fixed';
+          printButton.style.top = '20px';
+          printButton.style.right = '20px';
+          printButton.style.zIndex = '999';
+          printButton.style.padding = '8px 18px';
+          printButton.style.fontSize = '15px';
+          printButton.style.background = '#1976d2';
+          printButton.style.color = 'white';
+          printButton.style.border = 'none';
+          printButton.style.borderRadius = '4px';
+          printButton.style.cursor = 'pointer';
+          printButton.style.boxShadow = '0 2px 5px rgba(0,0,0,0.2)';
+          printButton.onclick = () => previewWindow.print();
+          previewWindow.document.body.appendChild(printButton);
+        });
       }
-      
-      // Clean up the URL object
-      window.URL.revokeObjectURL(url);
       
     } catch (error) {
       console.error('Print error:', error);
@@ -933,17 +941,18 @@ export default function App() {
   const handleGroupTotalPrint = async () => {
     setIsGroupTotalPrinting(true);
     try {
-      // Use the new preview system instead of direct PDF download
-      const response = await api.getGroupTotalReport({
-        fromDate: groupTotalForm.fromDate,
-        toDate: groupTotalForm.toDate,
-        asJson: true
-      });
+      // Call the group total report API with correct parameters
+      // For "all groups", pass null as the first parameter
+      const response = await api.getGroupTotalReport(
+        null, // group_id = null means "all groups"
+        groupTotalForm.fromDate,
+        groupTotalForm.toDate
+      );
       
       // Open preview in new tab
       const previewWindow = window.open('about:blank', '_blank');
       if (previewWindow) {
-        previewWindow.document.write(response.html);
+        previewWindow.document.write(response.data);
         previewWindow.document.close();
         previewWindow.focus();
         // Add print button to the preview
@@ -967,7 +976,7 @@ export default function App() {
       } else {
         // Fallback: open in current window
         const newWindow = window.open('about:blank');
-        newWindow.document.write(response.html);
+        newWindow.document.write(response.data);
         newWindow.document.close();
       }
     } catch (error) {
