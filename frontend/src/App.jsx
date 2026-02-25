@@ -991,6 +991,11 @@ export default function App() {
 
   // New function to handle group-specific total print
   const handleGroupSpecificTotalPrint = async () => {
+    if (groups.length === 0) {
+      alert('No groups available. Please create a group first.');
+      return;
+    }
+    
     if (!groupSpecificTotalForm.groupName) {
       alert('Please select a group name');
       return;
@@ -1435,13 +1440,17 @@ export default function App() {
           <div>
             <label className="text-xs font-bold uppercase text-slate-600 tracking-widest block mb-2">Group Name</label>
             <SearchableSelect
-              placeholder="Select Group Name"
+              placeholder={groups.length > 0 ? "Select Group Name" : "No Groups Available"}
               options={groups.map(g => ({ label: g.name, value: g.name }))}
               value={groupSpecificTotalForm.groupName}
               onChange={(value) => setGroupSpecificTotalForm({ ...groupSpecificTotalForm, groupName: value })}
               data-enter="3"
               data-enter-type="select"
+              disabled={groups.length === 0}
             />
+            {groups.length === 0 && (
+              <p className="text-xs text-red-500 mt-1">No groups available. Please create a group first.</p>
+            )}
           </div>
 
           <div className="flex gap-4 pt-3">
