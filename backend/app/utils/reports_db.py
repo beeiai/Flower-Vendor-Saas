@@ -6,6 +6,7 @@ Uses FastAPI dependency-injected SQLAlchemy sessions.
 from datetime import date, datetime, timedelta
 from decimal import Decimal
 from typing import List, Dict, Any, Optional
+from collections import defaultdict
 from sqlalchemy.orm import Session
 from sqlalchemy import func, and_, or_
 from app.models.silk_ledger_entry import SilkLedgerEntry
@@ -65,8 +66,8 @@ def calculate_commission(
         if group and group.commission_percent:
             return (amount * group.commission_percent / 100).quantize(Decimal("0.01"))
     
-    # Priority 4: Default 5%
-    return (amount * Decimal("5") / 100).quantize(Decimal("0.01"))
+    # Priority 4: Default 12%
+    return (amount * Decimal("12") / 100).quantize(Decimal("0.01"))
 
 
 def get_ledger_data(
@@ -183,75 +184,121 @@ def get_group_total_data(
     db: Session = None
 ) -> Dict[str, Any]:
     """
-    Get aggregated totals for all farmer groups.
+    Get aggregated totals for all farmer groups using CollectionItem data.
+    This provides proper date and vehicle information.
     
     Returns grouped data with:
     - Group name
-    - Total qty, kg, amount per group
-    - Average rate
-    - Commission
+    - Total qty, amount per group
+    - Customer breakdown with date and vehicle info
     """
     if not db:
-        return {"groups": [], "grand_total_amount": "0"}
+        return {"groups": [], "entries": [], "grand_total_amount": "0"}
     
     if from_date is None or to_date is None:
         from_date, to_date = get_default_date_range()
     
-    # Query: aggregate by group
-    group_data = db.query(
-        FarmerGroup.id,
-        FarmerGroup.name,
-        FarmerGroup.commission_percent,
-        func.sum(SilkLedgerEntry.qty).label("total_qty"),
-        func.sum(SilkLedgerEntry.kg).label("total_kg"),
-        func.sum(SilkLedgerEntry.qty * SilkLedgerEntry.rate).label("total_amount"),
-        func.avg(SilkLedgerEntry.rate).label("avg_rate"),
-        func.count(SilkLedgerEntry.id).label("entry_count")
+    # Query: get all collection items with group information
+    results = db.query(
+        FarmerGroup.id.label("group_id"),
+        FarmerGroup.name.label("group_name"),
+        Farmer.id.label("farmer_id"),
+        Farmer.name.label("farmer_name"),
+        CollectionItem.date,
+        CollectionItem.vehicle_name,
+        CollectionItem.vehicle_number,
+        CollectionItem.item_name,
+        CollectionItem.qty_kg,
+        CollectionItem.rate_per_kg,
+        CollectionItem.paid_amount
     ).join(
         Farmer, Farmer.group_id == FarmerGroup.id
     ).join(
-        SilkLedgerEntry, SilkLedgerEntry.customer_id == Farmer.id
+        CollectionItem, CollectionItem.farmer_id == Farmer.id
     ).filter(
         FarmerGroup.vendor_id == vendor_id,
-        SilkLedgerEntry.date >= from_date,
-        SilkLedgerEntry.date <= to_date
-    ).group_by(
-        FarmerGroup.id,
-        FarmerGroup.name,
-        FarmerGroup.commission_percent
+        CollectionItem.vendor_id == vendor_id,
+        CollectionItem.date >= from_date,
+        CollectionItem.date <= to_date
     ).order_by(
-        FarmerGroup.name.asc()
+        FarmerGroup.name.asc(),
+        CollectionItem.date.asc()
     ).all()
     
-    groups_list = []
-    grand_total = Decimal("0")
+    # Group data by group_id
+    grouped_data = defaultdict(list)
     
-    for group in group_data:
-        total_qty = Decimal(str(group.total_qty or 0))
-        total_kg = Decimal(str(group.total_kg or 0))
-        total_amount = Decimal(str(group.total_amount or 0))
-        avg_rate = Decimal(str(group.avg_rate or 0))
-        commission = calculate_commission(
-            total_amount,
-            group.commission_percent,
-            db=db
-        )
+    grand_total = Decimal("0")
+    entries_list = []
+    
+    for row in results:
+        qty = Decimal(str(row.qty_kg or 0))
+        rate = Decimal(str(row.rate_per_kg or 0))
+        amount = qty * rate
+        paid = Decimal(str(row.paid_amount or 0))
         
-        grand_total += total_amount
+        # Format date as DD-MM-YYYY
+        date_str = row.date.strftime("%d-%m-%Y") if row.date else "N/A"
+        
+        # Get vehicle info
+        vehicle_info = row.vehicle_name or row.vehicle_number or "N/A"
+        
+        # Add to grouped data
+        grouped_data[row.group_id].append({
+            "group_id": row.group_id,
+            "group_name": row.group_name,
+            "farmer_id": row.farmer_id,
+            "customer_name": row.farmer_name,
+            "date": date_str,
+            "vehicle": vehicle_info,
+            "item_name": row.item_name or "N/A",
+            "qty": str(qty),
+            "rate": str(rate),
+            "amount": str(amount),
+            "paid": str(paid)
+        })
+        
+        grand_total += amount
+        
+        # Add to entries list for detailed view
+        entries_list.append({
+            "group_id": row.group_id,
+            "group_name": row.group_name,
+            "farmer_id": row.farmer_id,
+            "customer_name": row.farmer_name,
+            "date": date_str,
+            "vehicle": vehicle_info,
+            "item_name": row.item_name or "N/A",
+            "qty": str(qty),
+            "rate": str(rate),
+            "amount": str(amount),
+            "paid": str(paid)
+        })
+    
+    # Create group summaries
+    groups_list = []
+    for group_id, group_entries in grouped_data.items():
+        if not group_entries:
+            continue
+            
+        group_name = group_entries[0]["group_name"]
+        total_qty = sum(Decimal(e["qty"]) for e in group_entries)
+        total_amount = sum(Decimal(e["amount"]) for e in group_entries)
+        total_paid = sum(Decimal(e["paid"]) for e in group_entries)
         
         groups_list.append({
-            "id": group.id,
-            "name": group.name,
+            "id": group_id,
+            "name": group_name,
             "total_qty": str(total_qty),
-            "total_kg": str(total_kg),
             "total_amount": str(total_amount),
-            "avg_rate": str(avg_rate),
-            "commission": str(commission),
-            "entry_count": group.entry_count
+            "total_paid": str(total_paid),
+            "customer_count": len(set(e["farmer_id"] for e in group_entries)),
+            "entry_count": len(group_entries)
         })
     
     return {
         "groups": groups_list,
+        "entries": entries_list,
         "grand_total_amount": str(grand_total),
         "group_count": len(groups_list),
         "from_date": from_date.isoformat(),
@@ -409,10 +456,10 @@ def get_daily_sales_data(
     db: Session = None
 ) -> Dict[str, Any]:
     """
-    Get daily collection/sales data aggregated by date and farmer.
-    Uses CollectionItem (flower collections) data.
+    Get daily collection/sales data with vehicle information.
+    Uses CollectionItem data for complete information including vehicle details.
     
-    Returns data grouped by date and party with quantities and amounts.
+    Returns data with date, vehicle, party, item, qty, rate, and amount.
     """
     if not db:
         return {"entries": [], "grand_total_qty": "0", "grand_total_amount": "0"}
@@ -420,15 +467,16 @@ def get_daily_sales_data(
     if from_date is None or to_date is None:
         from_date, to_date = get_default_date_range()
     
-    # Query collection items
+    # Query collection items with vehicle information
     query = db.query(
         CollectionItem.date,
+        CollectionItem.vehicle_name,
+        CollectionItem.vehicle_number,
         Farmer.name.label("party_name"),
         CollectionItem.item_name,
-        func.sum(CollectionItem.qty_kg).label("total_qty"),
-        func.sum(CollectionItem.qty_kg * CollectionItem.rate_per_kg).label("total_amount"),
-        func.avg(CollectionItem.rate_per_kg).label("avg_rate"),
-        func.count(CollectionItem.id).label("line_count")
+        CollectionItem.qty_kg,
+        CollectionItem.rate_per_kg,
+        CollectionItem.paid_amount
     ).outerjoin(
         Farmer, CollectionItem.farmer_id == Farmer.id
     ).filter(
@@ -441,11 +489,7 @@ def get_daily_sales_data(
     if item_name:
         query = query.filter(CollectionItem.item_name == item_name)
     
-    results = query.group_by(
-        CollectionItem.date,
-        Farmer.name,
-        CollectionItem.item_name
-    ).order_by(
+    results = query.order_by(
         CollectionItem.date.asc(),
         Farmer.name.asc()
     ).all()
@@ -455,21 +499,30 @@ def get_daily_sales_data(
     grand_total_amount = Decimal("0")
     
     for row in results:
-        total_qty = Decimal(str(row.total_qty or 0))
-        total_amount = Decimal(str(row.total_amount or 0))
-        avg_rate = Decimal(str(row.avg_rate or 0))
+        qty = Decimal(str(row.qty_kg or 0))
+        rate = Decimal(str(row.rate_per_kg or 0))
+        amount = qty * rate
+        paid = Decimal(str(row.paid_amount or 0))
         
-        grand_total_qty += total_qty
-        grand_total_amount += total_amount
+        # Format date as DD-MM-YYYY
+        date_str = row.date.strftime("%d-%m-%Y") if row.date else "N/A"
+        
+        # Get vehicle info
+        vehicle_info = row.vehicle_name or row.vehicle_number or "N/A"
+        
+        grand_total_qty += qty
+        grand_total_amount += amount
         
         entries_list.append({
-            "date": row.date.isoformat() if row.date else None,
+            "date": date_str,
+            "vehicle": vehicle_info,
+            "vehicle_name": vehicle_info,  # For backward compatibility
             "party": row.party_name or "Unknown",
             "item": row.item_name or "Unspecified",
-            "qty": str(total_qty),
-            "rate": str(avg_rate),
-            "amount": str(total_amount),
-            "line_count": row.line_count
+            "qty": str(qty),
+            "rate": str(rate),
+            "amount": str(amount),
+            "paid": str(paid)
         })
     
     return {

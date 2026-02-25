@@ -46,7 +46,7 @@ export const DEFAULT_STATES = {
     groupName: '',
     customerName: '',
     vehicle: '',
-    commissionPct: 0,
+    commissionPct: 12,
     autoLoad: false,
     rows: [],
   },

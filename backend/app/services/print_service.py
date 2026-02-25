@@ -58,6 +58,30 @@ class PrintService:
             paid_amount=f"{paid_amount:.2f}",
             final_total=f"{final_total:.2f}",
         )
+        
+        # Add print button with JavaScript
+        print_button_html = '''
+        <div style="position: fixed; top: 10px; right: 10px; z-index: 1000; background: white; padding: 10px; border-radius: 5px; box-shadow: 0 2px 10px rgba(0,0,0,0.2);">
+            <button onclick="window.print()" style="padding: 10px 20px; background-color: #007bff; color: white; border: none; border-radius: 4px; cursor: pointer; font-size: 14px; font-weight: bold;">🖨️ Print</button>
+        </div>
+        '''
+        
+        # Add script to automatically trigger print when page loads
+        auto_print_script = '''
+        <script>
+            // Auto-print when page loads
+            window.onload = function() {
+                // Small delay to ensure page is fully loaded
+                setTimeout(function() {
+                    window.print();
+                }, 500);
+            };
+        </script>
+        '''
+        
+        # Insert print button before </body> tag
+        content = content.replace('</body>', print_button_html + auto_print_script + '</body>')
+        
         return HTMLResponse(content=content)
     
     @staticmethod
@@ -81,6 +105,30 @@ class PrintService:
             customer_reports=customer_reports,
             group_total=f"{group_total:.2f}",
         )
+        
+        # Add print button with JavaScript
+        print_button_html = '''
+        <div style="position: fixed; top: 10px; right: 10px; z-index: 1000; background: white; padding: 10px; border-radius: 5px; box-shadow: 0 2px 10px rgba(0,0,0,0.2);">
+            <button onclick="window.print()" style="padding: 10px 20px; background-color: #007bff; color: white; border: none; border-radius: 4px; cursor: pointer; font-size: 14px; font-weight: bold;">🖨️ Print</button>
+        </div>
+        '''
+        
+        # Add script to automatically trigger print when page loads
+        auto_print_script = '''
+        <script>
+            // Auto-print when page loads
+            window.onload = function() {
+                // Small delay to ensure page is fully loaded
+                setTimeout(function() {
+                    window.print();
+                }, 500);
+            };
+        </script>
+        '''
+        
+        # Insert print button before </body> tag
+        content = content.replace('</body>', print_button_html + auto_print_script + '</body>')
+        
         return HTMLResponse(content=content)
     
     @staticmethod
@@ -109,6 +157,30 @@ class PrintService:
             total_luggage=f"{total_luggage:.2f}",
             group_total=f"{group_total:.2f}",
         )
+        
+        # Add print button with JavaScript
+        print_button_html = '''
+        <div style="position: fixed; top: 10px; right: 10px; z-index: 1000; background: white; padding: 10px; border-radius: 5px; box-shadow: 0 2px 10px rgba(0,0,0,0.2);">
+            <button onclick="window.print()" style="padding: 10px 20px; background-color: #007bff; color: white; border: none; border-radius: 4px; cursor: pointer; font-size: 14px; font-weight: bold;">🖨️ Print</button>
+        </div>
+        '''
+        
+        # Add script to automatically trigger print when page loads
+        auto_print_script = '''
+        <script>
+            // Auto-print when page loads
+            window.onload = function() {
+                // Small delay to ensure page is fully loaded
+                setTimeout(function() {
+                    window.print();
+                }, 500);
+            };
+        </script>
+        '''
+        
+        # Insert print button before </body> tag
+        content = content.replace('</body>', print_button_html + auto_print_script + '</body>')
+        
         return HTMLResponse(content=content)
     
     @staticmethod
@@ -131,4 +203,28 @@ class PrintService:
             total_qty=f"{total_qty:.2f}",
             total_amount=f"{total_amount:.2f}",
         )
+        
+        # Add print button with JavaScript
+        print_button_html = '''
+        <div style="position: fixed; top: 10px; right: 10px; z-index: 1000; background: white; padding: 10px; border-radius: 5px; box-shadow: 0 2px 10px rgba(0,0,0,0.2);">
+            <button onclick="window.print()" style="padding: 10px 20px; background-color: #007bff; color: white; border: none; border-radius: 4px; cursor: pointer; font-size: 14px; font-weight: bold;">🖨️ Print</button>
+        </div>
+        '''
+        
+        # Add script to automatically trigger print when page loads
+        auto_print_script = '''
+        <script>
+            // Auto-print when page loads
+            window.onload = function() {
+                // Small delay to ensure page is fully loaded
+                setTimeout(function() {
+                    window.print();
+                }, 500);
+            };
+        </script>
+        '''
+        
+        # Insert print button before </body> tag
+        content = content.replace('</body>', print_button_html + auto_print_script + '</body>')
+        
         return HTMLResponse(content=content)

@@ -1,8 +1,12 @@
 from fastapi import APIRouter, Depends, Query, HTTPException
+from fastapi.responses import HTMLResponse
 from sqlalchemy.orm import Session
 from sqlalchemy import func
 from datetime import date
 from typing import Optional
+from jinja2 import Template
+import os
+from pathlib import Path
 
 from app.core.db import get_db
 from app.dependencies import get_current_user
@@ -156,11 +160,9 @@ def get_ledger_report_pdf(
         )
         
         # Insert print button before </body> tag
-        html_content = html_content.replace('</body>', print_button_html + '</body>')
+        html_content = html_content.replace('</body>', print_button_html + auto_print_script + '</body>')
         
         # Fix logo path - use absolute path from templates directory
-        import os
-        from pathlib import Path
         BASE_DIR = Path(__file__).resolve().parent.parent
         logo_path = BASE_DIR / "templates" / "SKFS_logo.png"
         if logo_path.exists():
@@ -294,6 +296,19 @@ def get_ledger_report_docx(
         </div>
         '''
         
+        # Add script to automatically trigger print when page loads
+        auto_print_script = '''
+        <script>
+            // Auto-print when page loads
+            window.onload = function() {
+                // Small delay to ensure page is fully loaded
+                setTimeout(function() {
+                    window.print();
+                }, 500);
+            };
+        </script>
+        '''
+        
         template = Template(template_content)
         html_content = template.render(
             group_name=group_name,
@@ -313,11 +328,9 @@ def get_ledger_report_docx(
         )
         
         # Insert print button before </body> tag
-        html_content = html_content.replace('</body>', print_button_html + '</body>')
+        html_content = html_content.replace('</body>', print_button_html + auto_print_script + '</body>')
         
         # Fix logo path - use absolute path from templates directory
-        import os
-        from pathlib import Path
         BASE_DIR = Path(__file__).resolve().parent.parent
         logo_path = BASE_DIR / "templates" / "SKFS_logo.png"
         if logo_path.exists():
@@ -380,7 +393,7 @@ def get_group_patti_report_docx(
             CollectionItem.date >= from_date,
             CollectionItem.date <= to_date,
             CollectionItem.vendor_id == user.vendor_id
-        ).all()
+        ).order_by(CollectionItem.date).all()
         
         # Group items by farmer_id for faster lookup
         items_by_farmer = {}
@@ -390,13 +403,14 @@ def get_group_patti_report_docx(
             items_by_farmer[item.farmer_id].append(item)
         
         # Calculate report for each farmer
-        rows = []
+        customers = []
         totals = {
             'gross': 0,
             'commission': 0,
             'net': 0,
             'paid': 0,
-            'balance': 0
+            'balance': 0,
+            'customer_count': len(farmers)
         }
         
         # Create a lookup dict for farmer details
@@ -410,7 +424,10 @@ def get_group_patti_report_docx(
             farmer_gross = 0
             farmer_paid = 0
             farmer_luggage = 0
+            farmer_qty = 0
             
+            # Transform entries for this farmer
+            transactions = []
             for item in items:
                 qty = float(item.qty_kg or 0)
                 rate = float(item.rate_per_kg or 0)
@@ -420,20 +437,41 @@ def get_group_patti_report_docx(
                 farmer_gross += qty * rate
                 farmer_paid += paid
                 farmer_luggage += luggage
+                farmer_qty += qty
+                
+                # Add transaction entry
+                transactions.append({
+                    "date": item.date.strftime("%d-%m-%Y") if item.date else "N/A",
+                    "vehicle": getattr(item, 'vehicle', 'N/A') if hasattr(item, 'vehicle') else (getattr(item.vehicle, 'vehicle_number', 'N/A') if hasattr(item, 'vehicle') and item.vehicle else (getattr(item, 'vehicle_number', 'N/A') if hasattr(item, 'vehicle_number') else "N/A")),
+                    "qty": f"{qty:.2f}",
+                    "price": f"{rate:.2f}",
+                    "total": f"{qty * rate:.2f}",
+                    "luggage": f"{luggage:.2f}",
+                    "paid": f"{paid:.2f}",
+                    "amount": f"{(qty * rate + luggage - paid):.2f}"
+                })
             
             # Calculate commission and net
             farmer_commission = farmer_gross * (commission_pct / 100)
             farmer_net = farmer_gross - farmer_commission
             farmer_balance = farmer_net + farmer_luggage - farmer_paid
             
-            # Add to report rows
-            rows.append({
-                'customer_name': farmer.name,
-                'gross': f"{farmer_gross:.2f}",
+            # Add to customer list
+            customers.append({
+                'id': farmer.id,
+                'name': farmer.name,
+                'address': farmer.phone or "N/A",
+                'ledger_name': farmer.farmer_code or "N/A",
+                'balance': f"{farmer_balance:.2f}",
+                'total_qty': f"{farmer_qty:.2f}",
+                'total_amount': f"{farmer_gross:.2f}",
+                'total_paid': f"{farmer_paid:.2f}",
                 'commission': f"{farmer_commission:.2f}",
-                'net': f"{farmer_net:.2f}",
-                'paid': f"{farmer_paid:.2f}",
-                'balance': f"{farmer_balance:.2f}"
+                'net_amount': f"{farmer_net:.2f}",
+                'luggage_total': f"{farmer_luggage:.2f}",
+                'coolie': "0.00",  # Placeholder
+                'final_total': f"{farmer_balance:.2f}",
+                'transactions': transactions
             })
             
             # Add to group totals
@@ -442,7 +480,12 @@ def get_group_patti_report_docx(
             totals['net'] += farmer_net
             totals['paid'] += farmer_paid
             totals['balance'] += farmer_balance
-        
+
+        # Calculate commission for totals
+        total_commission = totals['gross'] * (commission_pct / 100)
+        total_net = totals['gross'] - total_commission
+        total_balance = total_net + totals['paid']
+
         # Load and render HTML template
         template_path = os.path.join("templates", "group_patti_report.html")
         
@@ -459,23 +502,49 @@ def get_group_patti_report_docx(
         </div>
         '''
         
+        # Add script to automatically trigger print when page loads
+        auto_print_script = '''
+        <script>
+            // Auto-print when page loads
+            window.onload = function() {
+                // Small delay to ensure page is fully loaded
+                setTimeout(function() {
+                    window.print();
+                }, 500);
+            };
+        </script>
+        '''
+        
         template = Template(template_content)
         html_content = template.render(
             group_name=group.name,
-            customers=rows,
-            totals=totals,
+            customers=customers,
+            rows=[],  # Empty rows for this context
+            totals={
+                'customer_count': len(customers),
+                'gross_total': f"{totals['gross']:.2f}",
+                'commission_total': f"{total_commission:.2f}",
+                'net_total': f"{total_net:.2f}",
+                'paid_total': f"{totals['paid']:.2f}",
+                'balance_total': f"{total_balance:.2f}",
+                'total_qty': f"{sum(float(c['total_qty']) for c in customers):.2f}" if customers else "0.00",
+                'total_amount': f"{totals['gross']:.2f}"
+            },
+            commission_pct=commission_pct,
             from_date=from_date.strftime("%d-%m-%Y"),
             to_date=to_date.strftime("%d-%m-%Y"),
             current_date=__import__('datetime').datetime.now().strftime("%d-%m-%Y"),
-            generated_at=__import__('datetime').datetime.now().isoformat()
+            generated_at=__import__('datetime').datetime.now().isoformat(),
+            farmer_count=len(customers),
+            entry_count=len(all_items),
+            grand_total_qty=f"{sum(float(c['total_qty']) for c in customers):.2f}" if customers else "0.00",
+            grand_total_amount=f"{totals['gross']:.2f}"
         )
         
         # Insert print button before </body> tag
-        html_content = html_content.replace('</body>', print_button_html + '</body>')
+        html_content = html_content.replace('</body>', print_button_html + auto_print_script + '</body>')
         
         # Fix logo path - use absolute path from templates directory
-        import os
-        from pathlib import Path
         BASE_DIR = Path(__file__).resolve().parent.parent
         logo_path = BASE_DIR / "templates" / "SKFS_logo.png"
         if logo_path.exists():
@@ -538,113 +607,35 @@ def get_group_total_report_docx(
             CollectionItem.vendor_id == user.vendor_id
         ).order_by(CollectionItem.date).all()
         
-        # Create farmer lookup for customer names
-        farmer_lookup = {f.id: f for f in farmers}
-        
-        # Transform data for template - implement proper grouping
-        from collections import defaultdict
-        grouped_data = defaultdict(list)
-        
-        # Group items by customer group
-        for item in all_items:
-            # Get farmer and group info
-            farmer_obj = farmer_lookup.get(item.farmer_id)
-            if farmer_obj and farmer_obj.group_id:
-                group_key = farmer_obj.group_id
-                grouped_data[group_key].append({
-                    "item": item,
-                    "farmer": farmer_obj
-                })
-        
-        # Process each group
-        rows = []
+        # Calculate group totals
         total_qty = 0
         total_amount = 0
         total_paid = 0
         total_luggage = 0
         
-        # Get all groups for proper ordering
-        groups = db.query(FarmerGroup).filter(
-            FarmerGroup.id.in_(grouped_data.keys()),
-            FarmerGroup.vendor_id == user.vendor_id
-        ).all()
-        
-        group_lookup = {g.id: g for g in groups}
-        
-        for group_id, group_entries in grouped_data.items():
-            group_obj = group_lookup.get(group_id)
-            if not group_obj:
-                continue
-                
-            # Group header
-            group_name = group_obj.name
-            group_qty = 0
-            group_amount = 0
-            group_paid = 0
-            group_luggage = 0
+        # Process all items to calculate totals
+        for item in all_items:
+            qty = float(item.qty_kg or 0)
+            rate = float(item.rate_per_kg or 0)
+            total = qty * rate
+            paid = float(item.paid_amount or 0)
+            luggage = float(item.transport_cost or 0)
             
-            # Process each entry in this group
-            for entry in group_entries:
-                item = entry["item"]
-                farmer = entry["farmer"]
-                
-                qty = float(item.qty_kg or 0)
-                rate = float(item.rate_per_kg or 0)
-                total = qty * rate
-                paid = float(item.paid_amount or 0)
-                luggage = float(item.transport_cost or 0)
-                
-                # Add customer breakdown row
-                rows.append({
-                    "date": item.date.strftime("%d-%m-%Y") if item.date else "N/A",
-                    "customer_name": farmer.name,
-                    "item_name": item.item_name or "N/A",
-                    "qty": f"{qty:.2f}",
-                    "rate": f"{rate:.2f}",
-                    "total": f"{total:.2f}",
-                    "paid": f"{paid:.2f}",
-                    "luggage": f"{luggage:.2f}",
-                    "is_group_header": False,
-                    "group_name": group_name
-                })
-                
-                group_qty += qty
-                group_amount += total
-                group_paid += paid
-                group_luggage += luggage
-            
-            # Add group summary row
-            group_total = group_amount - group_paid
-            rows.append({
-                "date": "GROUP TOTAL",
-                "customer_name": group_name,
-                "item_name": f"{len(group_entries)} customers",
-                "qty": f"{group_qty:.2f}",
-                "rate": "",
-                "total": f"{group_amount:.2f}",
-                "paid": f"{group_paid:.2f}",
-                "luggage": f"{group_luggage:.2f}",
-                "is_group_header": True,
-                "group_name": group_name
-            })
-            
-            total_qty += group_qty
-            total_amount += group_amount
-            total_paid += group_paid
-            total_luggage += group_luggage
+            total_qty += qty
+            total_amount += total
+            total_paid += paid
+            total_luggage += luggage
         
-        # Calculate final grand total
-        grand_total = total_amount - total_paid
+        # Calculate group total
+        group_total = total_amount - total_paid
         
-        # Aggregate data by group (row structure for group_total_report template)
+        # Prepare data for the group_total_report.html template
         # The template expects rows with: group_name, customer_count, total_qty, total_amount
-        aggregated_rows = [{
+        rows = [{
             "group_name": group.name,
             "customer_count": len(farmers),
             "total_qty": f"{total_qty:.2f}",
-            "total_amount": f"{total_amount:.2f}",
-            "total_paid": f"{total_paid:.2f}",
-            "balance": f"{group_total:.2f}"
+            "total_amount": f"{total_amount:.2f}"
         }]
         
         # Load and render HTML template
@@ -663,25 +654,37 @@ def get_group_total_report_docx(
         </div>
         '''
         
+        # Add script to automatically trigger print when page loads
+        auto_print_script = '''
+        <script>
+            // Auto-print when page loads
+            window.onload = function() {
+                // Small delay to ensure page is fully loaded
+                setTimeout(function() {
+                    window.print();
+                }, 500);
+            };
+        </script>
+        '''
+        
         template = Template(template_content)
         html_content = template.render(
-            rows=aggregated_rows,
+            rows=rows,
             overall_qty=f"{total_qty:.2f}",
             overall_amount=f"{total_amount:.2f}",
             overall_paid=f"{total_paid:.2f}",
-            overall_balance=f"{grand_total:.2f}",
+            overall_balance=f"{group_total:.2f}",
             from_date=start_date.strftime("%d-%m-%Y"),
             to_date=end_date.strftime("%d-%m-%Y"),
             current_date=__import__('datetime').datetime.now().strftime("%d-%m-%Y"),
-            generated_at=__import__('datetime').datetime.now().isoformat()
+            generated_at=__import__('datetime').datetime.now().isoformat(),
+            group_count=1  # Since we're showing only one group
         )
         
         # Insert print button before </body> tag
-        html_content = html_content.replace('</body>', print_button_html + '</body>')
+        html_content = html_content.replace('</body>', print_button_html + auto_print_script + '</body>')
         
         # Fix logo path - use absolute path from templates directory
-        import os
-        from pathlib import Path
         BASE_DIR = Path(__file__).resolve().parent.parent
         logo_path = BASE_DIR / "templates" / "SKFS_logo.png"
         if logo_path.exists():
@@ -777,15 +780,18 @@ def get_daily_sales_report_docx(
             from_date=from_date.strftime("%d-%m-%Y"),
             to_date=to_date.strftime("%d-%m-%Y"),
             current_date=__import__('datetime').datetime.now().strftime("%d-%m-%Y"),
-            generated_at=__import__('datetime').datetime.now().isoformat()
+            generated_at=__import__('datetime').datetime.now().isoformat(),
+            totals={
+                "record_count": len(rows),
+                "total_qty": f"{total_qty:.2f}",
+                "total_amount": f"{total_amount:.2f}"
+            }
         )
         
         # Insert print button before </body> tag
-        html_content = html_content.replace('</body>', print_button_html + '</body>')
+        html_content = html_content.replace('</body>', print_button_html + auto_print_script + '</body>')
         
         # Fix logo path - use absolute path from templates directory
-        import os
-        from pathlib import Path
         BASE_DIR = Path(__file__).resolve().parent.parent
         logo_path = BASE_DIR / "templates" / "SKFS_logo.png"
         if logo_path.exists():

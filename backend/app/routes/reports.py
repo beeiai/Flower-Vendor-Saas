@@ -5,6 +5,8 @@ from sqlalchemy import func
 from datetime import date, datetime
 from typing import Optional
 from jinja2 import Template
+import os
+from pathlib import Path
 
 from app.core.db import get_db
 from app.dependencies import get_current_user
@@ -37,7 +39,6 @@ def render_template(template_name: str, data: dict, template_dir: str = "templat
     Returns:
         Rendered HTML string with corrected asset paths and print button
     """
-    import os
     template_path = os.path.join(template_dir, template_name)
     
     if not os.path.exists(template_path):
@@ -56,12 +57,23 @@ def render_template(template_name: str, data: dict, template_dir: str = "templat
     </div>
     '''
     
+    # Add script to automatically trigger print when page loads
+    auto_print_script = '''
+    <script>
+        // Auto-print when page loads
+        window.onload = function() {
+            // Small delay to ensure page is fully loaded
+            setTimeout(function() {
+                window.print();
+            }, 500);
+        };
+    </script>
+    '''
+    
     # Insert print button before </body> tag
-    html = html.replace('</body>', print_button_html + '</body>')
+    html = html.replace('</body>', print_button_html + auto_print_script + '</body>')
     
     # Fix logo path: use absolute path from templates directory
-    import os
-    from pathlib import Path
     BASE_DIR = Path(__file__).resolve().parent.parent
     logo_path = BASE_DIR / "templates" / "SKFS_logo.png"
     if logo_path.exists():
@@ -248,7 +260,7 @@ def get_group_total_report(
     # Transform groups to match template expectations - implement proper grouping
     from collections import defaultdict
     
-    # Group data properly by group_id
+    # Group data properly by group_id for summary view
     grouped_data = defaultdict(list)
     for entry in group_data.get("entries", []):
         group_id = entry.get("group_id")
@@ -261,7 +273,7 @@ def get_group_total_report(
     overall_paid = 0
     overall_balance = 0
     
-    # Process each group
+    # Create summary rows for each group (what the template expects)
     for group_id, group_entries in grouped_data.items():
         if not group_entries:
             continue
@@ -274,50 +286,31 @@ def get_group_total_report(
         group_amount = 0
         group_paid = 0
         
-        # Add customer breakdown for this group
+        # Process all entries for this group to get totals
         for entry in group_entries:
             qty = float(entry.get("qty", 0))
             amount = float(entry.get("amount", 0))
             paid = float(entry.get("paid", 0)) if entry.get("paid") is not None else 0.0
             
-            # Add customer row
-            rows.append({
-                "date": entry.get("date", "N/A"),
-                "customer_name": entry.get("customer_name", "N/A"),
-                "item_name": entry.get("item_name", "N/A"),
-                "qty": f"{qty:.2f}",
-                "rate": entry.get("rate", "N/A"),
-                "total": f"{amount:.2f}",
-                "paid": f"{paid:.2f}",
-                "luggage": entry.get("luggage", "0.00"),
-                "is_group_detail": True,
-                "group_name": group_name
-            })
-            
             group_qty += qty
             group_amount += amount
             group_paid += paid
         
-        # Add group summary row
-        group_balance = group_amount - group_paid
+        # Get customer count for this group
+        customer_count = len(set(entry.get("farmer_id") for entry in group_entries if entry.get("farmer_id")))
+        
+        # Add summary row for this group (this is what the template expects)
         rows.append({
-            "date": "GROUP TOTAL",
-            "customer_name": group_name,
-            "item_name": f"{len(group_entries)} customers",
-            "qty": f"{group_qty:.2f}",
-            "rate": "",
-            "total": f"{group_amount:.2f}",
-            "paid": f"{group_paid:.2f}",
-            "luggage": "0.00",
-            "is_group_detail": False,
             "group_name": group_name,
-            "is_group_summary": True
+            "customer_count": customer_count,
+            "total_qty": f"{group_qty:.2f}",
+            "total_amount": f"{group_amount:.2f}"
         })
         
         overall_qty += group_qty
         overall_amount += group_amount
         overall_paid += group_paid
-        overall_balance += group_balance
+        overall_balance += (group_amount - group_paid)
     
     # Prepare template data
     template_data = {
@@ -625,7 +618,12 @@ def get_daily_sales_report(
         "to_date": to_date.strftime("%d-%m-%Y"),
         "current_date": current_date,
         "generated_at": generated_at,
-        "item_filter": item_name or "All Items"
+        "item_filter": item_name or "All Items",
+        "totals": {
+            "record_count": len(rows),
+            "total_qty": f"{total_qty:.2f}",
+            "total_amount": f"{total_amount:.2f}"
+        }
     }
     
     # Render HTML
