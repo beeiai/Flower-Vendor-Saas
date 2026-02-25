@@ -349,6 +349,190 @@ def get_group_total_report(
 
 
 # ================================================
+# GROUP TOTAL REPORT BY SPECIFIC GROUP NAME
+# ================================================
+@router.get("/group-total-by-group")
+def get_group_total_report_by_group(
+    start_date: date = Query(..., description="Start date for the report"),
+    end_date: date = Query(..., description="End date for the report"),
+    group_name: str = Query(..., description="Name of the specific group"),
+    format: str = Query("html", description="Response format: html or json"),
+    db: Session = Depends(get_db),
+    user = Depends(get_current_user)
+):
+    """
+    Get Group Total Report for a specific group within a date range.
+    
+    Calculates for each customer in the group:
+    - Total Quantity
+    - Total Price
+    - Total Commission
+    - Total Luggage
+    - Total Net Amount
+    
+    Query Parameters:
+    - start_date: Start date for the report
+    - end_date: End date for the report
+    - group_name: Name of the specific group
+    - format: Response format (html|json, default: html)
+    
+    Returns:
+    - If format=html: Rendered HTML template from group_total_report.html
+    - If format=json: {html, metadata} with page and record counts
+    """
+    # Get group by name for the specific vendor
+    group = db.query(FarmerGroup).filter(
+        FarmerGroup.name == group_name,
+        FarmerGroup.vendor_id == user.vendor_id
+    ).first()
+    
+    if not group:
+        return JSONResponse(
+            status_code=404,
+            content={"detail": f"Group '{group_name}' not found"}
+        )
+    
+    # Query collection items for this group's farmers within the date range
+    results = db.query(
+        Farmer.id.label("farmer_id"),
+        Farmer.name.label("farmer_name"),
+        Farmer.phone.label("farmer_phone"),
+        CollectionItem.date,
+        CollectionItem.vehicle_name,
+        CollectionItem.vehicle_number,
+        CollectionItem.qty_kg,
+        CollectionItem.rate_per_kg,
+        CollectionItem.paid_amount
+    ).join(
+        Farmer, Farmer.group_id == group.id
+    ).join(
+        CollectionItem, CollectionItem.farmer_id == Farmer.id
+    ).filter(
+        CollectionItem.vendor_id == user.vendor_id,
+        CollectionItem.date >= start_date,
+        CollectionItem.date <= end_date
+    ).order_by(
+        Farmer.name.asc(),
+        CollectionItem.date.asc()
+    ).all()
+    
+    # Calculate data for each customer in the group
+    from collections import defaultdict
+    customer_data = defaultdict(lambda: {
+        'total_qty': Decimal("0"),
+        'total_price': Decimal("0"),
+        'total_paid': Decimal("0"),
+        'total_commission': Decimal("0"),
+        'total_luggage': Decimal("0"),
+        'total_net_amount': Decimal("0"),
+        'transaction_count': 0,
+        'farmer_phone': ""
+    })
+    
+    # Process results to aggregate data by customer
+    for row in results:
+        farmer_key = row.farmer_id
+        qty = Decimal(str(row.qty_kg or 0))
+        rate = Decimal(str(row.rate_per_kg or 0))
+        price = qty * rate
+        paid = Decimal(str(row.paid_amount or 0))
+        
+        # Calculate commission (using default 12%)
+        commission = (price * Decimal("12") / 100).quantize(Decimal("0.01"))
+        net_amount = price - commission
+        
+        # Update customer data
+        customer_data[farmer_key]['total_qty'] += qty
+        customer_data[farmer_key]['total_price'] += price
+        customer_data[farmer_key]['total_paid'] += paid
+        customer_data[farmer_key]['total_commission'] += commission
+        customer_data[farmer_key]['total_net_amount'] += net_amount
+        customer_data[farmer_key]['transaction_count'] += 1
+        customer_data[farmer_key]['farmer_phone'] = row.farmer_phone or ""
+    
+    # Prepare rows for the template (one row per customer)
+    rows = []
+    overall_qty = Decimal("0")
+    overall_price = Decimal("0")  # Total price before commission
+    overall_commission = Decimal("0")
+    overall_net_amount = Decimal("0")  # Net amount after commission
+    overall_paid = Decimal("0")
+    overall_luggage = Decimal("0")
+    
+    for farmer_id, data in customer_data.items():
+        # Get farmer name
+        farmer = next((r for r in results if r.farmer_id == farmer_id), None)
+        farmer_name = farmer.farmer_name if farmer else "Unknown"
+        
+        row = {
+            "group_name": group_name,  # This is what the template expects
+            "customer_count": 1,  # Each row represents one customer
+            "total_qty": f"{data['total_qty']:.2f}",
+            "total_amount": f"{data['total_net_amount']:.2f}",  # Using net amount for display
+            "farmer_name": farmer_name,
+            "farmer_phone": data['farmer_phone'],
+            "total_price": f"{data['total_price']:.2f}",
+            "total_commission": f"{data['total_commission']:.2f}",
+            "total_luggage": f"{data['total_luggage']:.2f}",
+            "total_net_amount": f"{data['total_net_amount']:.2f}",
+            "total_paid": f"{data['total_paid']:.2f}"
+        }
+        rows.append(row)
+        
+        overall_qty += data['total_qty']
+        overall_price += data['total_price']  # Total price before commission
+        overall_commission += data['total_commission']
+        overall_net_amount += data['total_net_amount']
+        overall_paid += data['total_paid']
+        overall_luggage += data['total_luggage']
+    
+    # Calculate metadata
+    customer_count = len(customer_data)
+    page_count = estimate_pdf_page_count("group_total", group_count=customer_count)
+    generated_at = datetime.now().isoformat()
+    current_date = datetime.now().strftime("%d-%m-%Y")
+    
+    # Prepare template data - adjust to match what the existing template expects
+    template_data = {
+        "rows": rows,
+        "overall_qty": f"{overall_qty:.2f}",
+        "overall_amount": f"{overall_price:.2f}",  # Total price
+        "overall_commission": f"{overall_commission:.2f}",  # Total commission
+        "overall_luggage": f"{overall_luggage:.2f}",  # Total luggage
+        "overall_net_amount": f"{overall_net_amount:.2f}",  # Net amount after commission
+        "overall_paid": f"{overall_paid:.2f}",
+        "overall_balance": f"{(overall_net_amount - overall_paid):.2f}",  # Balance calculation
+        "from_date": start_date.strftime("%d-%m-%Y"),
+        "to_date": end_date.strftime("%d-%m-%Y"),
+        "current_date": current_date,
+        "generated_at": generated_at,
+        "group_count": customer_count  # Number of customers in the group
+    }
+    
+    # Render HTML using the existing template
+    html_content = render_template("group_total_report.html", template_data)
+    
+    if format.lower() == "json":
+        return JSONResponse({
+            "html": html_content,
+            "metadata": {
+                "page_count": page_count,
+                "record_count": customer_count,
+                "report_type": "group_total",
+                "paper_size": "A4",
+                "generated_at": generated_at,
+                "date_range": {
+                    "from": start_date.isoformat(),
+                    "to": end_date.isoformat()
+                },
+                "group_name": group_name
+            }
+        })
+    else:
+        return HTMLResponse(content=html_content)
+
+
+# ================================================
 # GROUP PATTI REPORT (Detailed by group and farmer)
 # ================================================
 @router.get("/group-patti/{group_id}")

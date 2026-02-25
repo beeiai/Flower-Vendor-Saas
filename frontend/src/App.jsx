@@ -651,6 +651,14 @@ export default function App() {
     groupName: '',
   });
   const [isGroupTotalPrinting, setIsGroupTotalPrinting] = useState(false);
+  
+  // New state for group-specific total report
+  const [groupSpecificTotalForm, setGroupSpecificTotalForm] = useState({
+    startDate: new Date().toISOString().split('T')[0],
+    endDate: new Date().toISOString().split('T')[0],
+    groupName: '',
+  });
+  const [isGroupSpecificTotalPrinting, setIsGroupSpecificTotalPrinting] = useState(false);
 
   const [isItemsDailySaleRateOpen, setIsItemsDailySaleRateOpen] = useState(false);
   const [itemsDailySaleRateForm, setItemsDailySaleRateForm] = useState({
@@ -978,6 +986,60 @@ export default function App() {
       alert(`Print failed: ${error.message}`);
     } finally {
       setIsGroupTotalPrinting(false);
+    }
+  };
+
+  // New function to handle group-specific total print
+  const handleGroupSpecificTotalPrint = async () => {
+    if (!groupSpecificTotalForm.groupName) {
+      alert('Please select a group name');
+      return;
+    }
+    
+    setIsGroupSpecificTotalPrinting(true);
+    try {
+      // Use the new api service for group-specific report
+      const response = await api.getGroupTotalReportByGroup(
+        groupSpecificTotalForm.groupName,
+        groupSpecificTotalForm.startDate,
+        groupSpecificTotalForm.endDate
+      );
+      
+      // Open preview in new tab
+      const previewWindow = window.open('about:blank', '_blank');
+      if (previewWindow) {
+        previewWindow.document.write(response);
+        previewWindow.document.close();
+        previewWindow.focus();
+        // Add print button to the preview
+        previewWindow.document.addEventListener('DOMContentLoaded', () => {
+          const printButton = previewWindow.document.createElement('button');
+          printButton.innerHTML = '🖨️ Print';
+          printButton.style.position = 'fixed';
+          printButton.style.top = '20px';
+          printButton.style.right = '20px';
+          printButton.style.zIndex = '999';
+          printButton.style.padding = '8px 18px';
+          printButton.style.fontSize = '15px';
+          printButton.style.background = '#1976d2';
+          printButton.style.color = '#fff';
+          printButton.style.border = 'none';
+          printButton.style.borderRadius = '4px';
+          printButton.style.cursor = 'pointer';
+          printButton.onclick = () => previewWindow.print();
+          previewWindow.document.body.appendChild(printButton);
+        });
+      } else {
+        // Fallback: open in current window
+        const newWindow = window.open('about:blank');
+        newWindow.document.write(response);
+        newWindow.document.close();
+      }
+    } catch (error) {
+      console.error('Print error:', error);
+      alert(`Print failed: ${error.message}`);
+    } finally {
+      setIsGroupSpecificTotalPrinting(false);
     }
   };
 
@@ -1345,6 +1407,71 @@ export default function App() {
     </div>
   );};
 
+  // New component for group-specific total report
+  const GroupSpecificTotalReportPage = () => {
+    const containerRef = useRef(null);
+    useEnterController(containerRef);
+    
+    return (
+    <div className="flex-1 flex flex-col h-full bg-gradient-to-br from-slate-50 to-slate-100 overflow-hidden" ref={containerRef}>
+      <div className="bg-gradient-to-r from-[#5B55E6] to-[#4A44D0] px-5 py-3 flex justify-between items-center text-white shrink-0 shadow-xl rounded-b-xl">
+        <h1 className="text-base font-bold uppercase flex items-center gap-2.5 tracking-wider"><Layers className="w-5 h-5 text-white" /> GROUP TOTAL PRINT</h1>
+        <button onClick={() => setActiveSection('daily')} className="p-1.5 rounded-lg hover:bg-white/20 transition-all"><X className="w-5 h-5" /></button>
+      </div>
+
+      <div className="p-6 flex-1 overflow-auto">
+        <div className="max-w-[720px] mx-auto bg-white border border-slate-200 shadow-lg rounded-2xl p-6 space-y-6">
+          <div className="grid grid-cols-2 gap-5">
+            <div>
+              <label className="text-xs font-bold uppercase text-slate-600 tracking-widest block mb-2">Start Date</label>
+              <input type="date" className="w-full border border-rose-200 rounded-lg px-4 py-3 text-sm font-medium bg-white outline-none focus:border-rose-500 focus:ring-2 focus:ring-rose-500/20 shadow-sm hover:shadow-md transition-all" style={{ height: '46px' }} value={groupSpecificTotalForm.startDate} onChange={e => setGroupSpecificTotalForm({ ...groupSpecificTotalForm, startDate: e.target.value })} data-enter="1" data-enter-type="input" />
+            </div>
+            <div>
+              <label className="text-xs font-bold uppercase text-slate-600 tracking-widest block mb-2">End Date</label>
+              <input type="date" className="w-full border border-rose-200 rounded-lg px-4 py-3 text-sm font-medium bg-white outline-none focus:border-rose-500 focus:ring-2 focus:ring-rose-500/20 shadow-sm hover:shadow-md transition-all" style={{ height: '46px' }} value={groupSpecificTotalForm.endDate} onChange={e => setGroupSpecificTotalForm({ ...groupSpecificTotalForm, endDate: e.target.value })} data-enter="2" data-enter-type="input" />
+            </div>
+          </div>
+
+          <div>
+            <label className="text-xs font-bold uppercase text-slate-600 tracking-widest block mb-2">Group Name</label>
+            <SearchableSelect
+              placeholder="Select Group Name"
+              options={groups.map(g => ({ label: g.name, value: g.name }))}
+              value={groupSpecificTotalForm.groupName}
+              onChange={(value) => setGroupSpecificTotalForm({ ...groupSpecificTotalForm, groupName: value })}
+              data-enter="3"
+              data-enter-type="select"
+            />
+          </div>
+
+          <div className="flex gap-4 pt-3">
+            <button 
+              onClick={handleGroupSpecificTotalPrint} 
+              disabled={isGroupSpecificTotalPrinting} 
+              className="flex-1 bg-gradient-to-r from-[#5B55E6] to-[#4A44D0] text-white py-3.5 font-bold uppercase text-sm rounded-xl shadow-lg disabled:opacity-50 hover:from-[#4A44D0] hover:to-[#3A34C0] transition-all hover:shadow-xl active:translate-y-0.5" 
+              data-enter="4"
+              data-enter-type="submit"
+            >
+              {isGroupSpecificTotalPrinting ? 'Printing...' : 'Print Selected Group'}
+            </button>
+            <button 
+              onClick={() => { setIsGroupSpecificTotalPrinting(false); setActiveSection('daily'); }} 
+              className="flex-1 bg-gradient-to-r from-slate-100 to-slate-200 text-slate-700 py-3.5 font-bold uppercase text-sm border border-slate-300 rounded-xl shadow-md hover:from-slate-200 hover:to-slate-300 transition-all hover:shadow-lg" 
+              data-enter="5"
+              data-enter-type="button"
+            >
+              Cancel
+            </button>
+          </div>
+
+          <div className="text-center text-sm font-medium text-slate-500 min-h-[24px]">
+            {isGroupSpecificTotalPrinting ? 'Preparing report for selected group...' : 'Report will include all customers in the selected group for the date range'}
+          </div>
+        </div>
+      </div>
+    </div>
+  );};
+
   return (
     <div className="h-screen flex flex-col bg-white overflow-hidden text-slate-900 font-sans">
       <Toast message={notification.message} type={notification.type} onClose={() => setNotification({ message: '', type: 'info' })} />
@@ -1373,6 +1500,7 @@ export default function App() {
               {[ 
                 { id: 'group-print', l: 'Group Printing', i: Printer },
                 { id: 'group-total', l: 'Group Total Report', i: Layers },
+                { id: 'group-specific-total', l: 'Group Total Print', i: Printer },
                 { id: 'daily-rate-sales', l: 'Daily Rate Wise Sales', i: FileBarChart },
                 { id: 'new-supplier', l: 'New Supplier', i: UserCheck },
                 { id: 'daily-sale', l: 'Daily Sale', i: Monitor },
@@ -1400,6 +1528,13 @@ export default function App() {
                     }));
                     setActiveSection('group-total');
                     return;
+                  }
+                  if (item.id === 'group-specific-total') {
+                    setGroupSpecificTotalForm(prev => ({
+                      ...prev,
+                      groupName: prev.groupName || (groups[0]?.name || ''),
+                    }));
+                    setActiveSection('group-specific-total');
                   }
                   if (item.id === 'daily-rate-sales') {
                     setItemsDailySaleRateForm(prev => ({
@@ -1526,6 +1661,7 @@ export default function App() {
         {activeSection === 'silk' && <SilkSummaryView ledgerStore={ledgerStore} customers={customers} onCancel={() => setActiveSection('daily')} />}
         {activeSection === 'reports' && <ReportsWindow groups={groups} customers={customers} vehicles={vehicles} advanceStore={advanceStore} onCancel={() => setActiveSection('daily')} />}
         {activeSection === 'group-total' && <GroupTotalReportPage />}
+        {activeSection === 'group-specific-total' && <GroupSpecificTotalReportPage />}
         {activeSection === 'group-print' && <GroupPattiPrintingPage />}
         {activeSection === 'group-adv' && <GroupAdvanceView groups={groups} customers={customers} advanceStore={advanceStore} onCancel={() => setActiveSection('daily')} />}
         {activeSection === 'group-pay' && <GroupPaymentView groups={groups} customers={customers} ledgerStore={ledgerStore} onCancel={() => setActiveSection('daily')} />}

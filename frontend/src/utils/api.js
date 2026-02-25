@@ -372,6 +372,18 @@ export const api = {
     return request('/reports/group-total', { params });
   },
   
+  getGroupTotalReportByGroup: async (groupName, startDate, endDate) => {
+    // For group total report for a specific group
+    const params = { 
+      start_date: startDate, 
+      end_date: endDate,
+      group_name: groupName,
+      format: 'html'
+    };
+    
+    return request('/reports/group-total-by-group', { params });
+  },
+  
   getDailySalesReport: async (fromDate, toDate, itemName = null) => {
     const params = { from_date: fromDate, to_date: toDate };
     if (itemName) params.item_name = itemName;
