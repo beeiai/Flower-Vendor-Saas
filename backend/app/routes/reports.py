@@ -443,7 +443,9 @@ def get_group_patti_report(
         for entry in farmer.get("entries", []):
             qty = float(entry.get("qty", 0))
             rate = float(entry.get("rate", 0))
-            total = qty * rate
+            # Use the pre-calculated amount from the database instead of recalculating
+            total = float(entry.get("amount", 0))
+            paid = float(entry.get("paid", 0))  # Get paid amount from the entry
             # Get vehicle info - entries from get_group_patti_data now have proper date/vehicle fields
             vehicle = entry.get("vehicle_name", entry.get("vehicle", "N/A"))
             # Date is already formatted as DD-MM-YYYY from reports_db
@@ -454,20 +456,34 @@ def get_group_patti_report(
                 "qty": f"{qty:.2f}",
                 "price": f"{rate:.2f}",
                 "total": f"{total:.2f}",
-                "luggage": "0.00",
-                "paid": "0.00",
-                "amount": f"{total:.2f}"
+                "luggage": "0.00",  # Default to 0.00, could be from transport_cost if available
+                "paid": f"{paid:.2f}",  # Use actual paid amount
+                "amount": f"{(total - paid):.2f}"  # Amount after paid deduction
             })
             farmer_qty += qty
             farmer_amount += total
-            # paid and luggage not available in current data
+            farmer_paid += paid
+        
+        # Calculate commission based on commission percentage
+        farmer_commission = farmer_amount * (commission_pct / 100)
+        farmer_net_amount = farmer_amount - farmer_commission
+        farmer_final_total = farmer_net_amount + 0.0 - farmer_paid  # luggage is 0.0 for now
+        
         customers.append({
             "id": farmer_id,
             "name": farmer_name,
             "address": farmer_address,
             "ledger_name": farmer.get("code", "N/A"),
-            "balance": f"{farmer_amount:.2f}",
-            "transactions": transactions
+            "balance": f"{farmer_final_total:.2f}",
+            "transactions": transactions,
+            "total_qty": f"{farmer_qty:.2f}",
+            "total_amount": f"{farmer_amount:.2f}",
+            "commission": f"{farmer_commission:.2f}",
+            "luggage_total": "0.00",  # Default to 0.00
+            "coolie": "0.00",  # Default to 0.00
+            "net_amount": f"{farmer_net_amount:.2f}",
+            "paid_amount": f"{farmer_paid:.2f}",
+            "final_total": f"{farmer_final_total:.2f}"
         })
         summary_rows.append({
             "customer": farmer_name,
