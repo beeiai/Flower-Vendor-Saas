@@ -25,14 +25,14 @@ export function useEnterController(containerRef) {
     // Attach container-specific Enter controller
     const handleContainerEnter = (e) => {
       if (e.key === "Enter") {
-        e.preventDefault();
-        e.stopPropagation();
-        console.log("Enter captured by controller");
-        
+        // Check if active element is within our container before preventing default
         const activeElement = document.activeElement;
         
-        // Only handle if active element is within our container
         if (containerRef.current.contains(activeElement)) {
+          e.preventDefault();
+          e.stopPropagation();
+          console.log("Enter captured by controller");
+          
           handleNavigation(activeElement);
         }
       }

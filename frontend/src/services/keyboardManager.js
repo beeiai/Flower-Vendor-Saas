@@ -134,25 +134,6 @@ class KeyboardManager {
   }
 
   /**
-   * Check if element is inside a container with its own Enter navigation
-   * (indicated by presence of elements with data-enter or data-enter-type attribute)
-   */
-  getContainerWithOwnNavigation(element) {
-    let parent = element;
-    // Look up the DOM tree for a container that has elements with data-enter or data-enter-type
-    while (parent && parent !== document) {
-      // Check if this parent element has any descendants with data-enter or data-enter-type attribute
-      const hasDataEnterChildren = parent.querySelector && 
-        (parent.querySelector('[data-enter]') || parent.querySelector('[data-enter-type]'));
-      if (hasDataEnterChildren) {
-        return parent;
-      }
-      parent = parent.parentElement;
-    }
-    return null;
-  }
-
-  /**
    * Handle Escape key press
    */
   handleEscapeKey(e) {
@@ -172,14 +153,6 @@ class KeyboardManager {
   handleEnterKey(e) {
     const target = e.target;
     const tagName = target?.tagName?.toUpperCase();
-
-    // Check if element is inside a container with its own Enter navigation
-    // (indicated by presence of elements with data-enter attribute)
-    const containerWithOwnNavigation = this.getContainerWithOwnNavigation(target);
-    if (containerWithOwnNavigation) {
-      // Defer to container-specific navigation system
-      return;
-    }
 
     // Don't interfere with dropdown selections
     if (this.isElementInOpenDropdown(target)) {
