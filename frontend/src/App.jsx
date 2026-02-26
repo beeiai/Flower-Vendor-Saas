@@ -1536,25 +1536,27 @@ export default function App() {
               />
 
               {groupTotalForm.groupName && (
-                <button
-                  type="button"
-                  onClick={() => {
-                    setGroupTotalForm({ ...groupTotalForm, groupName: "" });
-                    // Focus back on the input after clearing
-                    setTimeout(() => {
-                      groupTotalGroupRef.current?.focus();
-                    }, 50);
-                  }}
-                  className="absolute right-10 top-1/2 transform -translate-y-1/2 text-slate-500 hover:text-slate-700 p-1 rounded-full hover:bg-slate-100 transition-colors"
-                  title="Clear selection"
-                >
-                  <X className="w-4 h-4" />
-                </button>
-                <div className="absolute right-3 top-1/2 transform -translate-y-1/2 text-slate-700 pointer-events-none">
-                  <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
-                  </svg>
-                </div>
+                <>
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setGroupTotalForm({ ...groupTotalForm, groupName: "" });
+                      // Focus back on the input after clearing
+                      setTimeout(() => {
+                        groupTotalGroupRef.current?.focus();
+                      }, 50);
+                    }}
+                    className="absolute right-10 top-1/2 transform -translate-y-1/2 text-slate-500 hover:text-slate-700 p-1 rounded-full hover:bg-slate-100 transition-colors"
+                    title="Clear selection"
+                  >
+                    <X className="w-4 h-4" />
+                  </button>
+                  <div className="absolute right-3 top-1/2 transform -translate-y-1/2 text-slate-700 pointer-events-none">
+                    <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
+                    </svg>
+                  </div>
+                </>
               )}
             </div>
             {groups.length === 0 && (
