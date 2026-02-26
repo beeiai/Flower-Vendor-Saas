@@ -1240,7 +1240,7 @@ export default function App() {
     moreMenu: useRef(null)
   };
 
-  // Unified navigation hook for all report components
+  // Unified navigation hook for all report components - Industry Standard Implementation
   const useReportNavigation = (containerRef, elementOrder) => {
     useEffect(() => {
       const handleKeyDown = (e) => {
@@ -1252,7 +1252,16 @@ export default function App() {
         // Only handle Enter key within this container
         if (!container || !container.contains(activeElement)) return;
         
-        // Prevent default Enter behavior
+        // Check if the active element is a SearchableSelect input
+        const isSearchableSelectInput = activeElement.closest('[data-searchable-select]');
+        
+        // If it's a SearchableSelect input, let SearchableSelect handle it
+        // The SearchableSelect component will call onSelectionComplete when appropriate
+        if (isSearchableSelectInput) {
+          return;
+        }
+        
+        // Prevent default Enter behavior for non-SearchableSelect elements
         e.preventDefault();
         
         // Get all navigable elements in specified order
@@ -1299,26 +1308,56 @@ export default function App() {
     }, [containerRef, elementOrder]);
   };
 
-  // Focus management hook for report components
+  // Focus management hook for report components - Industry Standard Implementation
   const useReportFocus = (initialFocusRef, dependencies = []) => {
     useEffect(() => {
       // Set initial focus with proper delay for state updates
-      setTimeout(() => {
-        if (initialFocusRef.current) {
-          // For SearchableSelect components, focus the input inside
-          if (initialFocusRef.current.querySelector) {
-            const input = initialFocusRef.current.querySelector('input');
-            if (input) {
+      const setFocus = () => {
+        if (!initialFocusRef.current) return;
+        
+        // For SearchableSelect components, focus the input inside
+        if (initialFocusRef.current.querySelector) {
+          const input = initialFocusRef.current.querySelector('input');
+          if (input) {
+            // Small delay to ensure DOM is ready
+            setTimeout(() => {
               input.focus();
-            } else {
-              initialFocusRef.current.focus();
-            }
+              input.select(); // Select all text for better UX
+            }, 50);
           } else {
             initialFocusRef.current.focus();
           }
+        } else {
+          // For regular inputs/buttons
+          initialFocusRef.current.focus();
+          // If it's a text input, select all content
+          if (initialFocusRef.current.type === 'text' || initialFocusRef.current.type === 'number') {
+            setTimeout(() => {
+              initialFocusRef.current.select();
+            }, 10);
+          }
         }
-      }, 100);
-    }, dependencies);
+      };
+      
+      // Initial focus setup
+      setTimeout(setFocus, 100);
+      
+      // Also set up a mutation observer to handle dynamic content
+      const observer = new MutationObserver(() => {
+        setTimeout(setFocus, 50);
+      });
+      
+      if (initialFocusRef.current) {
+        observer.observe(initialFocusRef.current, {
+          childList: true,
+          subtree: true
+        });
+      }
+      
+      return () => {
+        observer.disconnect();
+      };
+    }, [initialFocusRef, ...dependencies]);
   };
 
   // Form reset hook for report components
