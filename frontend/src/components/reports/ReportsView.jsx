@@ -3,74 +3,8 @@ import SearchableSelect from '../shared/SearchableSelect';
 import { api } from '../../utils/api';
 import { DEFAULT_STATES } from '../../utils/stateManager';
 
-// Standalone keyboard navigation for ReportsView
-const useReportsNavigation = (containerRef) => {
-  useEffect(() => {
-    const handleKeyDown = (e) => {
-      if (e.key !== 'Enter') return;
-      
-      const activeElement = document.activeElement;
-      const container = containerRef.current;
-      
-      // Only handle Enter key within this container
-      if (!container || !container.contains(activeElement)) return;
-      
-      // Prevent default Enter behavior
-      e.preventDefault();
-      
-      // Get all navigable elements in order
-      const navigableElements = [
-        { element: container.querySelector('[data-enter="1"]'), type: 'date' },
-        { element: container.querySelector('[data-enter="2"]'), type: 'date' },
-        { element: container.querySelector('[data-enter="3"]'), type: 'select' },
-        { element: container.querySelector('[data-enter="4"]'), type: 'select' },
-        { element: container.querySelector('[data-enter="5"]'), type: 'select' },
-        { element: container.querySelector('[data-enter="6"]'), type: 'submit' },
-        { element: container.querySelector('[data-enter="7"]'), type: 'submit' }
-      ].filter(item => item.element);
-      
-      // Find current element index
-      const currentIndex = navigableElements.findIndex(item => item.element === activeElement);
-      
-      if (currentIndex === -1) return;
-      
-      // Handle different element types
-      const currentElement = navigableElements[currentIndex];
-      
-      if (currentElement.type === 'select') {
-        // For dropdowns, move to next element after selection
-        // However, for the group selection (data-enter="3"), we want to move to customer (data-enter="5") instead of vehicle (data-enter="4")
-        setTimeout(() => {
-          if (activeElement.dataset.enter === '3') { // Group selection
-            // Move to customer dropdown instead of vehicle
-            const customerElement = container.querySelector('[data-enter="5"]');
-            if (customerElement) {
-              customerElement.focus();
-            }
-          } else {
-            // For other selections, move to next element
-            const nextElement = navigableElements[currentIndex + 1];
-            if (nextElement) {
-              nextElement.element.focus();
-            }
-          }
-        }, 100);
-      } else if (currentElement.type === 'button' || currentElement.type === 'submit') {
-        // Trigger button click
-        activeElement.click();
-      } else {
-        // For other elements, move to next
-        const nextElement = navigableElements[currentIndex + 1];
-        if (nextElement) {
-          nextElement.element.focus();
-        }
-      }
-    };
-    
-    document.addEventListener('keydown', handleKeyDown);
-    return () => document.removeEventListener('keydown', handleKeyDown);
-  }, [containerRef]);
-};
+// Import unified navigation hook from App.jsx
+// This will be passed as a prop or imported from a shared hooks file
 
 function toNum(value) {
 	const n = Number(value);
@@ -81,17 +15,10 @@ function todayISO() {
 	return new Date().toISOString().split('T')[0];
 }
 
-export default function ReportsView({ groups, customers, vehicles, advanceStore = {}, onCancel }) {
+export default function ReportsView({ groups, customers, vehicles, advanceStore = {}, onCancel, 
+  useReportNavigation, useReportFocus, useReportFormReset }) {
 	const [filterError, setFilterError] = useState("");
 	
-	// Refs for keyboard navigation
-	const fromDateRef = useRef(null);
-	const toDateRef = useRef(null);
-	const groupRef = useRef(null);
-	const vehicleRef = useRef(null);
-	const customerRef = useRef(null);
-	const submitRef = useRef(null);
-
 	const [state, setState] = useState(DEFAULT_STATES.reports);
 
 	const {
@@ -106,8 +33,33 @@ export default function ReportsView({ groups, customers, vehicles, advanceStore 
 
 	const containerRef = useRef(null);
 	
-	// Use standalone navigation system
-	useReportsNavigation(containerRef);
+	// Use unified navigation system with proper element order
+	const elementOrder = [
+	  '[data-enter="1"]', // From Date
+	  '[data-enter="2"]', // To Date
+	  '[data-enter="3"]', // Group Name (select)
+	  '[data-enter="5"]', // Customer Name (select) - skip vehicle
+	  '[data-enter="6"]', // Submit Button (submit)
+	  '[data-enter="7"]'  // Print Button (submit)
+	];
+	
+	useReportNavigation(containerRef, elementOrder);
+	
+	// Use focus management hook
+	const groupRef = useRef(null);
+	useReportFocus(groupRef, []);
+	
+	// Use form reset hook
+	useReportFormReset(() => {
+	  setState(DEFAULT_STATES.reports);
+	}, []);
+	
+	// Refs for form elements
+	const fromDateRef = useRef(null);
+	const toDateRef = useRef(null);
+	const vehicleRef = useRef(null);
+	const customerRef = useRef(null);
+	const submitRef = useRef(null);
 
 	const setFromDate = useCallback((value) => setState(prev => ({ ...prev, fromDate: value })), []);
 	const setToDate = useCallback((value) => setState(prev => ({ ...prev, toDate: value })), []);

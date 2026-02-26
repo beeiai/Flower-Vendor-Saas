@@ -5,7 +5,7 @@ import { useKeyboardNavigation } from './hooks/useKeyboardNavigation';
 import { useEnterController } from './hooks/useEnterController';
 import { useERPEnterNavigation } from './hooks/useERPEnterNavigation';
 import MasterAdminDashboard from './components/admin/MasterAdminDashboard';
-import { Flower2, Receipt, FolderPlus, PackagePlus, Users, Plus, Trash2, Save, UserPlus, Check, X, ChevronDown, Calculator, Sparkles, Monitor, Database, Activity, ArrowRight, Truck, Clock, List, ChevronLeft, ChevronRight, Info, AlertCircle, CheckCircle2, XCircle, Printer, Search, Edit2, MessageSquare, FileText, LayoutPanelTop, BarChart3, Settings2, Play, MoreHorizontal, WalletCards, UserCheck, History, Landmark, ArrowDownToLine, ArrowUpFromLine, Coins, ArrowDownRight, ArrowUpRight, FileBarChart, Layers, Send, Smartphone } from 'lucide-react';
+import { Flower2, Receipt, FolderPlus, PackagePlus, Users, Plus, Trash2, Save, UserPlus, Check, X, ChevronDown, Calculator, Sparkles, Monitor, Database, Activity, ArrowRight, Truck, Clock, List, ChevronLeft, ChevronRight, Info, AlertCircle, CheckCircle2, XCircle, Printer, Search, Edit2, MessageSquare, FileText, LayoutPanelTop, BarChart3, Settings2, Play, MoreHorizontal, WalletCards, UserCheck, History, Landmark, ArrowDownToLine, ArrowUpFromLine, Coins, ArrowDownRight, ArrowUpRight, FileBarChart, Layers, Send, Smartphone, Calendar, Percent, Loader2 } from 'lucide-react';
 import SearchableSelect from './components/shared/SearchableSelect';
 import DailyTransactionsView from './components/transactions/DailyTransactionsView';
 import Toast from './components/shared/Toast';
@@ -1240,6 +1240,97 @@ export default function App() {
     moreMenu: useRef(null)
   };
 
+  // Unified navigation hook for all report components
+  const useReportNavigation = (containerRef, elementOrder) => {
+    useEffect(() => {
+      const handleKeyDown = (e) => {
+        if (e.key !== 'Enter') return;
+        
+        const activeElement = document.activeElement;
+        const container = containerRef.current;
+        
+        // Only handle Enter key within this container
+        if (!container || !container.contains(activeElement)) return;
+        
+        // Prevent default Enter behavior
+        e.preventDefault();
+        
+        // Get all navigable elements in specified order
+        const navigableElements = elementOrder
+          .map(selector => ({
+            element: container.querySelector(selector),
+            type: selector.includes('[data-enter-type="select"]') ? 'select' :
+                  selector.includes('[data-enter-type="submit"]') ? 'submit' :
+                  selector.includes('[data-enter-type="button"]') ? 'button' :
+                  selector.includes('input[type="date"]') ? 'date' : 'input'
+          }))
+          .filter(item => item.element);
+        
+        // Find current element index
+        const currentIndex = navigableElements.findIndex(item => item.element === activeElement);
+        
+        if (currentIndex === -1) return;
+        
+        // Handle different element types
+        const currentElement = navigableElements[currentIndex];
+        
+        if (currentElement.type === 'select') {
+          // For dropdowns, always move to next element (even if already selected)
+          const nextElement = navigableElements[currentIndex + 1];
+          if (nextElement) {
+            setTimeout(() => {
+              nextElement.element.focus();
+            }, 100);
+          }
+        } else if (currentElement.type === 'submit' || currentElement.type === 'button') {
+          // Trigger button click
+          activeElement.click();
+        } else {
+          // For other elements, move to next
+          const nextElement = navigableElements[currentIndex + 1];
+          if (nextElement) {
+            nextElement.element.focus();
+          }
+        }
+      };
+      
+      document.addEventListener('keydown', handleKeyDown);
+      return () => document.removeEventListener('keydown', handleKeyDown);
+    }, [containerRef, elementOrder]);
+  };
+
+  // Focus management hook for report components
+  const useReportFocus = (initialFocusRef, dependencies = []) => {
+    useEffect(() => {
+      // Set initial focus with proper delay for state updates
+      setTimeout(() => {
+        if (initialFocusRef.current) {
+          // For SearchableSelect components, focus the input inside
+          if (initialFocusRef.current.querySelector) {
+            const input = initialFocusRef.current.querySelector('input');
+            if (input) {
+              input.focus();
+            } else {
+              initialFocusRef.current.focus();
+            }
+          } else {
+            initialFocusRef.current.focus();
+          }
+        }
+      }, 100);
+    }, dependencies);
+  };
+
+  // Form reset hook for report components
+  const useReportFormReset = (resetFunction, triggerDependencies = []) => {
+    useEffect(() => {
+      // Reset form when dependencies change (like navigating away)
+      if (triggerDependencies.length > 0) {
+        resetFunction();
+      }
+    }, triggerDependencies);
+  };
+
   // Standalone keyboard navigation for Group Patti Printing Page
   const useGroupPattiNavigation = (containerRef) => {
     useEffect(() => {
@@ -1301,127 +1392,193 @@ export default function App() {
   const GroupPattiPrintingPage = ({ groups = [] }) => {
     const containerRef = useRef(null);
     
-
+    // Use unified navigation system with proper element order
+    const elementOrder = [
+      '[data-enter="1"]', // From Date
+      '[data-enter="2"]', // To Date
+      '[data-enter="3"]', // Group Name (select)
+      '[data-enter="4"]', // Commission (input)
+      '[data-enter="5"]', // Print Button (submit)
+      '[data-enter="6"]'  // Cancel Button (button)
+    ];
     
-    // Use standalone navigation system
-    useGroupPattiNavigation(containerRef);
+    useReportNavigation(containerRef, elementOrder);
     
-    // Refs for keyboard navigation
+    // Use focus management hook
+    const groupPattiGroupRef = useRef(null);
+    useReportFocus(groupPattiGroupRef, [groups.length, groupPattiForm.groupName]);
+    
+    // Use form reset hook
+    useReportFormReset(() => {
+      setGroupPattiForm(DEFAULT_STATES.groupPattiForm);
+      setIsGroupPattiPrinting(false);
+    }, [activeSection]);
+    
+    // Refs for form elements
     const groupPattiFromDateRef = useRef(null);
     const groupPattiToDateRef = useRef(null);
-    const groupPattiGroupRef = useRef(null);
     const groupPattiCommissionRef = useRef(null);
     const groupPattiPrintBtnRef = useRef(null);
     const groupPattiCancelBtnRef = useRef(null);
     
-    // Set initial focus
-    useEffect(() => {
-      setTimeout(() => {
-        // Always focus on group selection field first for consistent navigation
-        groupPattiGroupRef.current?.focus();
-      }, 100);
-    }, [groups.length, groupPattiForm.groupName]);
-    
     return (
     <div className="flex-1 flex flex-col h-full bg-gradient-to-br from-slate-50 to-slate-100 overflow-hidden" ref={containerRef}>
       <div className="bg-gradient-to-r from-[#5B55E6] to-[#4A44D0] px-5 py-3 flex justify-between items-center text-white shrink-0 shadow-xl rounded-b-xl">
-        <h1 className="text-base font-bold uppercase flex items-center gap-2.5 tracking-wider"><Printer className="w-5 h-5 text-white" /> GROUP PATTI PRINTING</h1>
-        <button onClick={() => setActiveSection('daily')} className="p-1.5 rounded-lg hover:bg-white/20 transition-all"><X className="w-5 h-5" /></button>
+        <h1 className="text-base font-bold uppercase flex items-center gap-2.5 tracking-wider">
+          <Printer className="w-5 h-5 text-white" /> GROUP PATTI PRINTING
+        </h1>
+        <button 
+          onClick={() => setActiveSection('daily')} 
+          className="p-1.5 rounded-lg hover:bg-white/20 transition-all"
+        >
+          <X className="w-5 h-5" />
+        </button>
       </div>
 
       <div className="p-6 flex-1 overflow-auto">
         <div className="max-w-[720px] mx-auto bg-white border border-slate-200 shadow-lg rounded-2xl p-6 space-y-6">
-          <div className="grid grid-cols-2 gap-5">
+          {/* Date Range Section */}
+          <div className="bg-slate-50/50 rounded-xl p-5 border border-slate-100">
+            <h2 className="text-sm font-bold uppercase text-slate-600 tracking-widest mb-4 flex items-center gap-2">
+              <Calendar className="w-4 h-4" />
+              Date Range
+            </h2>
+            <div className="grid grid-cols-2 gap-4">
+              <div>
+                <label className="text-xs font-semibold text-slate-600 uppercase tracking-widest block mb-2">From Date</label>
+                <input 
+                  ref={groupPattiFromDateRef}
+                  type="date" 
+                  className="w-full border border-rose-200 rounded-lg px-4 py-3 text-sm font-medium bg-white outline-none focus:border-rose-500 focus:ring-2 focus:ring-rose-500/20 shadow-sm hover:shadow-md transition-all" 
+                  style={{ height: '46px' }} 
+                  value={groupPattiForm.fromDate} 
+                  onChange={e => setGroupPattiForm({ ...groupPattiForm, fromDate: e.target.value })} 
+                  data-enter="1"
+                  data-enter-type="date"
+                />
+              </div>
+              <div>
+                <label className="text-xs font-semibold text-slate-600 uppercase tracking-widest block mb-2">To Date</label>
+                <input 
+                  ref={groupPattiToDateRef}
+                  type="date" 
+                  className="w-full border border-rose-200 rounded-lg px-4 py-3 text-sm font-medium bg-white outline-none focus:border-rose-500 focus:ring-2 focus:ring-rose-500/20 shadow-sm hover:shadow-md transition-all" 
+                  style={{ height: '46px' }} 
+                  value={groupPattiForm.toDate} 
+                  onChange={e => setGroupPattiForm({ ...groupPattiForm, toDate: e.target.value })} 
+                  data-enter="2"
+                  data-enter-type="date"
+                />
+              </div>
+            </div>
+          </div>
+
+          {/* Group Selection Section */}
+          <div className="bg-slate-50/50 rounded-xl p-5 border border-slate-100">
+            <h2 className="text-sm font-bold uppercase text-slate-600 tracking-widest mb-4 flex items-center gap-2">
+              <Users className="w-4 h-4" />
+              Group Selection
+            </h2>
+            <div className="relative">
+              <SearchableSelect 
+                label="Group Name" 
+                options={groups.length > 0 ? groups.map(g => g.name) : []} 
+                value={groupPattiForm.groupName} 
+                onChange={(val) => setGroupPattiForm({ ...groupPattiForm, groupName: val })} 
+                placeholder="Select group" 
+                inputRef={groupPattiGroupRef}
+                onSelectionComplete={() => {
+                  // After any group selection/deselection, always move to next field
+                  setTimeout(() => {
+                    groupPattiCommissionRef.current?.focus();
+                  }, 100);
+                }}
+                data-enter="3"
+                data-enter-type="select"
+                className="focus:border-rose-500 focus:ring-rose-500/20 rounded-lg shadow-sm hover:shadow-md transition-all border-rose-200" 
+              />
+              <div className="absolute right-3 top-8 text-slate-700 pointer-events-none">
+                <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
+                </svg>
+              </div>
+            </div>
+          </div>
+
+          {/* Commission Section */}
+          <div className="bg-slate-50/50 rounded-xl p-5 border border-slate-100">
+            <h2 className="text-sm font-bold uppercase text-slate-600 tracking-widest mb-4 flex items-center gap-2">
+              <Percent className="w-4 h-4" />
+              Commission Settings
+            </h2>
             <div>
-              <label className="text-xs font-bold uppercase text-slate-600 tracking-widest block mb-2">From Date</label>
+              <label className="text-xs font-semibold text-slate-600 uppercase tracking-widest block mb-2">Commission (%)</label>
               <input 
-                ref={groupPattiFromDateRef}
-                type="date" 
-                className="w-full border border-rose-200 rounded-lg px-4 py-3 text-sm font-medium bg-white outline-none focus:border-rose-500 focus:ring-2 focus:ring-rose-500/20 shadow-sm hover:shadow-md transition-all" 
+                ref={groupPattiCommissionRef}
+                type="number" 
+                className="w-full border border-rose-200 rounded-lg px-4 py-3 text-sm font-medium bg-white outline-none text-right focus:border-rose-500 focus:ring-2 focus:ring-rose-500/20 shadow-sm hover:shadow-md transition-all" 
                 style={{ height: '46px' }} 
-                value={groupPattiForm.fromDate} 
-                onChange={e => setGroupPattiForm({ ...groupPattiForm, fromDate: e.target.value })} 
-                data-enter="1"
-                data-enter-type="date"
+                value={groupPattiForm.commissionPct} 
+                onChange={e => setGroupPattiForm({ ...groupPattiForm, commissionPct: e.target.value })} 
+                data-enter="4"
+                data-enter-type="input"
               />
             </div>
-            <div>
-              <label className="text-xs font-bold uppercase text-slate-600 tracking-widest block mb-2">To Date</label>
-              <input 
-                ref={groupPattiToDateRef}
-                type="date" 
-                className="w-full border border-rose-200 rounded-lg px-4 py-3 text-sm font-medium bg-white outline-none focus:border-rose-500 focus:ring-2 focus:ring-rose-500/20 shadow-sm hover:shadow-md transition-all" 
-                style={{ height: '46px' }} 
-                value={groupPattiForm.toDate} 
-                onChange={e => setGroupPattiForm({ ...groupPattiForm, toDate: e.target.value })} 
-                data-enter="2"
-                data-enter-type="date"
-              />
+          </div>
+
+          {/* Action Buttons */}
+          <div className="bg-slate-50/50 rounded-xl p-5 border border-slate-100">
+            <div className="flex gap-4">
+              <button 
+                ref={groupPattiPrintBtnRef}
+                onClick={handleGroupPattiPrint} 
+                disabled={!groupPattiForm.groupName || isGroupPattiPrinting} 
+                className="flex-1 bg-gradient-to-r from-[#5B55E6] to-[#4A44D0] text-white py-3.5 font-bold uppercase text-sm rounded-xl shadow-lg disabled:opacity-50 hover:from-[#4A44D0] hover:to-[#3A34C0] transition-all hover:shadow-xl active:translate-y-0.5" 
+                data-enter="5"
+                data-enter-type="submit"
+              >
+                {isGroupPattiPrinting ? (
+                  <span className="flex items-center justify-center gap-2">
+                    <Loader2 className="w-4 h-4 animate-spin" />
+                    Printing...
+                  </span>
+                ) : (
+                  <span className="flex items-center justify-center gap-2">
+                    <Printer className="w-4 h-4" />
+                    Print Group Patti
+                  </span>
+                )}
+              </button>
+              <button 
+                ref={groupPattiCancelBtnRef}
+                onClick={() => { setIsGroupPattiPrinting(false); setActiveSection('daily'); }} 
+                className="flex-1 bg-gradient-to-r from-slate-100 to-slate-200 text-slate-700 py-3.5 font-bold uppercase text-sm border border-slate-300 rounded-xl shadow-md hover:from-slate-200 hover:to-slate-300 transition-all hover:shadow-lg" 
+                data-enter="6"
+                data-enter-type="button"
+              >
+                <span className="flex items-center justify-center gap-2">
+                  <X className="w-4 h-4" />
+                  Cancel
+                </span>
+              </button>
             </div>
-          </div>
 
-          <div className="relative">
-            <SearchableSelect 
-              label="Group Name" 
-              options={groups.length > 0 ? groups.map(g => g.name) : []} 
-              value={groupPattiForm.groupName} 
-              onChange={(val) => setGroupPattiForm({ ...groupPattiForm, groupName: val })} 
-              placeholder="Select group" 
-              inputRef={groupPattiGroupRef}
-              onSelectionComplete={() => {
-                // After any group selection/deselection, always move to next field
-                setTimeout(() => {
-                  groupPattiCommissionRef.current?.focus();
-                }, 100);
-              }}
-              data-enter="3"
-              data-enter-type="select"
-              className="focus:border-rose-500 focus:ring-rose-500/20 rounded-lg shadow-sm hover:shadow-md transition-all border-rose-200" 
-            />
-            <div className="absolute right-3 top-8 text-slate-700">
-              <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
-              </svg>
+            <div className="text-center text-sm font-medium text-slate-500 min-h-[24px] mt-3">
+              {isGroupPattiPrinting ? (
+                <span className="flex items-center justify-center gap-2 text-rose-500">
+                  <Loader2 className="w-4 h-4 animate-spin" />
+                  Preparing print document...
+                </span>
+              ) : groupPattiForm.groupName ? (
+                <span className="text-emerald-600">
+                  Ready to print patti for "{groupPattiForm.groupName}"
+                </span>
+              ) : (
+                <span className="text-amber-600">
+                  Please select a group to proceed
+                </span>
+              )}
             </div>
-
-          </div>
-
-          <div>
-            <label className="text-xs font-bold uppercase text-slate-600 tracking-widest block mb-2">Commission (%)</label>
-            <input 
-              ref={groupPattiCommissionRef}
-              type="number" 
-              className="w-full border border-rose-200 rounded-lg px-4 py-3 text-sm font-medium bg-white outline-none text-right focus:border-rose-500 focus:ring-2 focus:ring-rose-500/20 shadow-sm hover:shadow-md transition-all" 
-              style={{ height: '46px' }} 
-              value={groupPattiForm.commissionPct} 
-              onChange={e => setGroupPattiForm({ ...groupPattiForm, commissionPct: e.target.value })} 
-              data-enter="4"
-              data-enter-type="input"
-            />
-          </div>
-
-          <div className="flex gap-4 pt-3">
-            <button 
-              ref={groupPattiPrintBtnRef}
-              onClick={handleGroupPattiPrint} 
-              disabled={!groupPattiForm.groupName || isGroupPattiPrinting} 
-              className="flex-1 bg-gradient-to-r from-[#5B55E6] to-[#4A44D0] text-white py-3.5 font-bold uppercase text-sm rounded-xl shadow-lg disabled:opacity-50 hover:from-[#4A44D0] hover:to-[#3A34C0] transition-all hover:shadow-xl active:translate-y-0.5" 
-              data-enter="5"
-              data-enter-type="submit"
-            >
-              {isGroupPattiPrinting ? 'Printing...' : 'Print'}
-            </button>
-            <button 
-              ref={groupPattiCancelBtnRef}
-              onClick={() => { setIsGroupPattiPrinting(false); setActiveSection('daily'); }} 
-              className="flex-1 bg-gradient-to-r from-slate-100 to-slate-200 text-slate-700 py-3.5 font-bold uppercase text-sm border border-slate-300 rounded-xl shadow-md hover:from-slate-200 hover:to-slate-300 transition-all hover:shadow-lg" 
-              data-enter="6"
-              data-enter-type="button"
-            >Cancel</button>
-          </div>
-
-          <div className="text-center text-sm font-medium text-slate-500 min-h-[24px]">
-            {isGroupPattiPrinting ? 'Preparing print document...' : ''}
           </div>
         </div>
       </div>
@@ -1488,154 +1645,200 @@ export default function App() {
   const GroupTotalReportPage = ({ groups = [] }) => {
     const containerRef = useRef(null);
     
-
+    // Use unified navigation system with proper element order
+    const elementOrder = [
+      '[data-enter="1"]', // From Date
+      '[data-enter="2"]', // To Date
+      '[data-enter="3"]', // Group Name (select)
+      '[data-enter="4"]', // Print Button (submit)
+      '[data-enter="5"]'  // Cancel Button (button)
+    ];
     
-    // Use standalone navigation system
-    useGroupTotalNavigation(containerRef);
+    useReportNavigation(containerRef, elementOrder);
     
-    // Refs for keyboard navigation
+    // Use focus management hook
+    const groupTotalGroupRef = useRef(null);
+    useReportFocus(groupTotalGroupRef, [groups.length, groupTotalForm.groupName]);
+    
+    // Use form reset hook
+    useReportFormReset(() => {
+      setGroupTotalForm(DEFAULT_STATES.groupTotalForm);
+      setIsGroupTotalPrinting(false);
+    }, [activeSection]);
+    
+    // Refs for form elements
     const groupTotalFromDateRef = useRef(null);
     const groupTotalToDateRef = useRef(null);
-    const groupTotalGroupRef = useRef(null);
     const groupTotalPrintBtnRef = useRef(null);
     const groupTotalCancelBtnRef = useRef(null);
-    
-    // Set initial focus
-    useEffect(() => {
-      setTimeout(() => {
-        // Always focus on group selection field first for consistent navigation
-        groupTotalGroupRef.current?.focus();
-      }, 100);
-    }, [groups.length, groupTotalForm.groupName]);
     
     return (
     <div className="flex-1 flex flex-col h-full bg-gradient-to-br from-slate-50 to-slate-100 overflow-hidden" ref={containerRef}>
       <div className="bg-gradient-to-r from-[#5B55E6] to-[#4A44D0] px-5 py-3 flex justify-between items-center text-white shrink-0 shadow-xl rounded-b-xl">
-        <h1 className="text-base font-bold uppercase flex items-center gap-2.5 tracking-wider"><Layers className="w-5 h-5 text-white" /> GROUP TOTAL REPORT</h1>
-        <button onClick={() => setActiveSection('daily')} className="p-1.5 rounded-lg hover:bg-white/20 transition-all"><X className="w-5 h-5" /></button>
+        <h1 className="text-base font-bold uppercase flex items-center gap-2.5 tracking-wider">
+          <Layers className="w-5 h-5 text-white" /> GROUP TOTAL REPORT
+        </h1>
+        <button 
+          onClick={() => setActiveSection('daily')} 
+          className="p-1.5 rounded-lg hover:bg-white/20 transition-all"
+        >
+          <X className="w-5 h-5" />
+        </button>
       </div>
 
       <div className="p-6 flex-1 overflow-auto">
         <div className="max-w-[720px] mx-auto bg-white border border-slate-200 shadow-lg rounded-2xl p-6 space-y-6">
-          <div className="grid grid-cols-2 gap-5">
-            <div>
-              <label className="text-xs font-bold uppercase text-slate-600 tracking-widest block mb-2">From Date</label>
-              <input 
-                ref={groupTotalFromDateRef}
-                type="date" 
-                className="w-full border border-rose-200 rounded-lg px-4 py-3 text-sm font-medium bg-white outline-none focus:border-rose-500 focus:ring-2 focus:ring-rose-500/20 shadow-sm hover:shadow-md transition-all" 
-                style={{ height: '46px' }} 
-                value={groupTotalForm.fromDate} 
-                onChange={e => setGroupTotalForm({ ...groupTotalForm, fromDate: e.target.value })} 
-                data-enter="1"
-                data-enter-type="date"
-              />
-            </div>
-            <div>
-              <label className="text-xs font-bold uppercase text-slate-600 tracking-widest block mb-2">To Date</label>
-              <input 
-                ref={groupTotalToDateRef}
-                type="date" 
-                className="w-full border border-rose-200 rounded-lg px-4 py-3 text-sm font-medium bg-white outline-none focus:border-rose-500 focus:ring-2 focus:ring-rose-500/20 shadow-sm hover:shadow-md transition-all" 
-                style={{ height: '46px' }} 
-                value={groupTotalForm.toDate} 
-                onChange={e => setGroupTotalForm({ ...groupTotalForm, toDate: e.target.value })} 
-                data-enter="2"
-                data-enter-type="date"
-              />
+          {/* Date Range Section */}
+          <div className="bg-slate-50/50 rounded-xl p-5 border border-slate-100">
+            <h2 className="text-sm font-bold uppercase text-slate-600 tracking-widest mb-4 flex items-center gap-2">
+              <Calendar className="w-4 h-4" />
+              Date Range
+            </h2>
+            <div className="grid grid-cols-2 gap-4">
+              <div>
+                <label className="text-xs font-semibold text-slate-600 uppercase tracking-widest block mb-2">From Date</label>
+                <input 
+                  ref={groupTotalFromDateRef}
+                  type="date" 
+                  className="w-full border border-rose-200 rounded-lg px-4 py-3 text-sm font-medium bg-white outline-none focus:border-rose-500 focus:ring-2 focus:ring-rose-500/20 shadow-sm hover:shadow-md transition-all" 
+                  style={{ height: '46px' }} 
+                  value={groupTotalForm.fromDate} 
+                  onChange={e => setGroupTotalForm({ ...groupTotalForm, fromDate: e.target.value })} 
+                  data-enter="1"
+                  data-enter-type="date"
+                />
+              </div>
+              <div>
+                <label className="text-xs font-semibold text-slate-600 uppercase tracking-widest block mb-2">To Date</label>
+                <input 
+                  ref={groupTotalToDateRef}
+                  type="date" 
+                  className="w-full border border-rose-200 rounded-lg px-4 py-3 text-sm font-medium bg-white outline-none focus:border-rose-500 focus:ring-2 focus:ring-rose-500/20 shadow-sm hover:shadow-md transition-all" 
+                  style={{ height: '46px' }} 
+                  value={groupTotalForm.toDate} 
+                  onChange={e => setGroupTotalForm({ ...groupTotalForm, toDate: e.target.value })} 
+                  data-enter="2"
+                  data-enter-type="date"
+                />
+              </div>
             </div>
           </div>
 
-          <div>
-            <label className="text-xs font-bold uppercase text-slate-600 tracking-widest block mb-2">Group Name (Optional)</label>
-            <div className="relative">
-              <SearchableSelect
-                placeholder={groups.length > 0 ? "Select Group (Leave empty for all groups)" : "No Groups Available"}
-                options={groups.length > 0 ? groups.map(g => g.name) : []}
-                value={groupTotalForm.groupName}
-                onChange={(value) => setGroupTotalForm({ ...groupTotalForm, groupName: value })}
-                inputRef={groupTotalGroupRef}
-                onSelectionComplete={() => {
-                  // After any group selection/deselection, always move to next field
-                  setTimeout(() => {
-                    groupTotalPrintBtnRef.current?.focus();
-                  }, 100);
-                }}
-                data-enter="3"
-                data-enter-type="select"
-                disabled={groups.length === 0}
-                className="w-full"
-              />
+          {/* Group Selection Section */}
+          <div className="bg-slate-50/50 rounded-xl p-5 border border-slate-100">
+            <h2 className="text-sm font-bold uppercase text-slate-600 tracking-widest mb-4 flex items-center gap-2">
+              <Users className="w-4 h-4" />
+              Group Selection
+            </h2>
+            <div>
+              <label className="text-xs font-semibold text-slate-600 uppercase tracking-widest block mb-2">Group Name (Optional)</label>
+              <div className="relative">
+                <SearchableSelect
+                  placeholder={groups.length > 0 ? "Select Group (Leave empty for all groups)" : "No Groups Available"}
+                  options={groups.length > 0 ? groups.map(g => g.name) : []}
+                  value={groupTotalForm.groupName}
+                  onChange={(value) => setGroupTotalForm({ ...groupTotalForm, groupName: value })}
+                  inputRef={groupTotalGroupRef}
+                  onSelectionComplete={() => {
+                    // After any group selection/deselection, always move to next field
+                    setTimeout(() => {
+                      groupTotalPrintBtnRef.current?.focus();
+                    }, 100);
+                  }}
+                  data-enter="3"
+                  data-enter-type="select"
+                  disabled={groups.length === 0}
+                  className="w-full"
+                />
 
-              {groupTotalForm.groupName && (
-                <>
-                  <button
-                    type="button"
-                    onClick={() => {
-                      setGroupTotalForm({ ...groupTotalForm, groupName: "" });
-                      // Focus back on the input after clearing
-                      setTimeout(() => {
-                        groupTotalGroupRef.current?.focus();
-                      }, 50);
-                    }}
-                    className="absolute right-10 top-1/2 transform -translate-y-1/2 text-slate-500 hover:text-slate-700 p-1 rounded-full hover:bg-slate-100 transition-colors"
-                    title="Clear selection"
-                  >
-                    <X className="w-4 h-4" />
-                  </button>
-                  <div className="absolute right-3 top-1/2 transform -translate-y-1/2 text-slate-700 pointer-events-none">
-                    <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
-                    </svg>
-                  </div>
-                </>
+                {groupTotalForm.groupName && (
+                  <>
+                    <button
+                      type="button"
+                      onClick={() => {
+                        setGroupTotalForm({ ...groupTotalForm, groupName: "" });
+                        // Focus back on the input after clearing
+                        setTimeout(() => {
+                          groupTotalGroupRef.current?.focus();
+                        }, 50);
+                      }}
+                      className="absolute right-10 top-1/2 transform -translate-y-1/2 text-slate-500 hover:text-slate-700 p-1 rounded-full hover:bg-slate-100 transition-colors"
+                      title="Clear selection"
+                    >
+                      <X className="w-4 h-4" />
+                    </button>
+                    <div className="absolute right-3 top-1/2 transform -translate-y-1/2 text-slate-700 pointer-events-none">
+                      <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
+                      </svg>
+                    </div>
+                  </>
+                )}
+              </div>
+              {groups.length === 0 && (
+                <p className="text-xs text-red-500 mt-1">No groups available. Please create a group first.</p>
               )}
             </div>
-            {groups.length === 0 && (
-              <p className="text-xs text-red-500 mt-1">No groups available. Please create a group first.</p>
-            )}
           </div>
 
-          <div className="flex gap-4 pt-3">
-            <button 
-              ref={groupTotalPrintBtnRef}
-              onClick={handleGroupTotalPrint} 
-              disabled={isGroupTotalPrinting} 
-              className="flex-1 bg-gradient-to-r from-[#5B55E6] to-[#4A44D0] text-white py-3.5 font-bold uppercase text-sm rounded-xl shadow-lg disabled:opacity-50 hover:from-[#4A44D0] hover:to-[#3A34C0] transition-all hover:shadow-xl active:translate-y-0.5" 
-              onKeyDown={(e) => {
-                if (e.key === 'Enter') {
-                  e.preventDefault();
-                  if (isGroupTotalPrinting) return;
-                  handleGroupTotalPrint();
-                }
-              }}
-              data-enter="4"
-              data-enter-type="submit"
-            >
-              {isGroupTotalPrinting ? 'Printing...' : groupTotalForm.groupName ? 'Print Selected Group' : 'Print All Groups'}
-            </button>
-            <button 
-              ref={groupTotalCancelBtnRef}
-              onClick={() => { setIsGroupTotalPrinting(false); setActiveSection('daily'); }} 
-              className="flex-1 bg-gradient-to-r from-slate-100 to-slate-200 text-slate-700 py-3.5 font-bold uppercase text-sm border border-slate-300 rounded-xl shadow-md hover:from-slate-200 hover:to-slate-300 transition-all hover:shadow-lg" 
-              onKeyDown={(e) => {
-                if (e.key === 'Enter') {
-                  e.preventDefault();
-                  setIsGroupTotalPrinting(false); 
-                  setActiveSection('daily');
-                }
-              }}
-              data-enter="5"
-              data-enter-type="button"
-            >
-              Cancel
-            </button>
-          </div>
+          {/* Action Buttons */}
+          <div className="bg-slate-50/50 rounded-xl p-5 border border-slate-100">
+            <div className="flex gap-4">
+              <button 
+                ref={groupTotalPrintBtnRef}
+                onClick={handleGroupTotalPrint} 
+                disabled={isGroupTotalPrinting} 
+                className="flex-1 bg-gradient-to-r from-[#5B55E6] to-[#4A44D0] text-white py-3.5 font-bold uppercase text-sm rounded-xl shadow-lg disabled:opacity-50 hover:from-[#4A44D0] hover:to-[#3A34C0] transition-all hover:shadow-xl active:translate-y-0.5" 
+                data-enter="4"
+                data-enter-type="submit"
+              >
+                {isGroupTotalPrinting ? (
+                  <span className="flex items-center justify-center gap-2">
+                    <Loader2 className="w-4 h-4 animate-spin" />
+                    Printing...
+                  </span>
+                ) : groupTotalForm.groupName ? (
+                  <span className="flex items-center justify-center gap-2">
+                    <Printer className="w-4 h-4" />
+                    Print Selected Group
+                  </span>
+                ) : (
+                  <span className="flex items-center justify-center gap-2">
+                    <Layers className="w-4 h-4" />
+                    Print All Groups
+                  </span>
+                )}
+              </button>
+              <button 
+                ref={groupTotalCancelBtnRef}
+                onClick={() => { setIsGroupTotalPrinting(false); setActiveSection('daily'); }} 
+                className="flex-1 bg-gradient-to-r from-slate-100 to-slate-200 text-slate-700 py-3.5 font-bold uppercase text-sm border border-slate-300 rounded-xl shadow-md hover:from-slate-200 hover:to-slate-300 transition-all hover:shadow-lg" 
+                data-enter="5"
+                data-enter-type="button"
+              >
+                <span className="flex items-center justify-center gap-2">
+                  <X className="w-4 h-4" />
+                  Cancel
+                </span>
+              </button>
+            </div>
 
-          <div className="text-center text-sm font-medium text-slate-500 min-h-[24px]">
-            {isGroupTotalPrinting ? 'Preparing report...' : 
-             groupTotalForm.groupName ? `Report will include only "${groupTotalForm.groupName}" group` : 
-             'Report will include all groups in the selected date range'}
+            <div className="text-center text-sm font-medium text-slate-500 min-h-[24px] mt-3">
+              {isGroupTotalPrinting ? (
+                <span className="flex items-center justify-center gap-2 text-rose-500">
+                  <Loader2 className="w-4 h-4 animate-spin" />
+                  Preparing report...
+                </span>
+              ) : groupTotalForm.groupName ? (
+                <span className="text-emerald-600">
+                  Report will include only "{groupTotalForm.groupName}" group
+                </span>
+              ) : (
+                <span className="text-blue-600">
+                  Report will include all groups in the selected date range
+                </span>
+              )}
+            </div>
           </div>
         </div>
       </div>
@@ -1818,7 +2021,18 @@ export default function App() {
         {activeSection === 'daily-sale' && <DailySaleView onCancel={() => setActiveSection('daily')} />}
         {activeSection === 'saala' && <SaalaView catalog={catalog} onCancel={() => setActiveSection('daily')} showNotify={showNotify} />}
         {activeSection === 'silk' && <SilkSummaryView ledgerStore={ledgerStore} customers={customers} onCancel={() => setActiveSection('daily')} />}
-        {activeSection === 'reports' && <ReportsWindow groups={groups} customers={customers} vehicles={vehicles} advanceStore={advanceStore} onCancel={() => setActiveSection('daily')} />}
+        {activeSection === 'reports' && (
+          <ReportsWindow 
+            groups={groups} 
+            customers={customers} 
+            vehicles={vehicles} 
+            advanceStore={advanceStore} 
+            onCancel={() => setActiveSection('daily')}
+            useReportNavigation={useReportNavigation}
+            useReportFocus={useReportFocus}
+            useReportFormReset={useReportFormReset}
+          />
+        )}
         {activeSection === 'group-total' && (
           <div>
             {groups.length > 0 ? (
