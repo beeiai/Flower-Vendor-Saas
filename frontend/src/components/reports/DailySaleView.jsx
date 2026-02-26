@@ -72,12 +72,8 @@ export default function DailySaleView({ onCancel }) {
       const data = await api.getDailySales(fromDate, toDate, null);
       const allRows = Array.isArray(data) ? data : [];
 
-      // Get customers in the selected group
-      const groupCustomersList = customers.filter(c => c.group === selectedGroup);
-      const groupCustomerNames = groupCustomersList.map(c => c.name);
-      
-      // Filter rows to only this group's customers
-      const filteredRows = allRows.filter(r => groupCustomerNames.includes(r.party));
+      // Filter rows to only this group's customers using group information from backend
+      const filteredRows = allRows.filter(r => r.group === selectedGroup);
       setRows(filteredRows);
 
       if (filteredRows.length === 0) {
@@ -92,7 +88,7 @@ export default function DailySaleView({ onCancel }) {
     } finally {
       setLoading(false);
     }
-  }, [fromDate, toDate, selectedGroup, customers]);
+  }, [fromDate, toDate, selectedGroup]);
 
   const totals = useMemo(() => rows.reduce((acc, r) => ({
     qty:    acc.qty    + Number(r.qty   || 0),
@@ -108,8 +104,12 @@ export default function DailySaleView({ onCancel }) {
       const data = await api.getDailySales(fromDate, toDate, null);
       const allRows = Array.isArray(data) ? data : [];
       
-      // Get unique customer names (party) that have sales in this date range
-      const customersWithSales = new Set(allRows.map(r => r.party));
+      // Get unique customer names (party) that have sales in this date range for the selected group
+      const customersWithSales = new Set(
+        allRows
+          .filter(r => r.group === selectedGroup)
+          .map(r => r.party)
+      );
       
       // Filter group customers to only those with sales in date range
       const groupCustomersWithSales = customers.filter(c => 
@@ -186,8 +186,8 @@ export default function DailySaleView({ onCancel }) {
           continue;
         }
 
-        // Get this customer's sales for the date range
-        const customerRows = allRows.filter(r => r.party === customer.name);
+        // Get this customer's sales for the date range within the selected group
+        const customerRows = allRows.filter(r => r.party === customer.name && r.group === selectedGroup);
         
         // Build message only if customer has sales data
         const message = buildSmsForCustomer(customer.name, customerRows);
