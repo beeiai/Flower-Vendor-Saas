@@ -27,13 +27,37 @@ export default function DailySaleView({ onCancel }) {
 
   // Load groups + customers on mount
   useEffect(() => {
+    setFeedback({ message: 'Loading data...', type: 'info' });
     Promise.all([api.listGroups(), api.listCustomers()])
       .then(([g, c]) => {
-        setGroups(Array.isArray(g) ? g : []);
-        setCustomers(Array.isArray(c) ? c : []);
+        console.log('Groups loaded:', g);
+        console.log('Customers loaded:', c);
+        const groupsArray = Array.isArray(g) ? g : [];
+        const customersArray = Array.isArray(c) ? c : [];
+        setGroups(groupsArray);
+        setCustomers(customersArray);
+        
+        if (groupsArray.length === 0) {
+          setFeedback({ message: 'No groups found', type: 'info' });
+        } else {
+          setFeedback({ message: `Loaded ${groupsArray.length} groups`, type: 'success' });
+        }
       })
-      .catch(() => {});
+      .catch((err) => {
+        console.error('Error loading groups/customers:', err);
+        setFeedback({ message: 'Failed to load groups. Check API connection.', type: 'error' });
+      });
   }, []);
+
+  // Auto-clear feedback messages
+  useEffect(() => {
+    if (feedback.message && (feedback.type === 'success' || feedback.type === 'info')) {
+      const timer = setTimeout(() => {
+        setFeedback({ message: '', type: '' });
+      }, 3000);
+      return () => clearTimeout(timer);
+    }
+  }, [feedback]);
 
   const handleGo = useCallback(async () => {
     if (!selectedGroup) {
@@ -44,18 +68,22 @@ export default function DailySaleView({ onCancel }) {
     setLoading(true);
     setFeedback({ message: '', type: '' });
     try {
+      // Fetch sales data for the date range
       const data = await api.getDailySales(fromDate, toDate, null);
       const allRows = Array.isArray(data) ? data : [];
 
-      const groupCustomerNames = customers
-        .filter(c => c.group === selectedGroup)
-        .map(c => c.name);
+      // Get customers in the selected group
+      const groupCustomersList = customers.filter(c => c.group === selectedGroup);
+      const groupCustomerNames = groupCustomersList.map(c => c.name);
       
+      // Filter rows to only this group's customers
       const filteredRows = allRows.filter(r => groupCustomerNames.includes(r.party));
       setRows(filteredRows);
 
       if (filteredRows.length === 0) {
-        setFeedback({ message: 'No data found for this selection', type: 'info' });
+        setFeedback({ message: 'No sales data found for this group in selected dates', type: 'info' });
+      } else {
+        setFeedback({ message: `Found ${filteredRows.length} sales records`, type: 'success' });
       }
     } catch (e) {
       console.error(e);
@@ -80,13 +108,15 @@ export default function DailySaleView({ onCancel }) {
       const data = await api.getDailySales(fromDate, toDate, null);
       const allRows = Array.isArray(data) ? data : [];
       
-      // Get customer names that have sales in this date range
+      // Get unique customer names (party) that have sales in this date range
       const customersWithSales = new Set(allRows.map(r => r.party));
       
       // Filter group customers to only those with sales in date range
-      return customers.filter(c => 
+      const groupCustomersWithSales = customers.filter(c => 
         c.group === selectedGroup && customersWithSales.has(c.name)
       );
+      
+      return groupCustomersWithSales;
     } catch (e) {
       console.error(e);
       return [];
