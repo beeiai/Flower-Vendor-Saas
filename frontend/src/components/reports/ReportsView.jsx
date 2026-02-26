@@ -147,7 +147,8 @@ export default function ReportsView({ groups, customers, vehicles, advanceStore 
 		}
 	};
 
-	// Navigation flows automatically via onSelectionComplete callbacks
+	// Navigation is handled by the unified navigation system passed as props
+	// The onSelectionComplete callbacks ensure proper focus movement between dropdowns
 
 	const filteredRows = useMemo(() => {
 		const f = String(fromDate || '').trim();
@@ -318,7 +319,7 @@ export default function ReportsView({ groups, customers, vehicles, advanceStore 
 												}}
 												data-enter="3"
 												data-enter-type="select"
-												className={`focus:border-rose-500 focus:ring-rose-500/20 rounded-lg shadow-sm hover:shadow-md transition-all border-rose-200 ${filterError && !groupName ? 'border-red-500 ring-2 ring-red-100' : ''}`}
+												className={`focus:border-rose-500 focus:ring-rose-500/20 rounded-lg shadow-sm hover:shadow-md transition-all border-rose-200 w-full ${filterError && !groupName ? 'border-red-500 ring-2 ring-red-100' : ''}`}
 												error={filterError && !groupName}
 											/>
 										</div>
@@ -339,7 +340,7 @@ export default function ReportsView({ groups, customers, vehicles, advanceStore 
 												}}
 												data-enter="4"
 												data-enter-type="select"
-												className="focus:border-rose-500 focus:ring-rose-500/20 rounded-lg shadow-sm hover:shadow-md transition-all border-rose-200"
+												className="focus:border-rose-500 focus:ring-rose-500/20 rounded-lg shadow-sm hover:shadow-md transition-all border-rose-200 w-full"
 											/>
 										</div>
 									</div>
@@ -363,7 +364,7 @@ export default function ReportsView({ groups, customers, vehicles, advanceStore 
 													}}
 													data-enter="5"
 													data-enter-type="select"
-													className={`focus:border-rose-500 focus:ring-rose-500/20 rounded-lg shadow-sm hover:shadow-md transition-all border-rose-200 ${filterError && !customerName ? 'border-red-500 ring-2 ring-red-100' : ''}`}
+													className={`focus:border-rose-500 focus:ring-rose-500/20 rounded-lg shadow-sm hover:shadow-md transition-all border-rose-200 w-full ${filterError && !customerName ? 'border-red-500 ring-2 ring-red-100' : ''}`}
 													error={filterError && !customerName}
 												/>
 												{filterError && (

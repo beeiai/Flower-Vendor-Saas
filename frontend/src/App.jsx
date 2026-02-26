@@ -1441,6 +1441,7 @@ export default function App() {
       '[data-enter="6"]'  // Cancel Button (button)
     ];
     
+    // Ensure the unified navigation system is actually used
     useReportNavigation(containerRef, elementOrder);
     
     // Use focus management hook
@@ -1459,6 +1460,13 @@ export default function App() {
     const groupPattiCommissionRef = useRef(null);
     const groupPattiPrintBtnRef = useRef(null);
     const groupPattiCancelBtnRef = useRef(null);
+    
+    // Add data-testid for testing
+    useEffect(() => {
+      if (containerRef.current) {
+        containerRef.current.setAttribute('data-testid', 'group-patti');
+      }
+    }, []);
     
     return (
     <div className="flex-1 flex flex-col h-full bg-gradient-to-br from-slate-50 to-slate-100 overflow-hidden" ref={containerRef}>
@@ -1529,12 +1537,19 @@ export default function App() {
                 onSelectionComplete={() => {
                   // After any group selection/deselection, always move to next field
                   setTimeout(() => {
-                    groupPattiCommissionRef.current?.focus();
+                    const nextElement = groupPattiCommissionRef.current;
+                    if (nextElement) {
+                      nextElement.focus();
+                      // Select all text for easy editing
+                      if (nextElement.select) {
+                        nextElement.select();
+                      }
+                    }
                   }, 100);
                 }}
                 data-enter="3"
                 data-enter-type="select"
-                className="focus:border-rose-500 focus:ring-rose-500/20 rounded-lg shadow-sm hover:shadow-md transition-all border-rose-200" 
+                className="focus:border-rose-500 focus:ring-rose-500/20 rounded-lg shadow-sm hover:shadow-md transition-all border-rose-200 w-full" 
               />
               <div className="absolute right-3 top-8 text-slate-700 pointer-events-none">
                 <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
@@ -1693,6 +1708,7 @@ export default function App() {
       '[data-enter="5"]'  // Cancel Button (button)
     ];
     
+    // Ensure the unified navigation system is actually used
     useReportNavigation(containerRef, elementOrder);
     
     // Use focus management hook
@@ -1710,6 +1726,13 @@ export default function App() {
     const groupTotalToDateRef = useRef(null);
     const groupTotalPrintBtnRef = useRef(null);
     const groupTotalCancelBtnRef = useRef(null);
+    
+    // Add data-testid for testing
+    useEffect(() => {
+      if (containerRef.current) {
+        containerRef.current.setAttribute('data-testid', 'group-total');
+      }
+    }, []);
     
     return (
     <div className="flex-1 flex flex-col h-full bg-gradient-to-br from-slate-50 to-slate-100 overflow-hidden" ref={containerRef}>
@@ -1781,13 +1804,16 @@ export default function App() {
                   onSelectionComplete={() => {
                     // After any group selection/deselection, always move to next field
                     setTimeout(() => {
-                      groupTotalPrintBtnRef.current?.focus();
+                      const nextElement = groupTotalPrintBtnRef.current;
+                      if (nextElement) {
+                        nextElement.focus();
+                      }
                     }, 100);
                   }}
                   data-enter="3"
                   data-enter-type="select"
                   disabled={groups.length === 0}
-                  className="w-full"
+                  className="w-full focus:border-rose-500 focus:ring-rose-500/20 rounded-lg shadow-sm hover:shadow-md transition-all border-rose-200"
                 />
 
                 {groupTotalForm.groupName && (
