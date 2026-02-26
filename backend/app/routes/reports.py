@@ -49,8 +49,12 @@ def render_template(template_name: str, data: dict, template_dir: str = "templat
     with open(template_path, 'r', encoding='utf-8') as f:
         template_content = f.read()
     
-    template = Template(template_content)
-    html = template.render(**data)
+    try:
+        template = Template(template_content)
+        html = template.render(**data)
+    except Exception as e:
+        print(f"Template rendering error: {e}")
+        return f"<h1>Template rendering error: {str(e)}</h1>"
     
     # Add print button with JavaScript
     print_button_html = '''
@@ -75,13 +79,8 @@ def render_template(template_name: str, data: dict, template_dir: str = "templat
     # Insert print button before </body> tag
     html = html.replace('</body>', print_button_html + auto_print_script + '</body>')
     
-    # Fix logo path: use absolute path from templates directory
-    BASE_DIR = Path(__file__).resolve().parent.parent
-    logo_path = BASE_DIR / "templates" / "SKFS_logo.png"
-    if logo_path.exists():
-        html = html.replace('src="SKFS_logo.png"', f'src="file:///{logo_path.as_posix()}"')
-    else:
-        html = html.replace('src="SKFS_logo.png"', 'src="/templates/SKFS_logo.png"')
+    # Fix logo path: use absolute path from static directory
+    html = html.replace('src="SKFS_logo.png"', 'src="/static/images/SKFS_logo.png"')
     
     return html
 
@@ -281,7 +280,7 @@ def get_group_total_report(
             continue
             
         # Get group name from first entry
-        group_name = group_entries[0].get("group_name", "N/A")
+        group_name = group_entries[0].get("group_name", "N/A") if group_entries else "N/A"
         
         # Calculate group totals
         group_qty = 0
