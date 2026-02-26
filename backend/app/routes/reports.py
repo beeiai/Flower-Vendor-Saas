@@ -46,10 +46,10 @@ def render_template(template_name: str, data: dict, template_dir: str = "templat
     if not os.path.exists(template_path):
         return f"<h1>Template not found: {template_name}</h1>"
     
-    with open(template_path, 'r', encoding='utf-8') as f:
-        template_content = f.read()
-    
     try:
+        with open(template_path, 'r', encoding='utf-8') as f:
+            template_content = f.read()
+        
         template = Template(template_content)
         html = template.render(**data)
     except Exception as e:
@@ -76,11 +76,18 @@ def render_template(template_name: str, data: dict, template_dir: str = "templat
     </script>
     '''
     
-    # Insert print button before </body> tag
-    html = html.replace('</body>', print_button_html + auto_print_script + '</body>')
+    # Insert print button before </body> tag if it exists
+    if '</body>' in html:
+        html = html.replace('</body>', print_button_html + auto_print_script + '</body>')
+    else:
+        # If no </body> tag, append the scripts at the end
+        html += print_button_html + auto_print_script
     
     # Fix logo path: use absolute path from static directory
     html = html.replace('src="SKFS_logo.png"', 'src="/static/images/SKFS_logo.png"')
+    
+    # Also handle logo paths with file:// protocol
+    html = html.replace('src="file:', 'src="/static/images/')
     
     return html
 
@@ -195,7 +202,14 @@ def get_ledger_report(
     }
     
     # Render HTML
-    html_content = render_template("ledger_report.html", template_data)
+    try:
+        html_content = render_template("ledger_report.html", template_data)
+    except Exception as e:
+        print(f"Error rendering ledger report template: {e}")
+        return JSONResponse(
+            status_code=500,
+            content={"detail": f"Template rendering error: {str(e)}"}
+        )
     
     if format.lower() == "json":
         return JSONResponse({
@@ -328,7 +342,14 @@ def get_group_total_report(
     }
     
     # Render HTML
-    html_content = render_template("group_total_report.html", template_data)
+    try:
+        html_content = render_template("group_total_report.html", template_data)
+    except Exception as e:
+        print(f"Error rendering group total report template: {e}")
+        return JSONResponse(
+            status_code=500,
+            content={"detail": f"Template rendering error: {str(e)}"}
+        )
     
     if format.lower() == "json":
         return JSONResponse({
@@ -511,7 +532,14 @@ def get_group_total_report_by_group(
     }
     
     # Render HTML using the existing template
-    html_content = render_template("group_total_report.html", template_data)
+    try:
+        html_content = render_template("group_total_report.html", template_data)
+    except Exception as e:
+        print(f"Error rendering group total report by group template: {e}")
+        return JSONResponse(
+            status_code=500,
+            content={"detail": f"Template rendering error: {str(e)}"}
+        )
     
     if format.lower() == "json":
         return JSONResponse({
@@ -714,7 +742,14 @@ def get_group_patti_report(
     }
     
     # Render HTML
-    html_content = render_template("group_patti_report.html", template_data)
+    try:
+        html_content = render_template("group_patti_report.html", template_data)
+    except Exception as e:
+        print(f"Error rendering group patti report template: {e}")
+        return JSONResponse(
+            status_code=500,
+            content={"detail": f"Template rendering error: {str(e)}"}
+        )
     
     if format.lower() == "json":
         return JSONResponse({
@@ -828,7 +863,14 @@ def get_daily_sales_report(
     }
     
     # Render HTML
-    html_content = render_template("daily_sales_report.html", template_data)
+    try:
+        html_content = render_template("daily_sales_report.html", template_data)
+    except Exception as e:
+        print(f"Error rendering daily sales report template: {e}")
+        return JSONResponse(
+            status_code=500,
+            content={"detail": f"Template rendering error: {str(e)}"}
+        )
     
     if format.lower() == "json":
         return JSONResponse({
