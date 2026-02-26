@@ -1305,13 +1305,9 @@ export default function App() {
     const groupPattiGroupRef = useRef(null);
     const groupPattiCommissionRef = useRef(null);
     const groupPattiPrintBtnRef = useRef(null);
-    
-    // Refs for form elements
+    const groupPattiCancelBtnRef = useRef(null);
     const groupPattiFromDateRef = useRef(null);
     const groupPattiToDateRef = useRef(null);
-    const groupPattiCommissionRef = useRef(null);
-    const groupPattiPrintBtnRef = useRef(null);
-    const groupPattiCancelBtnRef = useRef(null);
     
     // Add data-testid for testing
     useEffect(() => {
@@ -1478,12 +1474,9 @@ export default function App() {
     // Refs for form elements
     const groupTotalGroupRef = useRef(null);
     const groupTotalPrintBtnRef = useRef(null);
-    
-    // Refs for form elements
+    const groupTotalCancelBtnRef = useRef(null);
     const groupTotalFromDateRef = useRef(null);
     const groupTotalToDateRef = useRef(null);
-    const groupTotalPrintBtnRef = useRef(null);
-    const groupTotalCancelBtnRef = useRef(null);
     
     // Add data-testid for testing
     useEffect(() => {
