@@ -90,9 +90,13 @@ def render_template(template_name: str, data: dict, template_dir: str = "templat
             import base64
             with open(logo_path, "rb") as img_file:
                 img_data = base64.b64encode(img_file.read()).decode('utf-8')
-                # Replace all logo references with data URI
-                html = html.replace('src="/static/images/SKFS_logo.png"', f'src="data:image/png;base64,{img_data}"')
-                html = html.replace('src="SKFS_logo.png"', f'src="data:image/png;base64,{img_data}"')
+                # Check if the encoded data is reasonable size (less than 1MB to avoid oversized HTML)
+                if len(img_data) < 1000000:  # Less than 1MB
+                    # Replace all logo references with data URI
+                    html = html.replace('src="/static/images/SKFS_logo.png"', f'src="data:image/png;base64,{img_data}"')
+                    html = html.replace('src="SKFS_logo.png"', f'src="data:image/png;base64,{img_data}"')
+                else:
+                    print(f"Logo file too large for data URI ({len(img_data)} bytes), using original path")
         except Exception as e:
             print(f"Error converting logo to data URI: {e}")
             # Fallback: keep the original path if conversion fails
@@ -537,7 +541,11 @@ def get_group_total_report_by_group(
     
     # Calculate metadata
     customer_count = len(customer_data)
-    page_count = estimate_pdf_page_count("group_total", group_count=customer_count)
+    try:
+        page_count = estimate_pdf_page_count("group_total", group_count=customer_count)
+    except Exception as e:
+        print(f"Error calculating page count: {e}")
+        page_count = 1  # Default to 1 page if calculation fails
     generated_at = datetime.now().isoformat()
     current_date = datetime.now().strftime("%d-%m-%Y")
     
