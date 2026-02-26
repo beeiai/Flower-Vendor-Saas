@@ -37,7 +37,7 @@ export default function DailySaleView({ onCancel }) {
 
   const handleGo = useCallback(async () => {
     if (!selectedGroup) {
-      setFeedback({ message: 'Please select a group to view sales', type: 'info' });
+      setFeedback({ message: 'Select a group to proceed', type: 'info' });
       return;
     }
 
@@ -47,7 +47,6 @@ export default function DailySaleView({ onCancel }) {
       const data = await api.getDailySales(fromDate, toDate, null);
       const allRows = Array.isArray(data) ? data : [];
 
-      // Filter to only customers in selected group
       const groupCustomerNames = customers
         .filter(c => c.group === selectedGroup)
         .map(c => c.name);
@@ -56,11 +55,11 @@ export default function DailySaleView({ onCancel }) {
       setRows(filteredRows);
 
       if (filteredRows.length === 0) {
-        setFeedback({ message: 'No sales data found for selected group in this date range', type: 'info' });
+        setFeedback({ message: 'No data found for this selection', type: 'info' });
       }
     } catch (e) {
       console.error(e);
-      setFeedback({ message: 'Failed to fetch sales data. Please try again.', type: 'error' });
+      setFeedback({ message: 'Failed to fetch data', type: 'error' });
       setRows([]);
     } finally {
       setLoading(false);
@@ -72,17 +71,29 @@ export default function DailySaleView({ onCancel }) {
     amount: acc.amount + Number(r.total || 0),
   }), { qty: 0, amount: 0 }), [rows]);
 
-  // Group rows by customer/party for SMS sending
-  const groupedByParty = useMemo(() => {
-    const grouped = {};
-    rows.forEach(r => {
-      if (!grouped[r.party]) grouped[r.party] = [];
-      grouped[r.party].push(r);
-    });
-    return grouped;
-  }, [rows]);
+  // Get all customers in selected group that have sales in the date range
+  const getGroupCustomers = useCallback(async () => {
+    if (!selectedGroup) return [];
+    
+    try {
+      // Fetch sales data for the date range
+      const data = await api.getDailySales(fromDate, toDate, null);
+      const allRows = Array.isArray(data) ? data : [];
+      
+      // Get customer names that have sales in this date range
+      const customersWithSales = new Set(allRows.map(r => r.party));
+      
+      // Filter group customers to only those with sales in date range
+      return customers.filter(c => 
+        c.group === selectedGroup && customersWithSales.has(c.name)
+      );
+    } catch (e) {
+      console.error(e);
+      return [];
+    }
+  }, [selectedGroup, customers, fromDate, toDate]);
 
-  // Get customer phone number and details
+  // Get customer phone number
   const getCustomerPhone = (customerName) => {
     const customer = customers.find(c => c.name === customerName);
     return customer?.phone || null;
@@ -90,16 +101,18 @@ export default function DailySaleView({ onCancel }) {
 
   // Build SMS message for a customer
   const buildSmsForCustomer = (customerName, customerRows) => {
+    if (customerRows.length === 0) return null;
+    
     const lines = [
-      `📦 DAILY SALE REPORT`,
-      `📅 ${fromDate} to ${toDate}`,
-      `👤 ${customerName}`,
-      '─────────────────',
+      'DAILY SALE REPORT',
+      `Date: ${fromDate} to ${toDate}`,
+      `Customer: ${customerName}`,
+      '',
     ];
     customerRows.forEach(r => {
       lines.push(`${r.itemName}: ${Number(r.qty||0).toFixed(2)} kg @ ₹${Number(r.rate||0).toFixed(2)} = ₹${Number(r.total||0).toFixed(2)}`);
     });
-    lines.push('─────────────────');
+    lines.push('');
     const custQty = customerRows.reduce((s, r) => s + Number(r.qty||0), 0);
     const custAmt = customerRows.reduce((s, r) => s + Number(r.total||0), 0);
     lines.push(`Total Qty: ${custQty.toFixed(2)} kg`);
@@ -109,8 +122,8 @@ export default function DailySaleView({ onCancel }) {
 
   // Send SMS to all customers in group
   const handleSendSMS = async () => {
-    if (rows.length === 0) {
-      setFeedback({ message: 'No data to send. Click Go to fetch sales data first.', type: 'info' });
+    if (!selectedGroup) {
+      setFeedback({ message: 'Select a group first', type: 'info' });
       return;
     }
 
@@ -118,21 +131,40 @@ export default function DailySaleView({ onCancel }) {
     setFeedback({ message: '', type: '' });
 
     try {
+      // Get customers in this group with sales in date range
+      const groupCustomers = await getGroupCustomers();
+      
+      if (groupCustomers.length === 0) {
+        setFeedback({ message: 'No customers with sales data in this group for selected dates', type: 'info' });
+        setSmsSending(false);
+        return;
+      }
+
       let successCount = 0;
       let failureCount = 0;
-      const failures = [];
 
-      // Send SMS to each customer
-      for (const [customerName, customerRows] of Object.entries(groupedByParty)) {
-        const phone = getCustomerPhone(customerName);
+      // Fetch fresh data for the date range
+      const data = await api.getDailySales(fromDate, toDate, null);
+      const allRows = Array.isArray(data) ? data : [];
+
+      // Send SMS to each customer in the group
+      for (const customer of groupCustomers) {
+        const phone = customer.phone;
         
         if (!phone) {
           failureCount++;
-          failures.push(`${customerName} (no phone number)`);
           continue;
         }
 
-        const message = buildSmsForCustomer(customerName, customerRows);
+        // Get this customer's sales for the date range
+        const customerRows = allRows.filter(r => r.party === customer.name);
+        
+        // Build message only if customer has sales data
+        const message = buildSmsForCustomer(customer.name, customerRows);
+        
+        if (!message) {
+          continue;
+        }
 
         try {
           // Send via DLT + FastSMS
@@ -144,30 +176,34 @@ export default function DailySaleView({ onCancel }) {
           successCount++;
         } catch (err) {
           failureCount++;
-          failures.push(customerName);
         }
       }
 
-      // Provide feedback
       if (successCount > 0 && failureCount === 0) {
         setFeedback({ 
-          message: `Messages sent successfully to ${successCount} customer${successCount !== 1 ? 's' : ''}`, 
+          message: `Successfully sent to ${successCount} customer${successCount !== 1 ? 's' : ''}`, 
           type: 'success' 
         });
       } else if (successCount > 0 && failureCount > 0) {
         setFeedback({ 
-          message: `Sent to ${successCount} customer${successCount !== 1 ? 's' : ''}, failed for ${failures.join(', ')}`, 
+          message: `Sent to ${successCount}, failed for ${failureCount}`, 
+          type: 'error' 
+        });
+      } else if (failureCount > 0) {
+        setFeedback({ 
+          message: `Failed to send. Check phone numbers.`, 
           type: 'error' 
         });
       } else {
         setFeedback({ 
-          message: `Failed to send messages to ${failures.join(', ')}. Please check phone numbers and try again.`, 
-          type: 'error' 
+          message: `No data to send for any customer in this group`, 
+          type: 'info' 
         });
       }
     } catch (e) {
+      console.error(e);
       setFeedback({ 
-        message: 'Error sending messages. Please try again.', 
+        message: 'Error sending messages', 
         type: 'error' 
       });
     } finally {
@@ -191,7 +227,7 @@ export default function DailySaleView({ onCancel }) {
       window.URL.revokeObjectURL(url);
     } catch (e) {
       setFeedback({ 
-        message: 'Print failed. Please try again.', 
+        message: 'Failed to generate report. Please try again.', 
         type: 'error' 
       });
     }
@@ -355,8 +391,8 @@ export default function DailySaleView({ onCancel }) {
             <button
               ref={smsRef}
               onClick={handleSendSMS}
-              disabled={smsSending || rows.length === 0}
-              title="Send SMS to all customers in selected group"
+              disabled={smsSending || !selectedGroup}
+              title="Send messages to all customers in group"
               onKeyDown={e => {
                 if (e.key === 'Enter') { e.preventDefault(); handleSendSMS(); }
                 else if (e.key === 'ArrowRight' || e.key === 'ArrowDown') { e.preventDefault(); setTimeout(() => printRef.current?.focus(), 0); }
