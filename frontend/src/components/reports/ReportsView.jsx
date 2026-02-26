@@ -24,8 +24,9 @@ const useReportsNavigation = (containerRef) => {
         { element: container.querySelector('[data-enter="2"]'), type: 'date' },
         { element: container.querySelector('[data-enter="3"]'), type: 'select' },
         { element: container.querySelector('[data-enter="4"]'), type: 'select' },
-        { element: container.querySelector('[data-enter="5"]'), type: 'button' },
-        { element: container.querySelector('[data-enter="6"]'), type: 'submit' }
+        { element: container.querySelector('[data-enter="5"]'), type: 'select' },
+        { element: container.querySelector('[data-enter="6"]'), type: 'submit' },
+        { element: container.querySelector('[data-enter="7"]'), type: 'submit' }
       ].filter(item => item.element);
       
       // Find current element index
@@ -38,10 +39,7 @@ const useReportsNavigation = (containerRef) => {
       
       if (currentElement.type === 'select') {
         // For dropdowns, trigger selection and move to next
-        const enterEvent = new KeyboardEvent('keydown', { key: 'Enter' });
-        activeElement.dispatchEvent(enterEvent);
-        
-        // Move to next element after selection
+        // Only dispatch enter event for dropdowns that have an open menu
         setTimeout(() => {
           const nextElement = navigableElements[currentIndex + 1];
           if (nextElement) {
