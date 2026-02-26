@@ -280,8 +280,10 @@ export default function ReportsView({ groups, customers, vehicles, advanceStore 
 												label="Group Name"
 												options={groups.map(g => g.name)}
 												value={groupName}
-												onChange={(value) => {
-													setGroupName(value);
+												onChange={setGroupName}
+												placeholder="Select group"
+												inputRef={groupRef}
+												onSelectionComplete={() => {
 													// After group selection, move to customer dropdown and auto-open it
 													setTimeout(() => {
 														const customerInput = customerRef.current?.querySelector('input');
@@ -293,8 +295,13 @@ export default function ReportsView({ groups, customers, vehicles, advanceStore 
 														}
 													}, 100);
 												}}
-												placeholder="Select group"
-												inputRef={groupRef}
+												onKeyDown={(e) => {
+													// Handle Enter key for navigation
+													if (e.key === 'Enter') {
+														e.preventDefault();
+														// Allow selection to complete, then navigation happens in onSelectionComplete
+													}
+												}}
 												className={`focus:border-rose-500 focus:ring-rose-500/20 rounded-lg shadow-sm hover:shadow-md transition-all border-rose-200 ${filterError && !groupName ? 'border-red-500 ring-2 ring-red-100' : ''}`}
 												error={filterError && !groupName}
 											/>
@@ -312,13 +319,19 @@ export default function ReportsView({ groups, customers, vehicles, advanceStore 
 												label="Vehicle"
 												options={vehicles.map(v => v.name)}
 												value={vehicle}
-												onChange={(value) => {
-													setVehicle(value);
+												onChange={setVehicle}
+												placeholder="(Opt)"
+												inputRef={vehicleRef}
+												onSelectionComplete={() => {
 													// After vehicle selection, move to customer dropdown
 													setTimeout(() => customerRef.current?.querySelector('input')?.focus(), 100);
 												}}
-												placeholder="(Opt)"
-												inputRef={vehicleRef}
+												onKeyDown={(e) => {
+													if (e.key === 'Enter') {
+														e.preventDefault();
+														// Allow selection to complete, then navigation happens in onSelectionComplete
+													}
+												}}
 												className="focus:border-rose-500 focus:ring-rose-500/20 rounded-lg shadow-sm hover:shadow-md transition-all border-rose-200"
 											/>
 											<div className="absolute right-3 top-8 text-slate-700 pointer-events-none">
@@ -340,13 +353,19 @@ export default function ReportsView({ groups, customers, vehicles, advanceStore 
 													label={null}
 													options={filteredCustomers.map(c => c.name)}
 													value={customerName}
-													onChange={(value) => {
-														setCustomerName(value);
+													onChange={setCustomerName}
+													placeholder="Select customer"
+													inputRef={customerRef}
+													onSelectionComplete={() => {
 														// After customer selection, move to Go button
 														setTimeout(() => submitRef.current?.focus(), 100);
 													}}
-													placeholder="Select customer"
-													inputRef={customerRef}
+													onKeyDown={(e) => {
+														if (e.key === 'Enter') {
+															e.preventDefault();
+															// Allow selection to complete, then navigation happens in onSelectionComplete
+														}
+													}}
 													className={`focus:border-rose-500 focus:ring-rose-500/20 rounded-lg shadow-sm hover:shadow-md transition-all border-rose-200 ${filterError && !customerName ? 'border-red-500 ring-2 ring-red-100' : ''}`}
 													error={filterError && !customerName}
 												/>

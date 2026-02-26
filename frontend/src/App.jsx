@@ -1268,21 +1268,20 @@ export default function App() {
 
   const GroupPattiPrintingPage = ({ groups = [] }) => {
     const containerRef = useRef(null);
+    // Remove useEnterController to avoid conflicts with SearchableSelect's built-in navigation
     
-    // Focus refs for navigation
-    const groupPattiFromDateRef = useRef(null);
-    const groupPattiToDateRef = useRef(null);
-    const groupPattiGroupRef = useRef(null);
-    const groupPattiCommissionRef = useRef(null);
-    const groupPattiPrintBtnRef = useRef(null);
-    const groupPattiCancelBtnRef = useRef(null);
+    // Debug: Log groups data
+    useEffect(() => {
+      console.log('GroupPattiPrintingPage - Groups received:', groups);
+      console.log('GroupPattiPrintingPage - Groups length:', groups.length);
+    }, [groups]);
     
-    // Set initial focus
+    // Set initial focus when component mounts
     useEffect(() => {
       setTimeout(() => {
         groupPattiFromDateRef.current?.focus();
       }, 100);
-    }, []);
+    }, [groups]); // Add groups dependency to re-run when groups change
     
     return (
     <div className="flex-1 flex flex-col h-full bg-gradient-to-br from-slate-50 to-slate-100 overflow-hidden" ref={containerRef}>
@@ -1303,12 +1302,8 @@ export default function App() {
                 style={{ height: '46px' }} 
                 value={groupPattiForm.fromDate} 
                 onChange={e => setGroupPattiForm({ ...groupPattiForm, fromDate: e.target.value })} 
-                onKeyDown={(e) => {
-                  if (e.key === 'Enter') {
-                    e.preventDefault();
-                    groupPattiToDateRef.current?.focus();
-                  }
-                }}
+                data-enter="1" 
+                data-enter-type="input"
               />
             </div>
             <div>
@@ -1320,21 +1315,8 @@ export default function App() {
                 style={{ height: '46px' }} 
                 value={groupPattiForm.toDate} 
                 onChange={e => setGroupPattiForm({ ...groupPattiForm, toDate: e.target.value })} 
-                onKeyDown={(e) => {
-                  if (e.key === 'Enter') {
-                    e.preventDefault();
-                    // Focus on group dropdown input
-                    setTimeout(() => {
-                      const groupInput = groupPattiGroupRef.current?.querySelector('input');
-                      if (groupInput) {
-                        groupInput.focus();
-                        // Trigger dropdown open
-                        const enterEvent = new KeyboardEvent('keydown', { key: 'Enter' });
-                        groupInput.dispatchEvent(enterEvent);
-                      }
-                    }, 100);
-                  }
-                }}
+                data-enter="2" 
+                data-enter-type="input"
               />
             </div>
           </div>
@@ -1344,15 +1326,17 @@ export default function App() {
               label="Group Name" 
               options={groups.map(g => g.name)} 
               value={groupPattiForm.groupName} 
-              onChange={(val) => {
-                setGroupPattiForm({ ...groupPattiForm, groupName: val });
-                // Immediately move to next field after selection
-                setTimeout(() => {
-                  groupPattiCommissionRef.current?.focus();
-                }, 100);
-              }} 
+              onChange={(val) => setGroupPattiForm({ ...groupPattiForm, groupName: val })} 
               placeholder="Select group" 
               inputRef={groupPattiGroupRef}
+              onSelectionComplete={() => {
+                // Called when an option is selected via keyboard or mouse
+                setTimeout(() => {
+                  groupPattiCommissionRef.current?.focus();
+                }, 0);
+              }}
+              data-enter="3" 
+              data-enter-type="dropdown"
               className="focus:border-rose-500 focus:ring-rose-500/20 rounded-lg shadow-sm hover:shadow-md transition-all border-rose-200" 
             />
             <div className="absolute right-3 top-8 text-slate-700">
@@ -1371,12 +1355,8 @@ export default function App() {
               style={{ height: '46px' }} 
               value={groupPattiForm.commissionPct} 
               onChange={e => setGroupPattiForm({ ...groupPattiForm, commissionPct: e.target.value })} 
-              onKeyDown={(e) => {
-                if (e.key === 'Enter') {
-                  e.preventDefault();
-                  groupPattiPrintBtnRef.current?.focus();
-                }
-              }}
+              data-enter="4" 
+              data-enter-type="input"
             />
           </div>
 
@@ -1386,13 +1366,8 @@ export default function App() {
               onClick={handleGroupPattiPrint} 
               disabled={!groupPattiForm.groupName || isGroupPattiPrinting} 
               className="flex-1 bg-gradient-to-r from-[#5B55E6] to-[#4A44D0] text-white py-3.5 font-bold uppercase text-sm rounded-xl shadow-lg disabled:opacity-50 hover:from-[#4A44D0] hover:to-[#3A34C0] transition-all hover:shadow-xl active:translate-y-0.5" 
-              onKeyDown={(e) => {
-                if (e.key === 'Enter') {
-                  e.preventDefault();
-                  if (!groupPattiForm.groupName || isGroupPattiPrinting) return;
-                  handleGroupPattiPrint();
-                }
-              }}
+              data-enter="5"
+              data-enter-type="submit"
             >
               {isGroupPattiPrinting ? 'Printing...' : 'Print'}
             </button>
@@ -1400,13 +1375,8 @@ export default function App() {
               ref={groupPattiCancelBtnRef}
               onClick={() => { setIsGroupPattiPrinting(false); setActiveSection('daily'); }} 
               className="flex-1 bg-gradient-to-r from-slate-100 to-slate-200 text-slate-700 py-3.5 font-bold uppercase text-sm border border-slate-300 rounded-xl shadow-md hover:from-slate-200 hover:to-slate-300 transition-all hover:shadow-lg" 
-              onKeyDown={(e) => {
-                if (e.key === 'Enter') {
-                  e.preventDefault();
-                  setIsGroupPattiPrinting(false);
-                  setActiveSection('daily');
-                }
-              }}
+              data-enter="6"
+              data-enter-type="button"
             >Cancel</button>
           </div>
 
@@ -1420,20 +1390,21 @@ export default function App() {
 
   const GroupTotalReportPage = ({ groups = [] }) => {
     const containerRef = useRef(null);
+    // Remove useEnterController to avoid conflicts with SearchableSelect's built-in navigation
     
-    // Focus refs for navigation
-    const groupTotalFromDateRef = useRef(null);
-    const groupTotalToDateRef = useRef(null);
-    const groupTotalGroupRef = useRef(null);
-    const groupTotalPrintBtnRef = useRef(null);
-    const groupTotalCancelBtnRef = useRef(null);
+    // Debug: Log groups data
+    useEffect(() => {
+      console.log('GroupTotalReportPage - Groups received:', groups);
+      console.log('GroupTotalReportPage - Groups length:', groups.length);
+    }, [groups]);
     
-    // Set initial focus
+    // Set initial focus when component mounts
     useEffect(() => {
       setTimeout(() => {
-        groupTotalFromDateRef.current?.focus();
+        // Focus on the first input field (from date)
+        document.querySelector('[data-enter="1"]')?.focus();
       }, 100);
-    }, []);
+    }, [groups]); // Add groups dependency to re-run when groups change
     
     return (
     <div className="flex-1 flex flex-col h-full bg-gradient-to-br from-slate-50 to-slate-100 overflow-hidden" ref={containerRef}>
@@ -1447,60 +1418,23 @@ export default function App() {
           <div className="grid grid-cols-2 gap-5">
             <div>
               <label className="text-xs font-bold uppercase text-slate-600 tracking-widest block mb-2">From Date</label>
-              <input 
-                ref={groupTotalFromDateRef}
-                type="date" 
-                className="w-full border border-rose-200 rounded-lg px-4 py-3 text-sm font-medium bg-white outline-none focus:border-rose-500 focus:ring-2 focus:ring-rose-500/20 shadow-sm hover:shadow-md transition-all" 
-                style={{ height: '46px' }} 
-                value={groupTotalForm.fromDate} 
-                onChange={e => setGroupTotalForm({ ...groupTotalForm, fromDate: e.target.value })} 
-                onKeyDown={(e) => {
-                  if (e.key === 'Enter') {
-                    e.preventDefault();
-                    groupTotalToDateRef.current?.focus();
-                  }
-                }}
-              />
+              <input type="date" className="w-full border border-rose-200 rounded-lg px-4 py-3 text-sm font-medium bg-white outline-none focus:border-rose-500 focus:ring-2 focus:ring-rose-500/20 shadow-sm hover:shadow-md transition-all" style={{ height: '46px' }} value={groupTotalForm.fromDate} onChange={e => setGroupTotalForm({ ...groupTotalForm, fromDate: e.target.value })} data-enter="1" data-enter-type="input" />
             </div>
             <div>
               <label className="text-xs font-bold uppercase text-slate-600 tracking-widest block mb-2">To Date</label>
-              <input 
-                ref={groupTotalToDateRef}
-                type="date" 
-                className="w-full border border-rose-200 rounded-lg px-4 py-3 text-sm font-medium bg-white outline-none focus:border-rose-500 focus:ring-2 focus:ring-rose-500/20 shadow-sm hover:shadow-md transition-all" 
-                style={{ height: '46px' }} 
-                value={groupTotalForm.toDate} 
-                onChange={e => setGroupTotalForm({ ...groupTotalForm, toDate: e.target.value })} 
-                onKeyDown={(e) => {
-                  if (e.key === 'Enter') {
-                    e.preventDefault();
-                    // Focus on group dropdown
-                    setTimeout(() => {
-                      const groupInput = groupTotalGroupRef.current?.querySelector('input');
-                      if (groupInput) {
-                        groupInput.focus();
-                      }
-                    }, 100);
-                  }
-                }}
-              />
+              <input type="date" className="w-full border border-rose-200 rounded-lg px-4 py-3 text-sm font-medium bg-white outline-none focus:border-rose-500 focus:ring-2 focus:ring-rose-500/20 shadow-sm hover:shadow-md transition-all" style={{ height: '46px' }} value={groupTotalForm.toDate} onChange={e => setGroupTotalForm({ ...groupTotalForm, toDate: e.target.value })} data-enter="2" data-enter-type="input" />
             </div>
           </div>
 
           <div>
             <label className="text-xs font-bold uppercase text-slate-600 tracking-widest block mb-2">Group Name (Optional)</label>
             <SearchableSelect
-              inputRef={groupTotalGroupRef}
               placeholder={groups.length > 0 ? "Select Group (Leave empty for all groups)" : "No Groups Available"}
-              options={groups.length > 0 ? ["", ...groups.map(g => g.name)] : []}
+              options={[{ label: "All Groups", value: "" }, ...groups.map(g => ({ label: g.name, value: g.name }))]}
               value={groupTotalForm.groupName}
-              onChange={(value) => {
-                setGroupTotalForm({ ...groupTotalForm, groupName: value });
-                // Move to print button after selection
-                setTimeout(() => {
-                  groupTotalPrintBtnRef.current?.focus();
-                }, 100);
-              }}
+              onChange={(value) => setGroupTotalForm({ ...groupTotalForm, groupName: value })}
+              data-enter="3"
+              data-enter-type="select"
               disabled={groups.length === 0}
             />
             {groups.length === 0 && (
@@ -1510,31 +1444,19 @@ export default function App() {
 
           <div className="flex gap-4 pt-3">
             <button 
-              ref={groupTotalPrintBtnRef}
               onClick={handleGroupTotalPrint} 
               disabled={isGroupTotalPrinting} 
               className="flex-1 bg-gradient-to-r from-[#5B55E6] to-[#4A44D0] text-white py-3.5 font-bold uppercase text-sm rounded-xl shadow-lg disabled:opacity-50 hover:from-[#4A44D0] hover:to-[#3A34C0] transition-all hover:shadow-xl active:translate-y-0.5" 
-              onKeyDown={(e) => {
-                if (e.key === 'Enter') {
-                  e.preventDefault();
-                  if (isGroupTotalPrinting) return;
-                  handleGroupTotalPrint();
-                }
-              }}
+              data-enter="4"
+              data-enter-type="submit"
             >
               {isGroupTotalPrinting ? 'Printing...' : groupTotalForm.groupName ? 'Print Selected Group' : 'Print All Groups'}
             </button>
             <button 
-              ref={groupTotalCancelBtnRef}
               onClick={() => { setIsGroupTotalPrinting(false); setActiveSection('daily'); }} 
               className="flex-1 bg-gradient-to-r from-slate-100 to-slate-200 text-slate-700 py-3.5 font-bold uppercase text-sm border border-slate-300 rounded-xl shadow-md hover:from-slate-200 hover:to-slate-300 transition-all hover:shadow-lg" 
-              onKeyDown={(e) => {
-                if (e.key === 'Enter') {
-                  e.preventDefault();
-                  setIsGroupTotalPrinting(false);
-                  setActiveSection('daily');
-                }
-              }}
+              data-enter="5"
+              data-enter-type="button"
             >
               Cancel
             </button>
@@ -1553,20 +1475,21 @@ export default function App() {
   // New component for group-specific total report
   const GroupSpecificTotalReportPage = ({ groups = [] }) => {
     const containerRef = useRef(null);
+    // Remove useEnterController to avoid conflicts with SearchableSelect's built-in navigation
     
-    // Focus refs for navigation
-    const groupSpecificTotalStartDateRef = useRef(null);
-    const groupSpecificTotalEndDateRef = useRef(null);
-    const groupSpecificTotalGroupRef = useRef(null);
-    const groupSpecificTotalPrintBtnRef = useRef(null);
-    const groupSpecificTotalCancelBtnRef = useRef(null);
+    // Debug: Log groups data
+    useEffect(() => {
+      console.log('GroupSpecificTotalReportPage - Groups received:', groups);
+      console.log('GroupSpecificTotalReportPage - Groups length:', groups.length);
+    }, [groups]);
     
-    // Set initial focus
+    // Set initial focus when component mounts
     useEffect(() => {
       setTimeout(() => {
-        groupSpecificTotalStartDateRef.current?.focus();
+        // Focus on the first input field (start date)
+        document.querySelector('[data-enter="1"]')?.focus();
       }, 100);
-    }, []);
+    }, [groups]); // Add groups dependency to re-run when groups change
     
     return (
     <div className="flex-1 flex flex-col h-full bg-gradient-to-br from-slate-50 to-slate-100 overflow-hidden" ref={containerRef}>
@@ -1580,60 +1503,23 @@ export default function App() {
           <div className="grid grid-cols-2 gap-5">
             <div>
               <label className="text-xs font-bold uppercase text-slate-600 tracking-widest block mb-2">Start Date</label>
-              <input 
-                ref={groupSpecificTotalStartDateRef}
-                type="date" 
-                className="w-full border border-rose-200 rounded-lg px-4 py-3 text-sm font-medium bg-white outline-none focus:border-rose-500 focus:ring-2 focus:ring-rose-500/20 shadow-sm hover:shadow-md transition-all" 
-                style={{ height: '46px' }} 
-                value={groupSpecificTotalForm.startDate} 
-                onChange={e => setGroupSpecificTotalForm({ ...groupSpecificTotalForm, startDate: e.target.value })} 
-                onKeyDown={(e) => {
-                  if (e.key === 'Enter') {
-                    e.preventDefault();
-                    groupSpecificTotalEndDateRef.current?.focus();
-                  }
-                }}
-              />
+              <input type="date" className="w-full border border-rose-200 rounded-lg px-4 py-3 text-sm font-medium bg-white outline-none focus:border-rose-500 focus:ring-2 focus:ring-rose-500/20 shadow-sm hover:shadow-md transition-all" style={{ height: '46px' }} value={groupSpecificTotalForm.startDate} onChange={e => setGroupSpecificTotalForm({ ...groupSpecificTotalForm, startDate: e.target.value })} data-enter="1" data-enter-type="input" />
             </div>
             <div>
               <label className="text-xs font-bold uppercase text-slate-600 tracking-widest block mb-2">End Date</label>
-              <input 
-                ref={groupSpecificTotalEndDateRef}
-                type="date" 
-                className="w-full border border-rose-200 rounded-lg px-4 py-3 text-sm font-medium bg-white outline-none focus:border-rose-500 focus:ring-2 focus:ring-rose-500/20 shadow-sm hover:shadow-md transition-all" 
-                style={{ height: '46px' }} 
-                value={groupSpecificTotalForm.endDate} 
-                onChange={e => setGroupSpecificTotalForm({ ...groupSpecificTotalForm, endDate: e.target.value })} 
-                onKeyDown={(e) => {
-                  if (e.key === 'Enter') {
-                    e.preventDefault();
-                    // Focus on group dropdown
-                    setTimeout(() => {
-                      const groupInput = groupSpecificTotalGroupRef.current?.querySelector('input');
-                      if (groupInput) {
-                        groupInput.focus();
-                      }
-                    }, 100);
-                  }
-                }}
-              />
+              <input type="date" className="w-full border border-rose-200 rounded-lg px-4 py-3 text-sm font-medium bg-white outline-none focus:border-rose-500 focus:ring-2 focus:ring-rose-500/20 shadow-sm hover:shadow-md transition-all" style={{ height: '46px' }} value={groupSpecificTotalForm.endDate} onChange={e => setGroupSpecificTotalForm({ ...groupSpecificTotalForm, endDate: e.target.value })} data-enter="2" data-enter-type="input" />
             </div>
           </div>
 
           <div>
             <label className="text-xs font-bold uppercase text-slate-600 tracking-widest block mb-2">Group Name</label>
             <SearchableSelect
-              inputRef={groupSpecificTotalGroupRef}
               placeholder={groups.length > 0 ? "Select Group Name" : "No Groups Available"}
-              options={groups.map(g => g.name)}
+              options={groups.map(g => ({ label: g.name, value: g.name }))}
               value={groupSpecificTotalForm.groupName}
-              onChange={(value) => {
-                setGroupSpecificTotalForm({ ...groupSpecificTotalForm, groupName: value });
-                // Move to print button after selection
-                setTimeout(() => {
-                  groupSpecificTotalPrintBtnRef.current?.focus();
-                }, 100);
-              }}
+              onChange={(value) => setGroupSpecificTotalForm({ ...groupSpecificTotalForm, groupName: value })}
+              data-enter="3"
+              data-enter-type="select"
               disabled={groups.length === 0}
             />
             {groups.length === 0 && (
@@ -1643,31 +1529,19 @@ export default function App() {
 
           <div className="flex gap-4 pt-3">
             <button 
-              ref={groupSpecificTotalPrintBtnRef}
               onClick={handleGroupSpecificTotalPrint} 
               disabled={isGroupSpecificTotalPrinting} 
               className="flex-1 bg-gradient-to-r from-[#5B55E6] to-[#4A44D0] text-white py-3.5 font-bold uppercase text-sm rounded-xl shadow-lg disabled:opacity-50 hover:from-[#4A44D0] hover:to-[#3A34C0] transition-all hover:shadow-xl active:translate-y-0.5" 
-              onKeyDown={(e) => {
-                if (e.key === 'Enter') {
-                  e.preventDefault();
-                  if (isGroupSpecificTotalPrinting) return;
-                  handleGroupSpecificTotalPrint();
-                }
-              }}
+              data-enter="4"
+              data-enter-type="submit"
             >
               {isGroupSpecificTotalPrinting ? 'Printing...' : 'Print Selected Group'}
             </button>
             <button 
-              ref={groupSpecificTotalCancelBtnRef}
               onClick={() => { setIsGroupSpecificTotalPrinting(false); setActiveSection('daily'); }} 
               className="flex-1 bg-gradient-to-r from-slate-100 to-slate-200 text-slate-700 py-3.5 font-bold uppercase text-sm border border-slate-300 rounded-xl shadow-md hover:from-slate-200 hover:to-slate-300 transition-all hover:shadow-lg" 
-              onKeyDown={(e) => {
-                if (e.key === 'Enter') {
-                  e.preventDefault();
-                  setIsGroupSpecificTotalPrinting(false);
-                  setActiveSection('daily');
-                }
-              }}
+              data-enter="5"
+              data-enter-type="button"
             >
               Cancel
             </button>
