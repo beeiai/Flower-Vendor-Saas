@@ -91,7 +91,6 @@ export default function ReportsView({ groups, customers, vehicles, advanceStore 
 	const vehicleRef = useRef(null);
 	const customerRef = useRef(null);
 	const submitRef = useRef(null);
-	const printButtonRef = useRef(null);
 
 	const [state, setState] = useState(DEFAULT_STATES.reports);
 
@@ -186,8 +185,6 @@ export default function ReportsView({ groups, customers, vehicles, advanceStore 
 			if (selectedCustomerObj?.id) {
 				const data = await api.listTransactions(selectedCustomerObj.id);
 				setRows(Array.isArray(data) ? data : []);
-				// After successful data load, move focus to Print button
-				setTimeout(() => printButtonRef.current?.focus(), 100);
 			} else {
 				setRows([]);
 			}
@@ -290,11 +287,7 @@ export default function ReportsView({ groups, customers, vehicles, advanceStore 
 			}
 			window.URL.revokeObjectURL(url);
 			// After printing, move focus back to Group selection
-			setTimeout(() => {
-				groupRef.current?.querySelector('input')?.focus();
-				// Also scroll to top of form to ensure visibility
-				groupRef.current?.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
-			}, 100);
+			setTimeout(() => groupRef.current?.querySelector('input')?.focus(), 100);
 		} catch (error) {
 			console.error('Print error:', error);
 			alert(`Print failed: ${error.message}`);
@@ -360,11 +353,14 @@ export default function ReportsView({ groups, customers, vehicles, advanceStore 
 												placeholder="Select group"
 												inputRef={groupRef}
 												onSelectionComplete={() => {
-													// After group selection, move to customer dropdown
+													// After group selection, move to customer dropdown and auto-open it
 													setTimeout(() => {
-														const customerInput = customerRef.current;
+														const customerInput = customerRef.current?.querySelector('input');
 														if (customerInput) {
 															customerInput.focus();
+															// Trigger dropdown open
+															const event = new KeyboardEvent('keydown', { key: 'Enter' });
+															customerInput.dispatchEvent(event);
 														}
 													}, 100);
 												}}
@@ -411,7 +407,6 @@ export default function ReportsView({ groups, customers, vehicles, advanceStore 
 													placeholder="Select customer"
 													inputRef={customerRef}
 													onSelectionComplete={() => {
-														// After customer selection, move to Go button
 														setTimeout(() => submitRef.current?.focus(), 100);
 													}}
 													data-enter="5"
@@ -598,7 +593,6 @@ export default function ReportsView({ groups, customers, vehicles, advanceStore 
 
 			<div className="shrink-0 border-t border-slate-200 bg-gradient-to-r from-slate-50 to-white p-4 flex justify-start gap-3">
 				<button
-					ref={printButtonRef}
 					type="button"
 					className="px-5 bg-gradient-to-r from-emerald-600 to-emerald-700 text-white text-xs font-bold rounded-lg hover:from-emerald-500 hover:to-emerald-600 transition-all shadow-md hover:shadow-lg flex items-center gap-2"
 					style={{ height: '40px' }}

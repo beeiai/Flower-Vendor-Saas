@@ -435,7 +435,7 @@ function GroupPrintingView({ groups, customers, ledgerStore, onCancel }) {
       }
       
       // Use the new preview system instead of direct PDF download
-      const htmlContent = await api.getGroupPattiReport(
+      const response = await api.getGroupPattiReport(
         selectedGroup.id,
         fromDate,
         toDate,
@@ -445,7 +445,7 @@ function GroupPrintingView({ groups, customers, ledgerStore, onCancel }) {
       // Open preview in new tab (similar to group total report)
       const previewWindow = window.open('about:blank', '_blank');
       if (previewWindow) {
-        previewWindow.document.write(htmlContent);
+        previewWindow.document.write(response.data);
         previewWindow.document.close();
         previewWindow.focus();
         // Add print button to the preview
@@ -908,27 +908,32 @@ export default function App() {
         throw new Error('Group not found');
       }
       
-      // Generate the print report from backend (returns HTML directly)
-      const htmlContent = await api.getGroupPattiReport(
+      // Generate the print report from backend
+      const response = await api.getGroupPattiReport(
         selectedGroup.id,
         groupPattiForm.fromDate,
         groupPattiForm.toDate,
         groupPattiForm.commissionPct
       );
       
-      // Open preview in new tab (since it's HTML content)
-      const previewWindow = window.open('about:blank', '_blank');
-      if (previewWindow) {
-        previewWindow.document.write(htmlContent);
-        previewWindow.document.close();
-        previewWindow.focus();
-      } else {
-        // Fallback: open in current window
-        const newWindow = window.open('about:blank');
-        newWindow.document.write(htmlContent);
-        newWindow.document.close();
-        newWindow.focus();
+      // Handle PDF preview (open in new tab for print preview)
+      const blob = response.data;
+      const url = window.URL.createObjectURL(blob);
+      
+      // Open in new tab for preview and print
+      const previewWindow = window.open(url, '_blank');
+      if (!previewWindow) {
+        // Fallback to download if popup blocked
+        const a = document.createElement('a');
+        a.href = url;
+        a.download = `group_patti_report_${group}_${new Date().toISOString().slice(0, 10)}.pdf`;
+        document.body.appendChild(a);
+        a.click();
+        document.body.removeChild(a);
       }
+      
+      // Clean up the URL object
+      window.URL.revokeObjectURL(url);
     } catch (error) {
       console.error('Print error:', error);
       alert(`Print failed: ${error.message}`);
