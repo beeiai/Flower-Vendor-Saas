@@ -1240,135 +1240,6 @@ export default function App() {
     moreMenu: useRef(null)
   };
 
-  // Unified navigation hook for all report components - Industry Standard Implementation
-  const useReportNavigation = (containerRef, elementOrder) => {
-    useEffect(() => {
-      const handleKeyDown = (e) => {
-        if (e.key !== 'Enter') return;
-        
-        const activeElement = document.activeElement;
-        const container = containerRef.current;
-        
-        // Only handle Enter key within this container
-        if (!container || !container.contains(activeElement)) return;
-        
-        // Check if the active element is a SearchableSelect input
-        const isSearchableSelectInput = activeElement.closest('[data-searchable-select]');
-        
-        // If it's a SearchableSelect input, let SearchableSelect handle it
-        // The SearchableSelect component will call onSelectionComplete when appropriate
-        if (isSearchableSelectInput) {
-          return;
-        }
-        
-        // Prevent default Enter behavior for non-SearchableSelect elements
-        e.preventDefault();
-        
-        // Get all navigable elements in specified order
-        const navigableElements = elementOrder
-          .map(selector => ({
-            element: container.querySelector(selector),
-            type: selector.includes('[data-enter-type="select"]') ? 'select' :
-                  selector.includes('[data-enter-type="submit"]') ? 'submit' :
-                  selector.includes('[data-enter-type="button"]') ? 'button' :
-                  selector.includes('input[type="date"]') ? 'date' : 'input'
-          }))
-          .filter(item => item.element);
-        
-        // Find current element index
-        const currentIndex = navigableElements.findIndex(item => item.element === activeElement);
-        
-        if (currentIndex === -1) return;
-        
-        // Handle different element types
-        const currentElement = navigableElements[currentIndex];
-        
-        if (currentElement.type === 'select') {
-          // For dropdowns, always move to next element (even if already selected)
-          const nextElement = navigableElements[currentIndex + 1];
-          if (nextElement) {
-            setTimeout(() => {
-              nextElement.element.focus();
-            }, 100);
-          }
-        } else if (currentElement.type === 'submit' || currentElement.type === 'button') {
-          // Trigger button click
-          activeElement.click();
-        } else {
-          // For other elements, move to next
-          const nextElement = navigableElements[currentIndex + 1];
-          if (nextElement) {
-            nextElement.element.focus();
-          }
-        }
-      };
-      
-      document.addEventListener('keydown', handleKeyDown);
-      return () => document.removeEventListener('keydown', handleKeyDown);
-    }, [containerRef, elementOrder]);
-  };
-
-  // Focus management hook for report components - Fixed Implementation
-  const useReportFocus = (initialFocusRef, dependencies = []) => {
-    useEffect(() => {
-      // Set initial focus with proper delay for state updates
-      const setFocus = () => {
-        if (!initialFocusRef.current) return;
-        
-        // For SearchableSelect components, we need to access the actual input element
-        // The ref points to the container div, so we need to find the input inside
-        const container = initialFocusRef.current;
-        const input = container.querySelector && container.querySelector('input');
-        
-        if (input) {
-          // Small delay to ensure DOM is ready
-          setTimeout(() => {
-            input.focus();
-            input.select(); // Select all text for better UX
-          }, 100);
-        } else if (container.focus) {
-          // For regular inputs/buttons
-          container.focus();
-          // If it's a text input, select all content
-          if (container.type === 'text' || container.type === 'number') {
-            setTimeout(() => {
-              container.select();
-            }, 10);
-          }
-        }
-      };
-      
-      // Initial focus setup
-      setTimeout(setFocus, 200); // Increased delay to ensure components are mounted
-      
-      // Also set up a mutation observer to handle dynamic content
-      const observer = new MutationObserver(() => {
-        setTimeout(setFocus, 100);
-      });
-      
-      if (initialFocusRef.current) {
-        observer.observe(initialFocusRef.current, {
-          childList: true,
-          subtree: true
-        });
-      }
-      
-      return () => {
-        observer.disconnect();
-      };
-    }, [initialFocusRef, ...dependencies]);
-  };
-
-  // Form reset hook for report components
-  const useReportFormReset = (resetFunction, triggerDependencies = []) => {
-    useEffect(() => {
-      // Reset form when dependencies change (like navigating away)
-      if (triggerDependencies.length > 0) {
-        resetFunction();
-      }
-    }, triggerDependencies);
-  };
-
   // Standalone keyboard navigation for Group Patti Printing Page
   const useGroupPattiNavigation = (containerRef) => {
     useEffect(() => {
@@ -1430,28 +1301,10 @@ export default function App() {
   const GroupPattiPrintingPage = ({ groups = [] }) => {
     const containerRef = useRef(null);
     
-    // Use unified navigation system with proper element order
-    const elementOrder = [
-      '[data-enter="1"]', // From Date
-      '[data-enter="2"]', // To Date
-      '[data-enter="3"]', // Group Name (select)
-      '[data-enter="4"]', // Commission (input)
-      '[data-enter="5"]', // Print Button (submit)
-      '[data-enter="6"]'  // Cancel Button (button)
-    ];
-    
-    // Ensure the unified navigation system is actually used
-    useReportNavigation(containerRef, elementOrder);
-    
-    // Use focus management hook
+    // Refs for form elements
     const groupPattiGroupRef = useRef(null);
-    useReportFocus(groupPattiGroupRef, [groups.length, groupPattiForm.groupName]);
-    
-    // Use form reset hook
-    useReportFormReset(() => {
-      setGroupPattiForm(DEFAULT_STATES.groupPattiForm);
-      setIsGroupPattiPrinting(false);
-    }, [activeSection]);
+    const groupPattiCommissionRef = useRef(null);
+    const groupPattiPrintBtnRef = useRef(null);
     
     // Refs for form elements
     const groupPattiFromDateRef = useRef(null);
@@ -1499,8 +1352,6 @@ export default function App() {
                   style={{ height: '46px' }} 
                   value={groupPattiForm.fromDate} 
                   onChange={e => setGroupPattiForm({ ...groupPattiForm, fromDate: e.target.value })} 
-                  data-enter="1"
-                  data-enter-type="date"
                 />
               </div>
               <div>
@@ -1512,8 +1363,6 @@ export default function App() {
                   style={{ height: '46px' }} 
                   value={groupPattiForm.toDate} 
                   onChange={e => setGroupPattiForm({ ...groupPattiForm, toDate: e.target.value })} 
-                  data-enter="2"
-                  data-enter-type="date"
                 />
               </div>
             </div>
@@ -1533,33 +1382,7 @@ export default function App() {
                 onChange={(val) => setGroupPattiForm({ ...groupPattiForm, groupName: val })} 
                 placeholder="Select group" 
                 inputRef={groupPattiGroupRef}
-                onSelectionComplete={() => {
-                  // After any group selection/deselection, always move to next field
-                  setTimeout(() => {
-                    const nextElement = groupPattiCommissionRef.current;
-                    if (nextElement) {
-                      nextElement.focus();
-                      // Select all text for easy editing
-                      if (nextElement.select) {
-                        nextElement.select();
-                      }
-                    } else {
-                      // Fallback: try to find the next element by selector
-                      const container = groupPattiGroupRef.current?.closest('[data-testid="group-patti"]');
-                      if (container) {
-                        const nextInput = container.querySelector('[data-enter="4"]');
-                        if (nextInput) {
-                          nextInput.focus();
-                          if (nextInput.select) {
-                            nextInput.select();
-                          }
-                        }
-                      }
-                    }
-                  }, 150);
-                }}
-                data-enter="3"
-                data-enter-type="select"
+                onSelectionComplete={() => setTimeout(() => groupPattiCommissionRef.current?.focus(), 0)}
                 className="focus:border-rose-500 focus:ring-rose-500/20 rounded-lg shadow-sm hover:shadow-md transition-all border-rose-200 w-full" 
               />
               <div className="absolute right-3 top-8 text-slate-700 pointer-events-none">
@@ -1585,8 +1408,7 @@ export default function App() {
                 style={{ height: '46px' }} 
                 value={groupPattiForm.commissionPct} 
                 onChange={e => setGroupPattiForm({ ...groupPattiForm, commissionPct: e.target.value })} 
-                data-enter="4"
-                data-enter-type="input"
+
               />
             </div>
           </div>
@@ -1599,8 +1421,7 @@ export default function App() {
                 onClick={handleGroupPattiPrint} 
                 disabled={!groupPattiForm.groupName || isGroupPattiPrinting} 
                 className="flex-1 bg-gradient-to-r from-[#5B55E6] to-[#4A44D0] text-white py-3.5 font-bold uppercase text-sm rounded-xl shadow-lg disabled:opacity-50 hover:from-[#4A44D0] hover:to-[#3A34C0] transition-all hover:shadow-xl active:translate-y-0.5" 
-                data-enter="5"
-                data-enter-type="submit"
+
               >
                 {isGroupPattiPrinting ? (
                   <span className="flex items-center justify-center gap-2">
@@ -1618,8 +1439,7 @@ export default function App() {
                 ref={groupPattiCancelBtnRef}
                 onClick={() => { setIsGroupPattiPrinting(false); setActiveSection('daily'); }} 
                 className="flex-1 bg-gradient-to-r from-slate-100 to-slate-200 text-slate-700 py-3.5 font-bold uppercase text-sm border border-slate-300 rounded-xl shadow-md hover:from-slate-200 hover:to-slate-300 transition-all hover:shadow-lg" 
-                data-enter="6"
-                data-enter-type="button"
+
               >
                 <span className="flex items-center justify-center gap-2">
                   <X className="w-4 h-4" />
@@ -1650,87 +1470,14 @@ export default function App() {
     </div>
   );};
 
-  // Standalone keyboard navigation for Group Total Report Page
-  const useGroupTotalNavigation = (containerRef) => {
-    useEffect(() => {
-      const handleKeyDown = (e) => {
-        if (e.key !== 'Enter') return;
-        
-        const activeElement = document.activeElement;
-        const container = containerRef.current;
-        
-        // Only handle Enter key within this container
-        if (!container || !container.contains(activeElement)) return;
-        
-        // Prevent default Enter behavior
-        e.preventDefault();
-        
-        // Get all navigable elements in order - always include group name field
-        const navigableElements = [
-          { element: container.querySelector('[data-enter="1"]'), type: 'date' },
-          { element: container.querySelector('[data-enter="2"]'), type: 'date' },
-          { element: container.querySelector('[data-enter="3"]'), type: 'select' },
-          { element: container.querySelector('[data-enter="4"]'), type: 'submit' },
-          { element: container.querySelector('[data-enter="5"]'), type: 'button' }
-        ].filter(item => item.element);
-        
-        // Find current element index
-        const currentIndex = navigableElements.findIndex(item => item.element === activeElement);
-        
-        if (currentIndex === -1) return;
-        
-        // Handle different element types
-        const currentElement = navigableElements[currentIndex];
-        
-        if (currentElement.type === 'select') {
-          // For dropdowns, always move to next element (even if already selected)
-          const nextElement = navigableElements[currentIndex + 1];
-          if (nextElement) {
-            setTimeout(() => {
-              nextElement.element.focus();
-            }, 100);
-          }
-        } else if (currentElement.type === 'submit' || currentElement.type === 'button') {
-          // Trigger button click
-          activeElement.click();
-        } else {
-          // For other elements, move to next
-          const nextElement = navigableElements[currentIndex + 1];
-          if (nextElement) {
-            nextElement.element.focus();
-          }
-        }
-      };
-      
-      document.addEventListener('keydown', handleKeyDown);
-      return () => document.removeEventListener('keydown', handleKeyDown);
-    }, [containerRef]);
-  };
+
 
   const GroupTotalReportPage = ({ groups = [] }) => {
     const containerRef = useRef(null);
     
-    // Use unified navigation system with proper element order
-    const elementOrder = [
-      '[data-enter="1"]', // From Date
-      '[data-enter="2"]', // To Date
-      '[data-enter="3"]', // Group Name (select)
-      '[data-enter="4"]', // Print Button (submit)
-      '[data-enter="5"]'  // Cancel Button (button)
-    ];
-    
-    // Ensure the unified navigation system is actually used
-    useReportNavigation(containerRef, elementOrder);
-    
-    // Use focus management hook
+    // Refs for form elements
     const groupTotalGroupRef = useRef(null);
-    useReportFocus(groupTotalGroupRef, [groups.length, groupTotalForm.groupName]);
-    
-    // Use form reset hook
-    useReportFormReset(() => {
-      setGroupTotalForm(DEFAULT_STATES.groupTotalForm);
-      setIsGroupTotalPrinting(false);
-    }, [activeSection]);
+    const groupTotalPrintBtnRef = useRef(null);
     
     // Refs for form elements
     const groupTotalFromDateRef = useRef(null);
@@ -1777,8 +1524,6 @@ export default function App() {
                   style={{ height: '46px' }} 
                   value={groupTotalForm.fromDate} 
                   onChange={e => setGroupTotalForm({ ...groupTotalForm, fromDate: e.target.value })} 
-                  data-enter="1"
-                  data-enter-type="date"
                 />
               </div>
               <div>
@@ -1790,8 +1535,6 @@ export default function App() {
                   style={{ height: '46px' }} 
                   value={groupTotalForm.toDate} 
                   onChange={e => setGroupTotalForm({ ...groupTotalForm, toDate: e.target.value })} 
-                  data-enter="2"
-                  data-enter-type="date"
                 />
               </div>
             </div>
@@ -1812,26 +1555,7 @@ export default function App() {
                   value={groupTotalForm.groupName}
                   onChange={(value) => setGroupTotalForm({ ...groupTotalForm, groupName: value })}
                   inputRef={groupTotalGroupRef}
-                  onSelectionComplete={() => {
-                    // After any group selection/deselection, always move to next field
-                    setTimeout(() => {
-                      const nextElement = groupTotalPrintBtnRef.current;
-                      if (nextElement) {
-                        nextElement.focus();
-                      } else {
-                        // Fallback: try to find the next element by selector
-                        const container = groupTotalGroupRef.current?.closest('[data-testid="group-total"]');
-                        if (container) {
-                          const nextButton = container.querySelector('[data-enter="4"]');
-                          if (nextButton) {
-                            nextButton.focus();
-                          }
-                        }
-                      }
-                    }, 150);
-                  }}
-                  data-enter="3"
-                  data-enter-type="select"
+                  onSelectionComplete={() => setTimeout(() => groupTotalPrintBtnRef.current?.focus(), 0)}
                   disabled={groups.length === 0}
                   className="w-full focus:border-rose-500 focus:ring-rose-500/20 rounded-lg shadow-sm hover:shadow-md transition-all border-rose-200"
                 />
@@ -1898,8 +1622,6 @@ export default function App() {
                 ref={groupTotalCancelBtnRef}
                 onClick={() => { setIsGroupTotalPrinting(false); setActiveSection('daily'); }} 
                 className="flex-1 bg-gradient-to-r from-slate-100 to-slate-200 text-slate-700 py-3.5 font-bold uppercase text-sm border border-slate-300 rounded-xl shadow-md hover:from-slate-200 hover:to-slate-300 transition-all hover:shadow-lg" 
-                data-enter="5"
-                data-enter-type="button"
               >
                 <span className="flex items-center justify-center gap-2">
                   <X className="w-4 h-4" />
@@ -2113,9 +1835,6 @@ export default function App() {
             vehicles={vehicles} 
             advanceStore={advanceStore} 
             onCancel={() => setActiveSection('daily')}
-            useReportNavigation={useReportNavigation}
-            useReportFocus={useReportFocus}
-            useReportFormReset={useReportFormReset}
           />
         )}
         {activeSection === 'group-total' && (

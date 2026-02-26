@@ -15,8 +15,7 @@ function todayISO() {
 	return new Date().toISOString().split('T')[0];
 }
 
-export default function ReportsView({ groups, customers, vehicles, advanceStore = {}, onCancel, 
-  useReportNavigation, useReportFocus, useReportFormReset }) {
+export default function ReportsView({ groups, customers, vehicles, advanceStore = {}, onCancel }) {
 	const [filterError, setFilterError] = useState("");
 	
 	const [state, setState] = useState(DEFAULT_STATES.reports);
@@ -33,27 +32,10 @@ export default function ReportsView({ groups, customers, vehicles, advanceStore 
 
 	const containerRef = useRef(null);
 	
-	// Use unified navigation system with proper element order
-	const elementOrder = [
-	  '[data-enter="1"]', // From Date
-	  '[data-enter="2"]', // To Date
-	  '[data-enter="3"]', // Group Name (select)
-	  '[data-enter="4"]', // Vehicle (select)
-	  '[data-enter="5"]', // Customer Name (select)
-	  '[data-enter="6"]', // Submit Button (submit)
-	  '[data-enter="7"]'  // Print Button (submit)
-	];
-	
-	useReportNavigation(containerRef, elementOrder);
-	
-	// Use focus management hook
+	// Refs for form elements
 	const groupRef = useRef(null);
-	useReportFocus(groupRef, []);
-	
-	// Use form reset hook
-	useReportFormReset(() => {
-	  setState(DEFAULT_STATES.reports);
-	}, []);
+	const customerRef = useRef(null);
+	const submitRef = useRef(null);
 	
 	// Refs for form elements
 	const fromDateRef = useRef(null);
@@ -278,8 +260,7 @@ export default function ReportsView({ groups, customers, vehicles, advanceStore 
 											style={{ height: '40px' }}
 											value={fromDate}
 											onChange={e => setFromDate(e.target.value)}
-											data-enter="1"
-											data-enter-type="date"
+											
 										/>
 									</div>
 
@@ -292,8 +273,7 @@ export default function ReportsView({ groups, customers, vehicles, advanceStore 
 											style={{ height: '36px' }}
 											value={toDate}
 											onChange={e => setToDate(e.target.value)}
-											data-enter="2"
-											data-enter-type="date"
+											
 										/>
 									</div>
 
@@ -318,8 +298,7 @@ export default function ReportsView({ groups, customers, vehicles, advanceStore 
 														}
 													}, 100);
 												}}
-												data-enter="3"
-												data-enter-type="select"
+												
 												className={`focus:border-rose-500 focus:ring-rose-500/20 rounded-lg shadow-sm hover:shadow-md transition-all border-rose-200 w-full ${filterError && !groupName ? 'border-red-500 ring-2 ring-red-100' : ''}`}
 												error={filterError && !groupName}
 											/>
@@ -339,8 +318,7 @@ export default function ReportsView({ groups, customers, vehicles, advanceStore 
 													// After vehicle selection, move to customer dropdown
 													setTimeout(() => customerRef.current?.focus(), 100);
 												}}
-												data-enter="4"
-												data-enter-type="select"
+												
 												className="focus:border-rose-500 focus:ring-rose-500/20 rounded-lg shadow-sm hover:shadow-md transition-all border-rose-200 w-full"
 											/>
 										</div>
@@ -363,8 +341,7 @@ export default function ReportsView({ groups, customers, vehicles, advanceStore 
 													onSelectionComplete={() => {
 														setTimeout(() => submitRef.current?.focus(), 100);
 													}}
-													data-enter="5"
-													data-enter-type="select"
+													
 													className={`focus:border-rose-500 focus:ring-rose-500/20 rounded-lg shadow-sm hover:shadow-md transition-all border-rose-200 w-full ${filterError && !customerName ? 'border-red-500 ring-2 ring-red-100' : ''}`}
 													error={filterError && !customerName}
 												/>
@@ -413,8 +390,7 @@ export default function ReportsView({ groups, customers, vehicles, advanceStore 
 											className="w-full bg-gradient-to-r from-rose-500 to-rose-600 text-white text-sm font-bold rounded-lg hover:from-rose-600 hover:to-rose-700 transition-all shadow-md hover:shadow-lg focus:outline-none focus:ring-2 focus:ring-rose-500 focus:ring-offset-2"
 											style={{ height: '36px' }}
 											onClick={handleFilterSubmit}
-											data-enter="6"
-											data-enter-type="submit"
+											
 										>
 											Go
 										</button>
@@ -551,8 +527,7 @@ export default function ReportsView({ groups, customers, vehicles, advanceStore 
 					className="px-5 bg-gradient-to-r from-emerald-600 to-emerald-700 text-white text-xs font-bold rounded-lg hover:from-emerald-500 hover:to-emerald-600 transition-all shadow-md hover:shadow-lg flex items-center gap-2"
 					style={{ height: '40px' }}
 					onClick={handlePrint}
-					data-enter="7"
-					data-enter-type="submit"
+					
 				>
 					<svg xmlns="http://www.w3.org/2000/svg" className="h-3.5 w-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
 						<path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17 17h2a2 2 0 002-2v-4a2 2 0 00-2-2H5a2 2 0 00-2 2v4a2 2 0 002 2h2m2 4h6a2 2 0 002-2v-4a2 2 0 00-2-2H9a2 2 0 00-2 2v4a2 2 0 002 2zm8-12V5a2 2 0 00-2-2H9a2 2 0 00-2 2v4h10z" />
