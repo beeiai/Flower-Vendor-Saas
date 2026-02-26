@@ -318,9 +318,10 @@ export const api = {
     if (itemName) params.item_name = itemName;
     const response = await request('/reports/daily-sales', { params });
     
-    // Handle the new JSON response structure
+    // Handle various possible response structures
     if (response && Array.isArray(response.data)) {
-      return response.data;  // Return the data array
+      // New format: { data: [...], metadata: {...} }
+      return response.data;  
     }
     
     // Fallback for direct array response
@@ -328,9 +329,25 @@ export const api = {
       return response;
     }
     
-    // Fallback for entries property
+    // Legacy format: { entries: [...] }
     if (response && Array.isArray(response.entries)) {
       return response.entries;
+    }
+    
+    // Another possible format: { html: "...", metadata: {...} } - parse if needed
+    if (response && typeof response.html === 'string') {
+      try {
+        // Attempt to extract data from HTML if it contains JSON data
+        const parser = new DOMParser();
+        const doc = parser.parseFromString(response.html, 'text/html');
+        const dataScript = doc.querySelector('#daily-sales-data, [data-daily-sales-data], script[data-type="daily-sales"]');
+        if (dataScript && dataScript.textContent) {
+          const extractedData = JSON.parse(dataScript.textContent);
+          return Array.isArray(extractedData) ? extractedData : [];
+        }
+      } catch (parseErr) {
+        console.warn('Could not parse HTML response for daily sales data:', parseErr);
+      }
     }
     
     console.error('Unexpected response format from daily-sales endpoint:', response);

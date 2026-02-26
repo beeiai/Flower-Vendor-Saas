@@ -72,7 +72,26 @@ export default function DailySaleView({ onCancel }) {
       // Fetch sales data for the date range
       const data = await api.getDailySales(fromDate, toDate, null);
       console.log('Raw data received:', data);
-      const allRows = Array.isArray(data) ? data : [];
+      
+      // Handle the response based on its structure
+      let allRows = [];
+      if (Array.isArray(data)) {
+        // If data is directly an array
+        allRows = data;
+      } else if (data && typeof data === 'object' && Array.isArray(data.data)) {
+        // If data is in the format { data: [...] }
+        allRows = data.data;
+      } else if (data && typeof data === 'object' && Array.isArray(data.entries)) {
+        // If data is in the format { entries: [...] }
+        allRows = data.entries;
+      } else {
+        console.error('Unexpected data structure:', data);
+        setFeedback({ message: 'Unexpected data format received', type: 'error' });
+        setRows([]);
+        setLoading(false);
+        return;
+      }
+      
       console.log('Processed rows:', allRows.length);
 
       // Filter rows to only this group's customers using group information from backend
