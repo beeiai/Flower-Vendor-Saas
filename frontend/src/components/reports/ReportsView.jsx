@@ -36,13 +36,9 @@ export default function ReportsView({ groups, customers, vehicles, advanceStore 
 	const groupRef = useRef(null);
 	const customerRef = useRef(null);
 	const submitRef = useRef(null);
-	
-	// Refs for form elements
 	const fromDateRef = useRef(null);
 	const toDateRef = useRef(null);
 	const vehicleRef = useRef(null);
-	const customerRef = useRef(null);
-	const submitRef = useRef(null);
 
 	const setFromDate = useCallback((value) => setState(prev => ({ ...prev, fromDate: value })), []);
 	const setToDate = useCallback((value) => setState(prev => ({ ...prev, toDate: value })), []);
