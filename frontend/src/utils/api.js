@@ -395,9 +395,17 @@ export const api = {
     return request('/print-docx/group-patti-report/', { params });
   },
   
-  getGroupTotalReport: async (groupId, startDate, endDate) => {
+  getGroupPattiReportHtml: async (groupId, fromDate, toDate, commissionPct = 12.0) => {
+    const params = { 
+      from_date: fromDate, 
+      to_date: toDate, 
+      format: 'html'
+    };
+    return request(`/reports/group-patti/${groupId}`, { params });
+  },
+  
+  getGroupTotalReport: async (startDate, endDate) => {
     // For group total report (all groups), use the reports endpoint
-    // This endpoint doesn't require group_id parameter
     const params = { 
       from_date: startDate, 
       to_date: endDate,

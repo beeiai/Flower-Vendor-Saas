@@ -197,7 +197,7 @@ export function SearchableSelect({ label, options, value, onChange, placeholder,
 
 	return (
 		<div
-			className={`flex flex-col gap-0 w-full relative searchable-select-container ${className}`}
+			className={`flex flex-col gap-0 w-full relative ${className}`}
 			ref={containerRef}
 			style={style}
 			data-searchable-select
