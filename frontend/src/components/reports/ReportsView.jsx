@@ -362,7 +362,7 @@ export default function ReportsView({ groups, customers, vehicles, advanceStore 
 												onSelectionComplete={() => {
 													// After group selection, move to customer dropdown
 													setTimeout(() => {
-														const customerInput = customerRef.current?.querySelector('input');
+														const customerInput = customerRef.current;
 														if (customerInput) {
 															customerInput.focus();
 														}
@@ -387,7 +387,7 @@ export default function ReportsView({ groups, customers, vehicles, advanceStore 
 												inputRef={vehicleRef}
 												onSelectionComplete={() => {
 													// After vehicle selection, move to customer dropdown
-													setTimeout(() => customerRef.current?.querySelector('input')?.focus(), 100);
+													setTimeout(() => customerRef.current?.focus(), 100);
 												}}
 												data-enter="4"
 												data-enter-type="select"
