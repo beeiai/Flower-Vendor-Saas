@@ -231,7 +231,7 @@ def get_ledger_report(
 
 
 # ================================================
-# GROUP TOTAL REPORT (Aggregated by group)
+# NEW GROUP TOTAL REPORT ENDPOINT (Aggregated by group)
 # ================================================
 @router.get("/group-total")
 def get_group_total_report(
@@ -258,65 +258,60 @@ def get_group_total_report(
     if from_date is None or to_date is None:
         from_date, to_date = get_default_date_range()
     
-    # Get data
-    group_data = get_group_total_data(
-        vendor_id=user.vendor_id,
-        from_date=from_date,
-        to_date=to_date,
-        db=db
-    )
+    # Query groups for the vendor
+    vendor_groups = db.query(FarmerGroup).filter(FarmerGroup.vendor_id == user.vendor_id).all()
     
     # Calculate metadata
-    group_count = group_data.get("group_count", 0)
+    group_count = len(vendor_groups)
     page_count = estimate_pdf_page_count("group_total", group_count=group_count)
     generated_at = datetime.now().isoformat()
     current_date = datetime.now().strftime("%d-%m-%Y")
     
-    # Transform groups to match template expectations - implement proper grouping
-    from collections import defaultdict
-    
-    # Group data properly by group_id for summary view
-    grouped_data = defaultdict(list)
-    for entry in group_data.get("entries", []):
-        group_id = entry.get("group_id")
-        if group_id:
-            grouped_data[group_id].append(entry)
-    
+    # Prepare rows with group data
     rows = []
     overall_qty = 0
     overall_amount = 0
     overall_paid = 0
     overall_balance = 0
     
-    # Create summary rows for each group (what the template expects)
-    for group_id, group_entries in grouped_data.items():
-        if not group_entries:
-            continue
-            
-        # Get group name from first entry
-        group_name = group_entries[0].get("group_name", "N/A") if group_entries else "N/A"
+    for group in vendor_groups:
+        # Query collection items for this group's farmers within the date range
+        results = db.query(
+            CollectionItem.qty_kg,
+            CollectionItem.rate_per_kg,
+            CollectionItem.paid_amount
+        ).join(
+            Farmer, CollectionItem.farmer_id == Farmer.id
+        ).filter(
+            Farmer.group_id == group.id,
+            CollectionItem.vendor_id == user.vendor_id,
+            CollectionItem.date >= from_date,
+            CollectionItem.date <= to_date
+        ).all()
         
-        # Calculate group totals
+        # Calculate totals for this group
         group_qty = 0
         group_amount = 0
         group_paid = 0
         
-        # Process all entries for this group to get totals
-        for entry in group_entries:
-            qty = float(entry.get("qty", 0))
-            amount = float(entry.get("amount", 0))
-            paid = float(entry.get("paid", 0)) if entry.get("paid") is not None else 0.0
+        for row in results:
+            qty = float(row.qty_kg or 0)
+            rate = float(row.rate_per_kg or 0)
+            paid = float(row.paid_amount or 0)
             
             group_qty += qty
-            group_amount += amount
+            group_amount += qty * rate
             group_paid += paid
         
-        # Get customer count for this group
-        customer_count = len(set(entry.get("farmer_id") for entry in group_entries if entry.get("farmer_id")))
+        # Count customers in this group
+        customer_count = db.query(Farmer).filter(
+            Farmer.group_id == group.id,
+            Farmer.vendor_id == user.vendor_id
+        ).count()
         
-        # Add summary row for this group (this is what the template expects)
+        # Add summary row for this group
         rows.append({
-            "group_name": group_name,
+            "group_name": group.name,
             "customer_count": customer_count,
             "total_qty": f"{group_qty:.2f}",
             "total_amount": f"{group_amount:.2f}"
@@ -338,7 +333,7 @@ def get_group_total_report(
         "to_date": to_date.strftime("%d-%m-%Y"),
         "current_date": current_date,
         "generated_at": generated_at,
-        "group_count": len(grouped_data)
+        "group_count": group_count
     }
     
     # Render HTML
@@ -371,7 +366,7 @@ def get_group_total_report(
 
 
 # ================================================
-# GROUP TOTAL REPORT BY SPECIFIC GROUP NAME
+# NEW GROUP TOTAL REPORT BY SPECIFIC GROUP NAME
 # ================================================
 @router.get("/group-total-by-group")
 def get_group_total_report_by_group(
@@ -562,7 +557,7 @@ def get_group_total_report_by_group(
 
 
 # ================================================
-# GROUP PATTI REPORT (Detailed by group and farmer)
+# NEW GROUP PATTI REPORT ENDPOINT (Detailed by group and farmer)
 # ================================================
 @router.get("/group-patti/{group_id}")
 def get_group_patti_report(
@@ -591,33 +586,37 @@ def get_group_patti_report(
     if from_date is None or to_date is None:
         from_date, to_date = get_default_date_range()
     
-    # Get data
-    patti_data = get_group_patti_data(
-        vendor_id=user.vendor_id,
-        group_id=group_id,
-        from_date=from_date,
-        to_date=to_date,
-        db=db
-    )
-    # Set commission default to 12 if missing or 0
-    commission_pct = 12.0
-    group_commission = patti_data.get("group", {}).get("commission_percent")
-    try:
-        group_commission = float(group_commission)
-        if group_commission > 0:
-            commission_pct = group_commission
-    except (TypeError, ValueError):
-        pass
+    # Get the group for the vendor
+    group = db.query(FarmerGroup).filter(
+        FarmerGroup.id == group_id,
+        FarmerGroup.vendor_id == user.vendor_id
+    ).first()
     
-    if not patti_data.get("group"):
+    if not group:
         return JSONResponse(
             status_code=404,
             content={"detail": "Group not found"}
         )
     
+    # Query farmers in this group
+    farmers = db.query(Farmer).filter(
+        Farmer.group_id == group_id,
+        Farmer.vendor_id == user.vendor_id
+    ).all()
+    
     # Calculate metadata
-    farmer_count = patti_data.get("farmer_count", 0)
-    entry_count = patti_data.get("entry_count", 0)
+    farmer_count = len(farmers)
+    
+    # Calculate entry count by querying collection items
+    entry_count = db.query(CollectionItem).join(
+        Farmer, CollectionItem.farmer_id == Farmer.id
+    ).filter(
+        Farmer.group_id == group_id,
+        CollectionItem.vendor_id == user.vendor_id,
+        CollectionItem.date >= from_date,
+        CollectionItem.date <= to_date
+    ).count()
+    
     page_count = estimate_pdf_page_count(
         "group_patti",
         record_count=entry_count,
@@ -626,7 +625,10 @@ def get_group_patti_report(
     )
     generated_at = datetime.now().isoformat()
     current_date = datetime.now().strftime("%d-%m-%Y")
-    group_name = patti_data.get("group", {}).get("name", "Unknown Group")
+    group_name = group.name
+    
+    # Set commission default to 12%
+    commission_pct = 12.0
     
     # Transform farmers data to match template expectations
     customers = []
@@ -642,34 +644,41 @@ def get_group_patti_report(
     summary_paid = 0
     summary_balance = 0
     
-    for farmer in patti_data.get("farmers", []):
-        farmer_name = farmer.get("name", "Unknown")
-        farmer_id = farmer.get("id", 0)
+    for farmer in farmers:
+        # Query collection items for this farmer within the date range
+        farmer_items = db.query(CollectionItem).filter(
+            CollectionItem.farmer_id == farmer.id,
+            CollectionItem.vendor_id == user.vendor_id,
+            CollectionItem.date >= from_date,
+            CollectionItem.date <= to_date
+        ).order_by(CollectionItem.date).all()
+        
+        farmer_name = farmer.name
+        farmer_id = farmer.id
         # Use phone as address if available
-        farmer_address = farmer.get("phone", "N/A")
-        # Transform entries (from reports_db) to transactions (for template)
+        farmer_address = farmer.phone or "N/A"
+        # Transform entries to transactions
         transactions = []
         farmer_qty = 0
         farmer_amount = 0
         farmer_paid = 0
         farmer_balance = 0
-        for entry in farmer.get("entries", []):
-            qty = float(entry.get("qty", 0))
-            rate = float(entry.get("rate", 0))
-            # Use the pre-calculated amount from the database instead of recalculating
-            total = float(entry.get("amount", 0))
-            paid = float(entry.get("paid", 0))  # Get paid amount from the entry
-            # Get vehicle info - entries from get_group_patti_data now have proper date/vehicle fields
-            vehicle = entry.get("vehicle_name", entry.get("vehicle", "N/A"))
-            # Date is already formatted as DD-MM-YYYY from reports_db
-            date_val = entry.get("date", "N/A")
+        for item in farmer_items:
+            qty = float(item.qty_kg or 0)
+            rate = float(item.rate_per_kg or 0)
+            total = qty * rate
+            paid = float(item.paid_amount or 0)
+            # Get vehicle info
+            vehicle = item.vehicle_name or item.vehicle_number or "N/A"
+            # Format date as DD-MM-YYYY
+            date_val = item.date.strftime("%d-%m-%Y") if item.date else "N/A"
             transactions.append({
                 "date": date_val,
                 "vehicle": vehicle,
                 "qty": f"{qty:.2f}",
                 "price": f"{rate:.2f}",
                 "total": f"{total:.2f}",
-                "luggage": "0.00",  # Default to 0.00, could be from transport_cost if available
+                "luggage": "0.00",  # Default to 0.00
                 "paid": f"{paid:.2f}",  # Use actual paid amount
                 "amount": f"{(total - paid):.2f}"  # Amount after paid deduction
             })
@@ -680,13 +689,13 @@ def get_group_patti_report(
         # Calculate commission based on commission percentage
         farmer_commission = farmer_amount * (commission_pct / 100)
         farmer_net_amount = farmer_amount - farmer_commission
-        farmer_final_total = farmer_net_amount + 0.0 - farmer_paid  # luggage is 0.0 for now
+        farmer_final_total = farmer_net_amount - farmer_paid  # Net amount minus paid
         
         customers.append({
             "id": farmer_id,
             "name": farmer_name,
             "address": farmer_address,
-            "ledger_name": farmer.get("code", "N/A"),
+            "ledger_name": farmer.code or "N/A",
             "balance": f"{farmer_final_total:.2f}",
             "transactions": transactions,
             "total_qty": f"{farmer_qty:.2f}",

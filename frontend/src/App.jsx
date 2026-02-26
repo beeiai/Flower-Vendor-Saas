@@ -1208,55 +1208,100 @@ export default function App() {
     moreMenu: useRef(null)
   };
 
-  // Standalone keyboard navigation for Group Patti Printing Page
+  // NEW IMPROVED keyboard navigation for Group Patti Printing Page with dropdown navigation
   const useGroupPattiNavigation = (containerRef) => {
     useEffect(() => {
       const handleKeyDown = (e) => {
-        if (e.key !== 'Enter') return;
-        
         const activeElement = document.activeElement;
         const container = containerRef.current;
         
-        // Only handle Enter key within this container
+        // Only handle key events within this container
         if (!container || !container.contains(activeElement)) return;
         
-        // Prevent default Enter behavior
-        e.preventDefault();
-        
-        // Get all navigable elements in order - always include group name field
-        const navigableElements = [
-          { element: container.querySelector('[data-enter="1"]'), type: 'date' },
-          { element: container.querySelector('[data-enter="2"]'), type: 'date' },
-          { element: container.querySelector('[data-enter="3"]'), type: 'select' },
-          { element: container.querySelector('[data-enter="4"]'), type: 'input' },
-          { element: container.querySelector('[data-enter="5"]'), type: 'submit' },
-          { element: container.querySelector('[data-enter="6"]'), type: 'button' }
-        ].filter(item => item.element);
-        
-        // Find current element index
-        const currentIndex = navigableElements.findIndex(item => item.element === activeElement);
-        
-        if (currentIndex === -1) return;
-        
-        // Handle different element types
-        const currentElement = navigableElements[currentIndex];
-        
-        if (currentElement.type === 'select') {
-          // For dropdowns, move to next element after selection
-          setTimeout(() => {
+        // Handle Enter key for form navigation
+        if (e.key === 'Enter') {
+          e.preventDefault();
+          
+          // Get all navigable elements in order
+          const navigableElements = [
+            { element: container.querySelector('[data-enter="1"]'), type: 'date' },
+            { element: container.querySelector('[data-enter="2"]'), type: 'date' },
+            { element: container.querySelector('[data-enter="3"]'), type: 'select' },
+            { element: container.querySelector('[data-enter="4"]'), type: 'input' },
+            { element: container.querySelector('[data-enter="5"]'), type: 'submit' },
+            { element: container.querySelector('[data-enter="6"]'), type: 'button' }
+          ].filter(item => item.element);
+          
+          // Find current element index
+          const currentIndex = navigableElements.findIndex(item => item.element === activeElement);
+          
+          if (currentIndex === -1) return;
+          
+          // Handle different element types
+          const currentElement = navigableElements[currentIndex];
+          
+          if (currentElement.type === 'select') {
+            // For dropdowns, move to next element after selection
+            setTimeout(() => {
+              const nextElement = navigableElements[currentIndex + 1];
+              if (nextElement) {
+                nextElement.element.focus();
+              }
+            }, 100);
+          } else if (currentElement.type === 'submit' || currentElement.type === 'button') {
+            // Trigger button click
+            activeElement.click();
+          } else {
+            // For other elements, move to next
             const nextElement = navigableElements[currentIndex + 1];
             if (nextElement) {
               nextElement.element.focus();
             }
-          }, 100);
-        } else if (currentElement.type === 'submit' || currentElement.type === 'button') {
-          // Trigger button click
-          activeElement.click();
-        } else {
-          // For other elements, move to next
-          const nextElement = navigableElements[currentIndex + 1];
-          if (nextElement) {
-            nextElement.element.focus();
+          }
+        }
+        // Handle arrow keys for dropdown navigation
+        else if ((e.key === 'ArrowUp' || e.key === 'ArrowDown') && activeElement.tagName === 'INPUT' && activeElement.classList.contains('dropdown-input')) {
+          e.preventDefault();
+          
+          // Find the dropdown container
+          const dropdownContainer = activeElement.closest('.searchable-select-container');
+          if (!dropdownContainer) return;
+          
+          const options = dropdownContainer.querySelectorAll('.option-item:not([disabled])');
+          if (!options.length) return;
+          
+          // Find currently selected option
+          let currentIndex = -1;
+          options.forEach((opt, idx) => {
+            if (opt.classList.contains('selected') || opt.classList.contains('focused')) {
+              currentIndex = idx;
+            }
+          });
+          
+          // Calculate new index based on arrow key
+          let newIndex;
+          if (e.key === 'ArrowUp') {
+            newIndex = currentIndex <= 0 ? options.length - 1 : currentIndex - 1;
+          } else { // ArrowDown
+            newIndex = currentIndex < 0 ? 0 : (currentIndex + 1) % options.length;
+          }
+          
+          // Remove previous selection and highlight new option
+          options.forEach(opt => {
+            opt.classList.remove('focused');
+          });
+          
+          if (options[newIndex]) {
+            options[newIndex].classList.add('focused');
+            options[newIndex].scrollIntoView({ block: 'nearest' });
+            
+            // Update the input value with the selected option
+            const selectedValue = options[newIndex].textContent.trim();
+            activeElement.value = selectedValue;
+            
+            // Trigger a change event to update React state
+            const event = new Event('change', { bubbles: true });
+            activeElement.dispatchEvent(event);
           }
         }
       };
@@ -1396,54 +1441,99 @@ export default function App() {
     </div>
   );};
 
-  // Standalone keyboard navigation for Group Total Report Page
+  // NEW IMPROVED keyboard navigation for Group Total Report Page with dropdown navigation
   const useGroupTotalNavigation = (containerRef) => {
     useEffect(() => {
       const handleKeyDown = (e) => {
-        if (e.key !== 'Enter') return;
-        
         const activeElement = document.activeElement;
         const container = containerRef.current;
         
-        // Only handle Enter key within this container
+        // Only handle key events within this container
         if (!container || !container.contains(activeElement)) return;
         
-        // Prevent default Enter behavior
-        e.preventDefault();
-        
-        // Get all navigable elements in order - always include group name field
-        const navigableElements = [
-          { element: container.querySelector('[data-enter="1"]'), type: 'date' },
-          { element: container.querySelector('[data-enter="2"]'), type: 'date' },
-          { element: container.querySelector('[data-enter="3"]'), type: 'select' },
-          { element: container.querySelector('[data-enter="4"]'), type: 'submit' },
-          { element: container.querySelector('[data-enter="5"]'), type: 'button' }
-        ].filter(item => item.element);
-        
-        // Find current element index
-        const currentIndex = navigableElements.findIndex(item => item.element === activeElement);
-        
-        if (currentIndex === -1) return;
-        
-        // Handle different element types
-        const currentElement = navigableElements[currentIndex];
-        
-        if (currentElement.type === 'select') {
-          // For dropdowns, move to next element after selection
-          setTimeout(() => {
+        // Handle Enter key for form navigation
+        if (e.key === 'Enter') {
+          e.preventDefault();
+          
+          // Get all navigable elements in order
+          const navigableElements = [
+            { element: container.querySelector('[data-enter="1"]'), type: 'date' },
+            { element: container.querySelector('[data-enter="2"]'), type: 'date' },
+            { element: container.querySelector('[data-enter="3"]'), type: 'select' },
+            { element: container.querySelector('[data-enter="4"]'), type: 'submit' },
+            { element: container.querySelector('[data-enter="5"]'), type: 'button' }
+          ].filter(item => item.element);
+          
+          // Find current element index
+          const currentIndex = navigableElements.findIndex(item => item.element === activeElement);
+          
+          if (currentIndex === -1) return;
+          
+          // Handle different element types
+          const currentElement = navigableElements[currentIndex];
+          
+          if (currentElement.type === 'select') {
+            // For dropdowns, move to next element after selection
+            setTimeout(() => {
+              const nextElement = navigableElements[currentIndex + 1];
+              if (nextElement) {
+                nextElement.element.focus();
+              }
+            }, 100);
+          } else if (currentElement.type === 'submit' || currentElement.type === 'button') {
+            // Trigger button click
+            activeElement.click();
+          } else {
+            // For other elements, move to next
             const nextElement = navigableElements[currentIndex + 1];
             if (nextElement) {
               nextElement.element.focus();
             }
-          }, 100);
-        } else if (currentElement.type === 'submit' || currentElement.type === 'button') {
-          // Trigger button click
-          activeElement.click();
-        } else {
-          // For other elements, move to next
-          const nextElement = navigableElements[currentIndex + 1];
-          if (nextElement) {
-            nextElement.element.focus();
+          }
+        }
+        // Handle arrow keys for dropdown navigation
+        else if ((e.key === 'ArrowUp' || e.key === 'ArrowDown') && activeElement.tagName === 'INPUT' && activeElement.classList.contains('dropdown-input')) {
+          e.preventDefault();
+          
+          // Find the dropdown container
+          const dropdownContainer = activeElement.closest('.searchable-select-container');
+          if (!dropdownContainer) return;
+          
+          const options = dropdownContainer.querySelectorAll('.option-item:not([disabled])');
+          if (!options.length) return;
+          
+          // Find currently selected option
+          let currentIndex = -1;
+          options.forEach((opt, idx) => {
+            if (opt.classList.contains('selected') || opt.classList.contains('focused')) {
+              currentIndex = idx;
+            }
+          });
+          
+          // Calculate new index based on arrow key
+          let newIndex;
+          if (e.key === 'ArrowUp') {
+            newIndex = currentIndex <= 0 ? options.length - 1 : currentIndex - 1;
+          } else { // ArrowDown
+            newIndex = currentIndex < 0 ? 0 : (currentIndex + 1) % options.length;
+          }
+          
+          // Remove previous selection and highlight new option
+          options.forEach(opt => {
+            opt.classList.remove('focused');
+          });
+          
+          if (options[newIndex]) {
+            options[newIndex].classList.add('focused');
+            options[newIndex].scrollIntoView({ block: 'nearest' });
+            
+            // Update the input value with the selected option
+            const selectedValue = options[newIndex].textContent.trim();
+            activeElement.value = selectedValue;
+            
+            // Trigger a change event to update React state
+            const event = new Event('change', { bubbles: true });
+            activeElement.dispatchEvent(event);
           }
         }
       };
@@ -1532,7 +1622,7 @@ export default function App() {
                 data-enter="3"
                 data-enter-type="select"
                 disabled={groups.length === 0}
-                className="w-full"
+                className="w-full focus:border-rose-500 focus:ring-rose-500/20 rounded-lg shadow-sm hover:shadow-md transition-all border-rose-200"
               />
 
               {groupTotalForm.groupName && (

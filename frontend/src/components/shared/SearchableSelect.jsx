@@ -181,8 +181,8 @@ export function SearchableSelect({ label, options, value, onChange, placeholder,
 					<button
 						key={idx}
 						type="button"
-						className={`w-full text-left px-3 py-2.5 text-sm font-medium border-b border-slate-100 last:border-0 transition-colors ${
-							highlight === idx ? 'bg-primary-600 text-white' : 'hover:bg-slate-50 text-slate-700'
+						className={`w-full text-left px-3 py-2.5 text-sm font-medium border-b border-slate-100 last:border-0 transition-colors option-item ${
+							highlight === idx ? 'bg-primary-600 text-white focused' : 'hover:bg-slate-50 text-slate-700'
 						}`}
 						onMouseDown={(e) => { e.preventDefault(); handleSelect(opt); }}
 					>
@@ -197,7 +197,7 @@ export function SearchableSelect({ label, options, value, onChange, placeholder,
 
 	return (
 		<div
-			className={`flex flex-col gap-0 w-full relative ${className}`}
+			className={`flex flex-col gap-0 w-full relative searchable-select-container ${className}`}
 			ref={containerRef}
 			style={style}
 			data-searchable-select
@@ -216,7 +216,7 @@ export function SearchableSelect({ label, options, value, onChange, placeholder,
 					placeholder={placeholder}
 					className={`w-full bg-white border ${
 						error ? 'border-red-400 ring-2 ring-red-50' : 'border-slate-300'
-					} rounded-sm px-3 py-2 text-sm font-medium outline-none focus:border-primary-500 focus:ring-2 focus:ring-primary-50 transition-all`}
+					} rounded-sm px-3 py-2 text-sm font-medium outline-none focus:border-primary-500 focus:ring-2 focus:ring-primary-50 transition-all dropdown-input`}
 					style={{ height: '36px' }}
 					value={searchTerm}
 					onFocus={() => {
