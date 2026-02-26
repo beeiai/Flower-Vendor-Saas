@@ -38,12 +38,21 @@ const useReportsNavigation = (containerRef) => {
       const currentElement = navigableElements[currentIndex];
       
       if (currentElement.type === 'select') {
-        // For dropdowns, trigger selection and move to next
-        // Only dispatch enter event for dropdowns that have an open menu
+        // For dropdowns, move to next element after selection
+        // However, for the group selection (data-enter="3"), we want to move to customer (data-enter="5") instead of vehicle (data-enter="4")
         setTimeout(() => {
-          const nextElement = navigableElements[currentIndex + 1];
-          if (nextElement) {
-            nextElement.element.focus();
+          if (activeElement.dataset.enter === '3') { // Group selection
+            // Move to customer dropdown instead of vehicle
+            const customerElement = container.querySelector('[data-enter="5"]');
+            if (customerElement) {
+              customerElement.focus();
+            }
+          } else {
+            // For other selections, move to next element
+            const nextElement = navigableElements[currentIndex + 1];
+            if (nextElement) {
+              nextElement.element.focus();
+            }
           }
         }, 100);
       } else if (currentElement.type === 'button' || currentElement.type === 'submit') {
