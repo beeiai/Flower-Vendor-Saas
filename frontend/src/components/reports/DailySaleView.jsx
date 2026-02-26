@@ -66,14 +66,22 @@ export default function DailySaleView({ onCancel }) {
     }
 
     setLoading(true);
-    setFeedback({ message: '', type: '' });
+    setFeedback({ message: 'Fetching data...', type: 'info' });
     try {
+      console.log('Fetching daily sales data for:', { fromDate, toDate, selectedGroup });
       // Fetch sales data for the date range
       const data = await api.getDailySales(fromDate, toDate, null);
+      console.log('Raw data received:', data);
       const allRows = Array.isArray(data) ? data : [];
+      console.log('Processed rows:', allRows.length);
 
       // Filter rows to only this group's customers using group information from backend
-      const filteredRows = allRows.filter(r => r.group === selectedGroup);
+      const filteredRows = allRows.filter(r => {
+        const match = r.group === selectedGroup;
+        console.log('Row group check:', { rowGroup: r.group, selectedGroup, match });
+        return match;
+      });
+      console.log('Filtered rows:', filteredRows.length);
       setRows(filteredRows);
 
       if (filteredRows.length === 0) {
@@ -82,8 +90,8 @@ export default function DailySaleView({ onCancel }) {
         setFeedback({ message: `Found ${filteredRows.length} sales records`, type: 'success' });
       }
     } catch (e) {
-      console.error(e);
-      setFeedback({ message: 'Failed to fetch data', type: 'error' });
+      console.error('Error fetching data:', e);
+      setFeedback({ message: 'Failed to fetch data: ' + e.message, type: 'error' });
       setRows([]);
     } finally {
       setLoading(false);

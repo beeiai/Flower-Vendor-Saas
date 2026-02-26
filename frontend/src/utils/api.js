@@ -312,11 +312,29 @@ export const api = {
   getDailySales: async (fromDate, toDate, itemName = null) => {
     const params = {
       from_date: fromDate,
-      to_date: toDate
+      to_date: toDate,
+      format: 'json'  // Request JSON format instead of HTML
     };
     if (itemName) params.item_name = itemName;
-    const rows = await request('/reports/daily-sales', { params });
-    return rows;
+    const response = await request('/reports/daily-sales', { params });
+    
+    // Handle the new JSON response structure
+    if (response && Array.isArray(response.data)) {
+      return response.data;  // Return the data array
+    }
+    
+    // Fallback for direct array response
+    if (Array.isArray(response)) {
+      return response;
+    }
+    
+    // Fallback for entries property
+    if (response && Array.isArray(response.entries)) {
+      return response.entries;
+    }
+    
+    console.error('Unexpected response format from daily-sales endpoint:', response);
+    return [];
   },
   getDailySalesItems: async () => {
     const items = await request('/reports/daily-sales/items', {});

@@ -832,7 +832,7 @@ def get_daily_sales_report(
     
     if format.lower() == "json":
         return JSONResponse({
-            "html": html_content,
+            "data": rows,  # Return the actual data array
             "metadata": {
                 "page_count": page_count,
                 "record_count": record_count,
