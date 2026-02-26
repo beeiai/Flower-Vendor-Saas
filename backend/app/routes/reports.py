@@ -83,11 +83,20 @@ def render_template(template_name: str, data: dict, template_dir: str = "templat
         # If no </body> tag, append the scripts at the end
         html += print_button_html + auto_print_script
     
-    # Fix logo path: use absolute path from static directory
-    html = html.replace('src="SKFS_logo.png"', 'src="/static/images/SKFS_logo.png"')
-    
-    # Also handle logo paths with file:// protocol
-    html = html.replace('src="file:', 'src="/static/images/')
+    # Convert logo to data URI for reliable printing in production
+    logo_path = os.path.join("static", "images", "SKFS_logo.png")
+    if os.path.exists(logo_path):
+        try:
+            import base64
+            with open(logo_path, "rb") as img_file:
+                img_data = base64.b64encode(img_file.read()).decode('utf-8')
+                # Replace all logo references with data URI
+                html = html.replace('src="/static/images/SKFS_logo.png"', f'src="data:image/png;base64,{img_data}"')
+                html = html.replace('src="SKFS_logo.png"', f'src="data:image/png;base64,{img_data}"')
+        except Exception as e:
+            print(f"Error converting logo to data URI: {e}")
+            # Fallback: keep the original path if conversion fails
+            pass
     
     return html
 
@@ -426,28 +435,35 @@ def get_group_total_report_by_group(
         )
     
     # Query collection items for this group's farmers within the date range
-    results = db.query(
-        Farmer.id.label("farmer_id"),
-        Farmer.name.label("farmer_name"),
-        Farmer.phone.label("farmer_phone"),
-        CollectionItem.date,
-        CollectionItem.vehicle_name,
-        CollectionItem.vehicle_number,
-        CollectionItem.qty_kg,
-        CollectionItem.rate_per_kg,
-        CollectionItem.paid_amount
-    ).join(
-        Farmer, Farmer.group_id == group.id
-    ).join(
-        CollectionItem, CollectionItem.farmer_id == Farmer.id
-    ).filter(
-        CollectionItem.vendor_id == user.vendor_id,
-        CollectionItem.date >= start_date,
-        CollectionItem.date <= end_date
-    ).order_by(
-        Farmer.name.asc(),
-        CollectionItem.date.asc()
-    ).all()
+    try:
+        results = db.query(
+            Farmer.id.label("farmer_id"),
+            Farmer.name.label("farmer_name"),
+            Farmer.phone.label("farmer_phone"),
+            CollectionItem.date,
+            CollectionItem.vehicle_name,
+            CollectionItem.vehicle_number,
+            CollectionItem.qty_kg,
+            CollectionItem.rate_per_kg,
+            CollectionItem.paid_amount
+        ).join(
+            Farmer, Farmer.group_id == group.id
+        ).join(
+            CollectionItem, CollectionItem.farmer_id == Farmer.id
+        ).filter(
+            CollectionItem.vendor_id == user.vendor_id,
+            CollectionItem.date >= start_date,
+            CollectionItem.date <= end_date
+        ).order_by(
+            Farmer.name.asc(),
+            CollectionItem.date.asc()
+        ).all()
+    except Exception as e:
+        print(f"Error executing query for group total by group: {e}")
+        return JSONResponse(
+            status_code=500,
+            content={"detail": f"Database query error: {str(e)}"}
+        )
     
     # Calculate data for each customer in the group
     from collections import defaultdict
@@ -494,7 +510,7 @@ def get_group_total_report_by_group(
     
     for farmer_id, data in customer_data.items():
         # Get farmer name
-        farmer = next((r for r in results if r.farmer_id == farmer_id), None)
+        farmer = next((r for r in results if r.farmer_id == farmer_id), None) if results else None
         farmer_name = farmer.farmer_name if farmer else "Unknown"
         
         row = {
@@ -526,21 +542,28 @@ def get_group_total_report_by_group(
     current_date = datetime.now().strftime("%d-%m-%Y")
     
     # Prepare template data - adjust to match what the existing template expects
-    template_data = {
-        "rows": rows,
-        "overall_qty": f"{overall_qty:.2f}",
-        "overall_amount": f"{overall_price:.2f}",  # Total price
-        "overall_commission": f"{overall_commission:.2f}",  # Total commission
-        "overall_luggage": f"{overall_luggage:.2f}",  # Total luggage
-        "overall_net_amount": f"{overall_net_amount:.2f}",  # Net amount after commission
-        "overall_paid": f"{overall_paid:.2f}",
-        "overall_balance": f"{(overall_net_amount - overall_paid):.2f}",  # Balance calculation
-        "from_date": start_date.strftime("%d-%m-%Y"),
-        "to_date": end_date.strftime("%d-%m-%Y"),
-        "current_date": current_date,
-        "generated_at": generated_at,
-        "group_count": customer_count  # Number of customers in the group
-    }
+    try:
+        template_data = {
+            "rows": rows,
+            "overall_qty": f"{overall_qty:.2f}",
+            "overall_amount": f"{overall_price:.2f}",  # Total price
+            "overall_commission": f"{overall_commission:.2f}",  # Total commission
+            "overall_luggage": f"{overall_luggage:.2f}",  # Total luggage
+            "overall_net_amount": f"{overall_net_amount:.2f}",  # Net amount after commission
+            "overall_paid": f"{overall_paid:.2f}",
+            "overall_balance": f"{(overall_net_amount - overall_paid):.2f}",  # Balance calculation
+            "from_date": start_date.strftime("%d-%m-%Y") if start_date else "",
+            "to_date": end_date.strftime("%d-%m-%Y") if end_date else "",
+            "current_date": current_date,
+            "generated_at": generated_at,
+            "group_count": customer_count  # Number of customers in the group
+        }
+    except Exception as e:
+        print(f"Error preparing template data: {e}")
+        return JSONResponse(
+            status_code=500,
+            content={"detail": f"Template data preparation error: {str(e)}"}
+        )
     
     # Render HTML using the existing template
     try:
