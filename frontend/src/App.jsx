@@ -1266,22 +1266,88 @@ export default function App() {
     moreMenu: useRef(null)
   };
 
+  // Standalone keyboard navigation for Group Patti Printing Page
+  const useGroupPattiNavigation = (containerRef) => {
+    useEffect(() => {
+      const handleKeyDown = (e) => {
+        if (e.key !== 'Enter') return;
+        
+        const activeElement = document.activeElement;
+        const container = containerRef.current;
+        
+        // Only handle Enter key within this container
+        if (!container || !container.contains(activeElement)) return;
+        
+        // Prevent default Enter behavior
+        e.preventDefault();
+        
+        // Get all navigable elements in order
+        const navigableElements = [
+          { element: container.querySelector('[data-enter="1"]'), type: 'date' },
+          { element: container.querySelector('[data-enter="2"]'), type: 'date' },
+          { element: container.querySelector('[data-enter="3"]'), type: 'select' },
+          { element: container.querySelector('[data-enter="4"]'), type: 'input' },
+          { element: container.querySelector('[data-enter="5"]'), type: 'submit' },
+          { element: container.querySelector('[data-enter="6"]'), type: 'button' }
+        ].filter(item => item.element);
+        
+        // Find current element index
+        const currentIndex = navigableElements.findIndex(item => item.element === activeElement);
+        
+        if (currentIndex === -1) return;
+        
+        // Handle different element types
+        const currentElement = navigableElements[currentIndex];
+        
+        if (currentElement.type === 'select') {
+          // For dropdowns, trigger selection and move to next
+          const enterEvent = new KeyboardEvent('keydown', { key: 'Enter' });
+          activeElement.dispatchEvent(enterEvent);
+          
+          // Move to next element after selection
+          setTimeout(() => {
+            const nextElement = navigableElements[currentIndex + 1];
+            if (nextElement) {
+              nextElement.element.focus();
+            }
+          }, 100);
+        } else if (currentElement.type === 'submit' || currentElement.type === 'button') {
+          // Trigger button click
+          activeElement.click();
+        } else {
+          // For other elements, move to next
+          const nextElement = navigableElements[currentIndex + 1];
+          if (nextElement) {
+            nextElement.element.focus();
+          }
+        }
+      };
+      
+      document.addEventListener('keydown', handleKeyDown);
+      return () => document.removeEventListener('keydown', handleKeyDown);
+    }, [containerRef]);
+  };
+
   const GroupPattiPrintingPage = ({ groups = [] }) => {
     const containerRef = useRef(null);
-    // Remove useEnterController to avoid conflicts with SearchableSelect's built-in navigation
     
-    // Debug: Log groups data
-    useEffect(() => {
-      console.log('GroupPattiPrintingPage - Groups received:', groups);
-      console.log('GroupPattiPrintingPage - Groups length:', groups.length);
-    }, [groups]);
+    // Use standalone navigation system
+    useGroupPattiNavigation(containerRef);
     
-    // Set initial focus when component mounts
+    // Refs for keyboard navigation
+    const groupPattiFromDateRef = useRef(null);
+    const groupPattiToDateRef = useRef(null);
+    const groupPattiGroupRef = useRef(null);
+    const groupPattiCommissionRef = useRef(null);
+    const groupPattiPrintBtnRef = useRef(null);
+    const groupPattiCancelBtnRef = useRef(null);
+    
+    // Set initial focus
     useEffect(() => {
       setTimeout(() => {
         groupPattiFromDateRef.current?.focus();
       }, 100);
-    }, [groups]); // Add groups dependency to re-run when groups change
+    }, []);
     
     return (
     <div className="flex-1 flex flex-col h-full bg-gradient-to-br from-slate-50 to-slate-100 overflow-hidden" ref={containerRef}>
@@ -1302,8 +1368,8 @@ export default function App() {
                 style={{ height: '46px' }} 
                 value={groupPattiForm.fromDate} 
                 onChange={e => setGroupPattiForm({ ...groupPattiForm, fromDate: e.target.value })} 
-                data-enter="1" 
-                data-enter-type="input"
+                data-enter="1"
+                data-enter-type="date"
               />
             </div>
             <div>
@@ -1315,13 +1381,13 @@ export default function App() {
                 style={{ height: '46px' }} 
                 value={groupPattiForm.toDate} 
                 onChange={e => setGroupPattiForm({ ...groupPattiForm, toDate: e.target.value })} 
-                data-enter="2" 
-                data-enter-type="input"
+                data-enter="2"
+                data-enter-type="date"
               />
             </div>
           </div>
 
-          <div className="relative" ref={groupPattiGroupContainerRef}>
+          <div className="relative">
             <SearchableSelect 
               label="Group Name" 
               options={groups.map(g => g.name)} 
@@ -1330,13 +1396,13 @@ export default function App() {
               placeholder="Select group" 
               inputRef={groupPattiGroupRef}
               onSelectionComplete={() => {
-                // Called when an option is selected via keyboard or mouse
+                // After group selection, move to commission input
                 setTimeout(() => {
                   groupPattiCommissionRef.current?.focus();
-                }, 0);
+                }, 100);
               }}
-              data-enter="3" 
-              data-enter-type="dropdown"
+              data-enter="3"
+              data-enter-type="select"
               className="focus:border-rose-500 focus:ring-rose-500/20 rounded-lg shadow-sm hover:shadow-md transition-all border-rose-200" 
             />
             <div className="absolute right-3 top-8 text-slate-700">
@@ -1355,7 +1421,7 @@ export default function App() {
               style={{ height: '46px' }} 
               value={groupPattiForm.commissionPct} 
               onChange={e => setGroupPattiForm({ ...groupPattiForm, commissionPct: e.target.value })} 
-              data-enter="4" 
+              data-enter="4"
               data-enter-type="input"
             />
           </div>
@@ -1388,23 +1454,86 @@ export default function App() {
     </div>
   );};
 
+  // Standalone keyboard navigation for Group Total Report Page
+  const useGroupTotalNavigation = (containerRef) => {
+    useEffect(() => {
+      const handleKeyDown = (e) => {
+        if (e.key !== 'Enter') return;
+        
+        const activeElement = document.activeElement;
+        const container = containerRef.current;
+        
+        // Only handle Enter key within this container
+        if (!container || !container.contains(activeElement)) return;
+        
+        // Prevent default Enter behavior
+        e.preventDefault();
+        
+        // Get all navigable elements in order
+        const navigableElements = [
+          { element: container.querySelector('[data-enter="1"]'), type: 'date' },
+          { element: container.querySelector('[data-enter="2"]'), type: 'date' },
+          { element: container.querySelector('[data-enter="3"]'), type: 'select' },
+          { element: container.querySelector('[data-enter="4"]'), type: 'submit' },
+          { element: container.querySelector('[data-enter="5"]'), type: 'button' }
+        ].filter(item => item.element);
+        
+        // Find current element index
+        const currentIndex = navigableElements.findIndex(item => item.element === activeElement);
+        
+        if (currentIndex === -1) return;
+        
+        // Handle different element types
+        const currentElement = navigableElements[currentIndex];
+        
+        if (currentElement.type === 'select') {
+          // For dropdowns, trigger selection and move to next
+          const enterEvent = new KeyboardEvent('keydown', { key: 'Enter' });
+          activeElement.dispatchEvent(enterEvent);
+          
+          // Move to next element after selection
+          setTimeout(() => {
+            const nextElement = navigableElements[currentIndex + 1];
+            if (nextElement) {
+              nextElement.element.focus();
+            }
+          }, 100);
+        } else if (currentElement.type === 'submit' || currentElement.type === 'button') {
+          // Trigger button click
+          activeElement.click();
+        } else {
+          // For other elements, move to next
+          const nextElement = navigableElements[currentIndex + 1];
+          if (nextElement) {
+            nextElement.element.focus();
+          }
+        }
+      };
+      
+      document.addEventListener('keydown', handleKeyDown);
+      return () => document.removeEventListener('keydown', handleKeyDown);
+    }, [containerRef]);
+  };
+
   const GroupTotalReportPage = ({ groups = [] }) => {
     const containerRef = useRef(null);
-    // Remove useEnterController to avoid conflicts with SearchableSelect's built-in navigation
     
-    // Debug: Log groups data
-    useEffect(() => {
-      console.log('GroupTotalReportPage - Groups received:', groups);
-      console.log('GroupTotalReportPage - Groups length:', groups.length);
-    }, [groups]);
+    // Use standalone navigation system
+    useGroupTotalNavigation(containerRef);
     
-    // Set initial focus when component mounts
+    // Refs for keyboard navigation
+    const groupTotalFromDateRef = useRef(null);
+    const groupTotalToDateRef = useRef(null);
+    const groupTotalGroupRef = useRef(null);
+    const groupTotalPrintBtnRef = useRef(null);
+    const groupTotalCancelBtnRef = useRef(null);
+    
+    // Set initial focus
     useEffect(() => {
       setTimeout(() => {
-        // Focus on the first input field (from date)
-        document.querySelector('[data-enter="1"]')?.focus();
+        groupTotalFromDateRef.current?.focus();
       }, 100);
-    }, [groups]); // Add groups dependency to re-run when groups change
+    }, []);
     
     return (
     <div className="flex-1 flex flex-col h-full bg-gradient-to-br from-slate-50 to-slate-100 overflow-hidden" ref={containerRef}>
@@ -1418,11 +1547,29 @@ export default function App() {
           <div className="grid grid-cols-2 gap-5">
             <div>
               <label className="text-xs font-bold uppercase text-slate-600 tracking-widest block mb-2">From Date</label>
-              <input type="date" className="w-full border border-rose-200 rounded-lg px-4 py-3 text-sm font-medium bg-white outline-none focus:border-rose-500 focus:ring-2 focus:ring-rose-500/20 shadow-sm hover:shadow-md transition-all" style={{ height: '46px' }} value={groupTotalForm.fromDate} onChange={e => setGroupTotalForm({ ...groupTotalForm, fromDate: e.target.value })} data-enter="1" data-enter-type="input" />
+              <input 
+                ref={groupTotalFromDateRef}
+                type="date" 
+                className="w-full border border-rose-200 rounded-lg px-4 py-3 text-sm font-medium bg-white outline-none focus:border-rose-500 focus:ring-2 focus:ring-rose-500/20 shadow-sm hover:shadow-md transition-all" 
+                style={{ height: '46px' }} 
+                value={groupTotalForm.fromDate} 
+                onChange={e => setGroupTotalForm({ ...groupTotalForm, fromDate: e.target.value })} 
+                data-enter="1"
+                data-enter-type="date"
+              />
             </div>
             <div>
               <label className="text-xs font-bold uppercase text-slate-600 tracking-widest block mb-2">To Date</label>
-              <input type="date" className="w-full border border-rose-200 rounded-lg px-4 py-3 text-sm font-medium bg-white outline-none focus:border-rose-500 focus:ring-2 focus:ring-rose-500/20 shadow-sm hover:shadow-md transition-all" style={{ height: '46px' }} value={groupTotalForm.toDate} onChange={e => setGroupTotalForm({ ...groupTotalForm, toDate: e.target.value })} data-enter="2" data-enter-type="input" />
+              <input 
+                ref={groupTotalToDateRef}
+                type="date" 
+                className="w-full border border-rose-200 rounded-lg px-4 py-3 text-sm font-medium bg-white outline-none focus:border-rose-500 focus:ring-2 focus:ring-rose-500/20 shadow-sm hover:shadow-md transition-all" 
+                style={{ height: '46px' }} 
+                value={groupTotalForm.toDate} 
+                onChange={e => setGroupTotalForm({ ...groupTotalForm, toDate: e.target.value })} 
+                data-enter="2"
+                data-enter-type="date"
+              />
             </div>
           </div>
 
@@ -1433,6 +1580,19 @@ export default function App() {
               options={[{ label: "All Groups", value: "" }, ...groups.map(g => ({ label: g.name, value: g.name }))]}
               value={groupTotalForm.groupName}
               onChange={(value) => setGroupTotalForm({ ...groupTotalForm, groupName: value })}
+              inputRef={groupTotalGroupRef}
+              onSelectionComplete={() => {
+                // After group selection, move to print button
+                setTimeout(() => {
+                  groupTotalPrintBtnRef.current?.focus();
+                }, 100);
+              }}
+              onKeyDown={(e) => {
+                if (e.key === 'Enter') {
+                  e.preventDefault();
+                  // Allow selection to complete
+                }
+              }}
               data-enter="3"
               data-enter-type="select"
               disabled={groups.length === 0}
@@ -1444,17 +1604,33 @@ export default function App() {
 
           <div className="flex gap-4 pt-3">
             <button 
+              ref={groupTotalPrintBtnRef}
               onClick={handleGroupTotalPrint} 
               disabled={isGroupTotalPrinting} 
               className="flex-1 bg-gradient-to-r from-[#5B55E6] to-[#4A44D0] text-white py-3.5 font-bold uppercase text-sm rounded-xl shadow-lg disabled:opacity-50 hover:from-[#4A44D0] hover:to-[#3A34C0] transition-all hover:shadow-xl active:translate-y-0.5" 
+              onKeyDown={(e) => {
+                if (e.key === 'Enter') {
+                  e.preventDefault();
+                  if (isGroupTotalPrinting) return;
+                  handleGroupTotalPrint();
+                }
+              }}
               data-enter="4"
               data-enter-type="submit"
             >
               {isGroupTotalPrinting ? 'Printing...' : groupTotalForm.groupName ? 'Print Selected Group' : 'Print All Groups'}
             </button>
             <button 
+              ref={groupTotalCancelBtnRef}
               onClick={() => { setIsGroupTotalPrinting(false); setActiveSection('daily'); }} 
               className="flex-1 bg-gradient-to-r from-slate-100 to-slate-200 text-slate-700 py-3.5 font-bold uppercase text-sm border border-slate-300 rounded-xl shadow-md hover:from-slate-200 hover:to-slate-300 transition-all hover:shadow-lg" 
+              onKeyDown={(e) => {
+                if (e.key === 'Enter') {
+                  e.preventDefault();
+                  setIsGroupTotalPrinting(false); 
+                  setActiveSection('daily');
+                }
+              }}
               data-enter="5"
               data-enter-type="button"
             >
@@ -1472,24 +1648,73 @@ export default function App() {
     </div>
   );};
 
+  // Standalone keyboard navigation for Group Specific Total Report Page
+  const useGroupSpecificTotalNavigation = (containerRef) => {
+    useEffect(() => {
+      const handleKeyDown = (e) => {
+        if (e.key !== 'Enter') return;
+        
+        const activeElement = document.activeElement;
+        const container = containerRef.current;
+        
+        // Only handle Enter key within this container
+        if (!container || !container.contains(activeElement)) return;
+        
+        // Prevent default Enter behavior
+        e.preventDefault();
+        
+        // Get all navigable elements in order
+        const navigableElements = [
+          { element: container.querySelector('[data-enter="1"]'), type: 'date' },
+          { element: container.querySelector('[data-enter="2"]'), type: 'date' },
+          { element: container.querySelector('[data-enter="3"]'), type: 'select' },
+          { element: container.querySelector('[data-enter="4"]'), type: 'submit' },
+          { element: container.querySelector('[data-enter="5"]'), type: 'button' }
+        ].filter(item => item.element);
+        
+        // Find current element index
+        const currentIndex = navigableElements.findIndex(item => item.element === activeElement);
+        
+        if (currentIndex === -1) return;
+        
+        // Handle different element types
+        const currentElement = navigableElements[currentIndex];
+        
+        if (currentElement.type === 'select') {
+          // For dropdowns, trigger selection and move to next
+          const enterEvent = new KeyboardEvent('keydown', { key: 'Enter' });
+          activeElement.dispatchEvent(enterEvent);
+          
+          // Move to next element after selection
+          setTimeout(() => {
+            const nextElement = navigableElements[currentIndex + 1];
+            if (nextElement) {
+              nextElement.element.focus();
+            }
+          }, 100);
+        } else if (currentElement.type === 'submit' || currentElement.type === 'button') {
+          // Trigger button click
+          activeElement.click();
+        } else {
+          // For other elements, move to next
+          const nextElement = navigableElements[currentIndex + 1];
+          if (nextElement) {
+            nextElement.element.focus();
+          }
+        }
+      };
+      
+      document.addEventListener('keydown', handleKeyDown);
+      return () => document.removeEventListener('keydown', handleKeyDown);
+    }, [containerRef]);
+  };
+
   // New component for group-specific total report
   const GroupSpecificTotalReportPage = ({ groups = [] }) => {
     const containerRef = useRef(null);
-    // Remove useEnterController to avoid conflicts with SearchableSelect's built-in navigation
     
-    // Debug: Log groups data
-    useEffect(() => {
-      console.log('GroupSpecificTotalReportPage - Groups received:', groups);
-      console.log('GroupSpecificTotalReportPage - Groups length:', groups.length);
-    }, [groups]);
-    
-    // Set initial focus when component mounts
-    useEffect(() => {
-      setTimeout(() => {
-        // Focus on the first input field (start date)
-        document.querySelector('[data-enter="1"]')?.focus();
-      }, 100);
-    }, [groups]); // Add groups dependency to re-run when groups change
+    // Use standalone navigation system
+    useGroupSpecificTotalNavigation(containerRef);
     
     return (
     <div className="flex-1 flex flex-col h-full bg-gradient-to-br from-slate-50 to-slate-100 overflow-hidden" ref={containerRef}>

@@ -88,6 +88,13 @@ export function SearchableSelect({ label, options, value, onChange, placeholder,
 		if (!open && !disabled) {
 			setOpen(true);
 			setHighlight(0);
+			// Scroll to top when opening dropdown
+			setTimeout(() => {
+				const dropdown = document.querySelector('[data-searchable-select] .fixed');
+				if (dropdown) {
+					dropdown.scrollTop = 0;
+				}
+			}, 0);
 		}
 	};
 
@@ -173,7 +180,7 @@ export function SearchableSelect({ label, options, value, onChange, placeholder,
 
 	const dropdownList = open && !disabled && createPortal(
 		<div
-			className="fixed bg-white border border-slate-300 shadow-dropdown z-[10000] max-h-56 overflow-y-auto mt-1 rounded-sm"
+			className="fixed bg-white border border-slate-300 shadow-dropdown z-[10000] max-h-80 overflow-y-auto mt-1 rounded-sm"
 			style={{ top: `${coords.top}px`, left: `${coords.left}px`, width: `${coords.width}px` }}
 		>
 			{filteredOptions.length > 0
