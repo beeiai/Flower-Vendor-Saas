@@ -1308,43 +1308,42 @@ export default function App() {
     }, [containerRef, elementOrder]);
   };
 
-  // Focus management hook for report components - Industry Standard Implementation
+  // Focus management hook for report components - Fixed Implementation
   const useReportFocus = (initialFocusRef, dependencies = []) => {
     useEffect(() => {
       // Set initial focus with proper delay for state updates
       const setFocus = () => {
         if (!initialFocusRef.current) return;
         
-        // For SearchableSelect components, focus the input inside
-        if (initialFocusRef.current.querySelector) {
-          const input = initialFocusRef.current.querySelector('input');
-          if (input) {
-            // Small delay to ensure DOM is ready
-            setTimeout(() => {
-              input.focus();
-              input.select(); // Select all text for better UX
-            }, 50);
-          } else {
-            initialFocusRef.current.focus();
-          }
-        } else {
+        // For SearchableSelect components, we need to access the actual input element
+        // The ref points to the container div, so we need to find the input inside
+        const container = initialFocusRef.current;
+        const input = container.querySelector && container.querySelector('input');
+        
+        if (input) {
+          // Small delay to ensure DOM is ready
+          setTimeout(() => {
+            input.focus();
+            input.select(); // Select all text for better UX
+          }, 100);
+        } else if (container.focus) {
           // For regular inputs/buttons
-          initialFocusRef.current.focus();
+          container.focus();
           // If it's a text input, select all content
-          if (initialFocusRef.current.type === 'text' || initialFocusRef.current.type === 'number') {
+          if (container.type === 'text' || container.type === 'number') {
             setTimeout(() => {
-              initialFocusRef.current.select();
+              container.select();
             }, 10);
           }
         }
       };
       
       // Initial focus setup
-      setTimeout(setFocus, 100);
+      setTimeout(setFocus, 200); // Increased delay to ensure components are mounted
       
       // Also set up a mutation observer to handle dynamic content
       const observer = new MutationObserver(() => {
-        setTimeout(setFocus, 50);
+        setTimeout(setFocus, 100);
       });
       
       if (initialFocusRef.current) {
@@ -1544,8 +1543,20 @@ export default function App() {
                       if (nextElement.select) {
                         nextElement.select();
                       }
+                    } else {
+                      // Fallback: try to find the next element by selector
+                      const container = groupPattiGroupRef.current?.closest('[data-testid="group-patti"]');
+                      if (container) {
+                        const nextInput = container.querySelector('[data-enter="4"]');
+                        if (nextInput) {
+                          nextInput.focus();
+                          if (nextInput.select) {
+                            nextInput.select();
+                          }
+                        }
+                      }
                     }
-                  }, 100);
+                  }, 150);
                 }}
                 data-enter="3"
                 data-enter-type="select"
@@ -1807,8 +1818,17 @@ export default function App() {
                       const nextElement = groupTotalPrintBtnRef.current;
                       if (nextElement) {
                         nextElement.focus();
+                      } else {
+                        // Fallback: try to find the next element by selector
+                        const container = groupTotalGroupRef.current?.closest('[data-testid="group-total"]');
+                        if (container) {
+                          const nextButton = container.querySelector('[data-enter="4"]');
+                          if (nextButton) {
+                            nextButton.focus();
+                          }
+                        }
                       }
-                    }, 100);
+                    }, 150);
                   }}
                   data-enter="3"
                   data-enter-type="select"

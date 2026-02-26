@@ -38,7 +38,8 @@ export default function ReportsView({ groups, customers, vehicles, advanceStore 
 	  '[data-enter="1"]', // From Date
 	  '[data-enter="2"]', // To Date
 	  '[data-enter="3"]', // Group Name (select)
-	  '[data-enter="5"]', // Customer Name (select) - skip vehicle
+	  '[data-enter="4"]', // Vehicle (select)
+	  '[data-enter="5"]', // Customer Name (select)
 	  '[data-enter="6"]', // Submit Button (submit)
 	  '[data-enter="7"]'  // Print Button (submit)
 	];
@@ -250,7 +251,7 @@ export default function ReportsView({ groups, customers, vehicles, advanceStore 
 	};
 
 	return (
-		<div className="flex-1 flex flex-col h-full overflow-hidden bg-white" ref={containerRef}>
+		<div className="flex-1 flex flex-col h-full overflow-hidden bg-white" ref={containerRef} data-testid="reports-view">
 			<div className="bg-slate-800 px-5 py-3 text-white shrink-0">
 				<h2 className="text-base font-semibold tracking-wide">Reports</h2>
 			</div>
