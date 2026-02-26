@@ -375,9 +375,9 @@ def get_group_total_report(
 # ================================================
 @router.get("/group-total-by-group")
 def get_group_total_report_by_group(
-    start_date: date = Query(..., description="Start date for the report"),
-    end_date: date = Query(..., description="End date for the report"),
-    group_name: str = Query(..., description="Name of the specific group"),
+    start_date: Optional[date] = Query(None, description="Start date for the report"),
+    end_date: Optional[date] = Query(None, description="End date for the report"),
+    group_name: Optional[str] = Query(None, description="Name of the specific group"),
     format: str = Query("html", description="Response format: html or json"),
     db: Session = Depends(get_db),
     user = Depends(get_current_user)
@@ -402,6 +402,17 @@ def get_group_total_report_by_group(
     - If format=html: Rendered HTML template from group_total_report.html
     - If format=json: {html, metadata} with page and record counts
     """
+    # Validate required parameters
+    if not group_name:
+        return JSONResponse(
+            status_code=400,
+            content={"detail": "group_name parameter is required"}
+        )
+    
+    # Set default dates if not provided
+    if start_date is None or end_date is None:
+        start_date, end_date = get_default_date_range()
+    
     # Get group by name for the specific vendor
     group = db.query(FarmerGroup).filter(
         FarmerGroup.name == group_name,
