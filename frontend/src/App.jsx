@@ -1555,7 +1555,8 @@ export default function App() {
                     <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
                   </svg>
                 </div>
-              </div>
+              )}
+            </div>
             {groups.length === 0 && (
               <p className="text-xs text-red-500 mt-1">No groups available. Please create a group first.</p>
             )}
