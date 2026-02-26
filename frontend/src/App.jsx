@@ -1266,7 +1266,7 @@ export default function App() {
     moreMenu: useRef(null)
   };
 
-  const GroupPattiPrintingPage = () => {
+  const GroupPattiPrintingPage = ({ groups = [] }) => {
     const containerRef = useRef(null);
     useEnterController(containerRef);
     
@@ -1375,7 +1375,7 @@ export default function App() {
     </div>
   );};
 
-  const GroupTotalReportPage = () => {
+  const GroupTotalReportPage = ({ groups = [] }) => {
     const containerRef = useRef(null);
     useEnterController(containerRef);
     
@@ -1446,7 +1446,7 @@ export default function App() {
   );};
 
   // New component for group-specific total report
-  const GroupSpecificTotalReportPage = () => {
+  const GroupSpecificTotalReportPage = ({ groups = [] }) => {
     const containerRef = useRef(null);
     useEnterController(containerRef);
     
@@ -1702,9 +1702,9 @@ export default function App() {
         {activeSection === 'saala' && <SaalaView catalog={catalog} onCancel={() => setActiveSection('daily')} showNotify={showNotify} />}
         {activeSection === 'silk' && <SilkSummaryView ledgerStore={ledgerStore} customers={customers} onCancel={() => setActiveSection('daily')} />}
         {activeSection === 'reports' && <ReportsWindow groups={groups} customers={customers} vehicles={vehicles} advanceStore={advanceStore} onCancel={() => setActiveSection('daily')} />}
-        {activeSection === 'group-total' && <GroupTotalReportPage />}
-        {activeSection === 'group-specific-total' && <GroupSpecificTotalReportPage />}
-        {activeSection === 'group-print' && <GroupPattiPrintingPage />}
+        {activeSection === 'group-total' && <GroupTotalReportPage groups={groups} />}
+        {activeSection === 'group-specific-total' && <GroupSpecificTotalReportPage groups={groups} />}
+        {activeSection === 'group-print' && <GroupPattiPrintingPage groups={groups} />}
         {activeSection === 'group-adv' && <GroupAdvanceView groups={groups} customers={customers} advanceStore={advanceStore} onCancel={() => setActiveSection('daily')} />}
         {activeSection === 'group-pay' && <GroupPaymentView groups={groups} customers={customers} ledgerStore={ledgerStore} onCancel={() => setActiveSection('daily')} />}
         {activeSection === 'sms' && <SmsView customers={customers} ledgerStore={ledgerStore} onCancel={() => setActiveSection('daily')} showNotify={showNotify} />}

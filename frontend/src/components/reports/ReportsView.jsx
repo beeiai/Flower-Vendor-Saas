@@ -2,7 +2,6 @@ import React, { useEffect, useMemo, useState, useCallback, useRef } from 'react'
 import SearchableSelect from '../shared/SearchableSelect';
 import { api } from '../../utils/api';
 import { DEFAULT_STATES } from '../../utils/stateManager';
-import { useEnterController } from '../../hooks/useEnterController';
 
 function toNum(value) {
 	const n = Number(value);
@@ -15,9 +14,8 @@ function todayISO() {
 
 export default function ReportsView({ groups, customers, vehicles, advanceStore = {}, onCancel }) {
 	const [filterError, setFilterError] = useState("");
-	const [navigationStep, setNavigationStep] = useState('group'); // 'group', 'customer', 'go', 'print'
-
-	// ✅ FIX: One ref per field, no duplicates
+	
+	// Refs for keyboard navigation
 	const fromDateRef = useRef(null);
 	const toDateRef = useRef(null);
 	const groupRef = useRef(null);
@@ -39,7 +37,6 @@ export default function ReportsView({ groups, customers, vehicles, advanceStore 
 	} = state;
 
 	const containerRef = useRef(null);
-	useEnterController(containerRef);
 
 	const setFromDate = useCallback((value) => setState(prev => ({ ...prev, fromDate: value })), []);
 	const setToDate = useCallback((value) => setState(prev => ({ ...prev, toDate: value })), []);
@@ -112,7 +109,6 @@ export default function ReportsView({ groups, customers, vehicles, advanceStore 
 		}
 		setAutoLoadLocal(true);
 		setAutoLoad(true);
-		setNavigationStep('print');
 		try {
 			const selectedCustomerObj = customers.find(c => c.name === customerName);
 			if (selectedCustomerObj?.id) {
@@ -221,8 +217,7 @@ export default function ReportsView({ groups, customers, vehicles, advanceStore 
 				document.body.removeChild(a);
 			}
 			window.URL.revokeObjectURL(url);
-			// After printing, move focus back to Group selection and reset navigation step
-			setNavigationStep('group');
+			// After printing, move focus back to Group selection
 			setTimeout(() => {
 				groupRef.current?.querySelector('input')?.focus();
 				// Also scroll to top of form to ensure visibility
@@ -231,8 +226,7 @@ export default function ReportsView({ groups, customers, vehicles, advanceStore 
 		} catch (error) {
 			console.error('Print error:', error);
 			alert(`Print failed: ${error.message}`);
-			// Even on error, reset navigation step and return to group
-			setNavigationStep('group');
+			// Even on error, return to group selection
 			setTimeout(() => groupRef.current?.querySelector('input')?.focus(), 100);
 		}
 	};
@@ -291,21 +285,25 @@ export default function ReportsView({ groups, customers, vehicles, advanceStore 
 												inputRef={groupRef}
 												onSelectionComplete={() => {
 													// After group selection, move to customer dropdown and auto-open it
-													setNavigationStep('customer');
 													setTimeout(() => {
 														const customerInput = customerRef.current?.querySelector('input');
 														if (customerInput) {
 															customerInput.focus();
-															// Trigger dropdown open
-															const event = new KeyboardEvent('keydown', { key: 'Enter' });
-															customerInput.dispatchEvent(event);
+															// Trigger dropdown open with Enter key
+															const enterEvent = new KeyboardEvent('keydown', { key: 'Enter' });
+															customerInput.dispatchEvent(enterEvent);
 														}
 													}, 100);
 												}}
+												onKeyDown={(e) => {
+													// Handle Enter key for navigation
+													if (e.key === 'Enter') {
+														e.preventDefault();
+														// Allow selection to complete, then navigation happens in onSelectionComplete
+													}
+												}}
 												className={`focus:border-rose-500 focus:ring-rose-500/20 rounded-lg shadow-sm hover:shadow-md transition-all border-rose-200 ${filterError && !groupName ? 'border-red-500 ring-2 ring-red-100' : ''}`}
 												error={filterError && !groupName}
-												data-enter="1"
-												data-enter-type="dropdown"
 											/>
 											<div className="absolute right-3 top-8 text-slate-700 pointer-events-none">
 												<svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
@@ -325,7 +323,14 @@ export default function ReportsView({ groups, customers, vehicles, advanceStore 
 												placeholder="(Opt)"
 												inputRef={vehicleRef}
 												onSelectionComplete={() => {
+													// After vehicle selection, move to customer dropdown
 													setTimeout(() => customerRef.current?.querySelector('input')?.focus(), 100);
+												}}
+												onKeyDown={(e) => {
+													if (e.key === 'Enter') {
+														e.preventDefault();
+														// Allow selection to complete, then navigation happens in onSelectionComplete
+													}
 												}}
 												className="focus:border-rose-500 focus:ring-rose-500/20 rounded-lg shadow-sm hover:shadow-md transition-all border-rose-200"
 											/>
@@ -353,13 +358,16 @@ export default function ReportsView({ groups, customers, vehicles, advanceStore 
 													inputRef={customerRef}
 													onSelectionComplete={() => {
 														// After customer selection, move to Go button
-														setNavigationStep('go');
 														setTimeout(() => submitRef.current?.focus(), 100);
+													}}
+													onKeyDown={(e) => {
+														if (e.key === 'Enter') {
+															e.preventDefault();
+															// Allow selection to complete, then navigation happens in onSelectionComplete
+														}
 													}}
 													className={`focus:border-rose-500 focus:ring-rose-500/20 rounded-lg shadow-sm hover:shadow-md transition-all border-rose-200 ${filterError && !customerName ? 'border-red-500 ring-2 ring-red-100' : ''}`}
 													error={filterError && !customerName}
-													data-enter="2"
-													data-enter-type="dropdown"
 												/>
 												{filterError && (
 													<div className="text-xs text-red-600 mt-2 font-semibold">{filterError}</div>
@@ -412,8 +420,6 @@ export default function ReportsView({ groups, customers, vehicles, advanceStore 
 													handleFilterSubmit();
 												}
 											}}
-											data-enter="3"
-											data-enter-type="submit"
 										>
 											Go
 										</button>
@@ -551,8 +557,12 @@ export default function ReportsView({ groups, customers, vehicles, advanceStore 
 					className="px-5 bg-gradient-to-r from-emerald-600 to-emerald-700 text-white text-xs font-bold rounded-lg hover:from-emerald-500 hover:to-emerald-600 transition-all shadow-md hover:shadow-lg flex items-center gap-2"
 					style={{ height: '40px' }}
 					onClick={handlePrint}
-					data-enter="4"
-					data-enter-type="button"
+					onKeyDown={e => {
+						if (e.key === 'Enter') {
+							e.preventDefault();
+							handlePrint();
+						}
+					}}
 				>
 					<svg xmlns="http://www.w3.org/2000/svg" className="h-3.5 w-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
 						<path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17 17h2a2 2 0 002-2v-4a2 2 0 00-2-2H5a2 2 0 00-2 2v4a2 2 0 002 2h2m2 4h6a2 2 0 002-2v-4a2 2 0 00-2-2H9a2 2 0 00-2 2v4a2 2 0 002 2zm8-12V5a2 2 0 00-2-2H9a2 2 0 00-2 2v4h10z" />

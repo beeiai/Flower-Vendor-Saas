@@ -4,6 +4,7 @@ from sqlalchemy.orm import Session
 from sqlalchemy import func
 from datetime import date, datetime
 from typing import Optional
+from decimal import Decimal
 from jinja2 import Template
 import os
 from pathlib import Path
@@ -12,6 +13,7 @@ from app.core.db import get_db
 from app.dependencies import get_current_user
 from app.models.collection_item import CollectionItem
 from app.models.farmer import Farmer
+from app.models.farmer_group import FarmerGroup
 from app.utils.page_counter import estimate_pdf_page_count
 from app.utils.reports_db import (
     get_ledger_data,
