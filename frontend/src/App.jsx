@@ -1223,7 +1223,7 @@ export default function App() {
         // Prevent default Enter behavior
         e.preventDefault();
         
-        // Get all navigable elements in order
+        // Get all navigable elements in order - always include group name field
         const navigableElements = [
           { element: container.querySelector('[data-enter="1"]'), type: 'date' },
           { element: container.querySelector('[data-enter="2"]'), type: 'date' },
@@ -1269,6 +1269,8 @@ export default function App() {
   const GroupPattiPrintingPage = ({ groups = [] }) => {
     const containerRef = useRef(null);
     
+
+    
     // Use standalone navigation system
     useGroupPattiNavigation(containerRef);
     
@@ -1283,9 +1285,10 @@ export default function App() {
     // Set initial focus
     useEffect(() => {
       setTimeout(() => {
-        groupPattiFromDateRef.current?.focus();
+        // Always focus on group selection field first for consistent navigation
+        groupPattiGroupRef.current?.focus();
       }, 100);
-    }, []);
+    }, [groups.length, groupPattiForm.groupName]);
     
     return (
     <div className="flex-1 flex flex-col h-full bg-gradient-to-br from-slate-50 to-slate-100 overflow-hidden" ref={containerRef}>
@@ -1328,7 +1331,7 @@ export default function App() {
           <div className="relative">
             <SearchableSelect 
               label="Group Name" 
-              options={groups.map(g => g.name)} 
+              options={groups.length > 0 ? groups.map(g => g.name) : []} 
               value={groupPattiForm.groupName} 
               onChange={(val) => setGroupPattiForm({ ...groupPattiForm, groupName: val })} 
               placeholder="Select group" 
@@ -1348,6 +1351,7 @@ export default function App() {
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
               </svg>
             </div>
+
           </div>
 
           <div>
@@ -1407,7 +1411,7 @@ export default function App() {
         // Prevent default Enter behavior
         e.preventDefault();
         
-        // Get all navigable elements in order
+        // Get all navigable elements in order - always include group name field
         const navigableElements = [
           { element: container.querySelector('[data-enter="1"]'), type: 'date' },
           { element: container.querySelector('[data-enter="2"]'), type: 'date' },
@@ -1452,6 +1456,8 @@ export default function App() {
   const GroupTotalReportPage = ({ groups = [] }) => {
     const containerRef = useRef(null);
     
+
+    
     // Use standalone navigation system
     useGroupTotalNavigation(containerRef);
     
@@ -1465,9 +1471,10 @@ export default function App() {
     // Set initial focus
     useEffect(() => {
       setTimeout(() => {
-        groupTotalFromDateRef.current?.focus();
+        // Always focus on group selection field first for consistent navigation
+        groupTotalGroupRef.current?.focus();
       }, 100);
-    }, []);
+    }, [groups.length, groupTotalForm.groupName]);
     
     return (
     <div className="flex-1 flex flex-col h-full bg-gradient-to-br from-slate-50 to-slate-100 overflow-hidden" ref={containerRef}>
@@ -1509,21 +1516,46 @@ export default function App() {
 
           <div>
             <label className="text-xs font-bold uppercase text-slate-600 tracking-widest block mb-2">Group Name (Optional)</label>
-            <SearchableSelect
-              placeholder={groups.length > 0 ? "Select Group (Leave empty for all groups)" : "No Groups Available"}
-              options={[{ label: "All Groups", value: "" }, ...groups.map(g => ({ label: g.name, value: g.name }))]}              value={groupTotalForm.groupName}
-              onChange={(value) => setGroupTotalForm({ ...groupTotalForm, groupName: value })}
-              inputRef={groupTotalGroupRef}
-              onSelectionComplete={() => {
-                // After group selection, move to print button
-                setTimeout(() => {
-                  groupTotalPrintBtnRef.current?.focus();
-                }, 100);
-              }}
-              data-enter="3"
-              data-enter-type="select"
-              disabled={groups.length === 0}
-            />
+            <div className="relative">
+              <SearchableSelect
+                placeholder={groups.length > 0 ? "Select Group (Leave empty for all groups)" : "No Groups Available"}
+                options={groups.length > 0 ? groups.map(g => g.name) : []}
+                value={groupTotalForm.groupName}
+                onChange={(value) => setGroupTotalForm({ ...groupTotalForm, groupName: value })}
+                inputRef={groupTotalGroupRef}
+                onSelectionComplete={() => {
+                  // After group selection, move to print button
+                  setTimeout(() => {
+                    groupTotalPrintBtnRef.current?.focus();
+                  }, 100);
+                }}
+                data-enter="3"
+                data-enter-type="select"
+                disabled={groups.length === 0}
+                className="w-full"
+              />
+
+              {groupTotalForm.groupName && (
+                <button
+                  type="button"
+                  onClick={() => {
+                    setGroupTotalForm({ ...groupTotalForm, groupName: "" });
+                    // Focus back on the input after clearing
+                    setTimeout(() => {
+                      groupTotalGroupRef.current?.focus();
+                    }, 50);
+                  }}
+                  className="absolute right-10 top-1/2 transform -translate-y-1/2 text-slate-500 hover:text-slate-700 p-1 rounded-full hover:bg-slate-100 transition-colors"
+                  title="Clear selection"
+                >
+                  <X className="w-4 h-4" />
+                </button>
+                <div className="absolute right-3 top-1/2 transform -translate-y-1/2 text-slate-700 pointer-events-none">
+                  <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
+                  </svg>
+                </div>
+            </div>
             {groups.length === 0 && (
               <p className="text-xs text-red-500 mt-1">No groups available. Please create a group first.</p>
             )}
@@ -1618,18 +1650,12 @@ export default function App() {
                 <button key={item.id} onClick={() => {
                   setShowUMenu(false);
                   if (item.id === 'group-print') {
-                    setGroupPattiForm(prev => ({
-                      ...prev,
-                      groupName: prev.groupName || (groups[0]?.name || ''),
-                    }));
+                    // Don't auto-select a group - let user choose
                     setActiveSection('group-print');
                     return;
                   }
                   if (item.id === 'group-total') {
-                    setGroupTotalForm(prev => ({
-                      ...prev,
-                      groupName: prev.groupName || (groups[0]?.name || ''),
-                    }));
+                    // Don't auto-select a group - let user choose or leave empty for all groups
                     setActiveSection('group-total');
                     return;
                   }
@@ -1758,9 +1784,35 @@ export default function App() {
         {activeSection === 'saala' && <SaalaView catalog={catalog} onCancel={() => setActiveSection('daily')} showNotify={showNotify} />}
         {activeSection === 'silk' && <SilkSummaryView ledgerStore={ledgerStore} customers={customers} onCancel={() => setActiveSection('daily')} />}
         {activeSection === 'reports' && <ReportsWindow groups={groups} customers={customers} vehicles={vehicles} advanceStore={advanceStore} onCancel={() => setActiveSection('daily')} />}
-        {activeSection === 'group-total' && <GroupTotalReportPage groups={groups} />}
+        {activeSection === 'group-total' && (
+          <div>
+            {groups.length > 0 ? (
+              <GroupTotalReportPage groups={groups} />
+            ) : (
+              <div className="flex-1 flex items-center justify-center bg-slate-100">
+                <div className="text-center p-8 bg-white rounded-xl shadow-lg border border-slate-200">
+                  <div className="text-slate-600 mb-4">Loading groups data...</div>
+                  <div className="text-sm text-slate-500">Please wait while we fetch the available groups</div>
+                </div>
+              </div>
+            )}
+          </div>
+        )}
 
-        {activeSection === 'group-print' && <GroupPattiPrintingPage groups={groups} />}
+        {activeSection === 'group-print' && (
+          <div>
+            {groups.length > 0 ? (
+              <GroupPattiPrintingPage groups={groups} />
+            ) : (
+              <div className="flex-1 flex items-center justify-center bg-slate-100">
+                <div className="text-center p-8 bg-white rounded-xl shadow-lg border border-slate-200">
+                  <div className="text-slate-600 mb-4">Loading groups data...</div>
+                  <div className="text-sm text-slate-500">Please wait while we fetch the available groups</div>
+                </div>
+              </div>
+            )}
+          </div>
+        )}
         {activeSection === 'group-adv' && <GroupAdvanceView groups={groups} customers={customers} advanceStore={advanceStore} onCancel={() => setActiveSection('daily')} />}
         {activeSection === 'group-pay' && <GroupPaymentView groups={groups} customers={customers} ledgerStore={ledgerStore} onCancel={() => setActiveSection('daily')} />}
         {activeSection === 'sms' && <SmsView customers={customers} ledgerStore={ledgerStore} onCancel={() => setActiveSection('daily')} showNotify={showNotify} />}
