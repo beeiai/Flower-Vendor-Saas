@@ -66,56 +66,33 @@ export default function DailySaleView({ onCancel }) {
     }
 
     setLoading(true);
-    setFeedback({ message: 'Fetching data...', type: 'info' });
+    setFeedback({ message: '', type: '' });
     try {
-      console.log('Fetching daily sales data for:', { fromDate, toDate, selectedGroup });
       // Fetch sales data for the date range
       const data = await api.getDailySales(fromDate, toDate, null);
-      console.log('Raw data received:', data);
-      
-      // Handle the response based on its structure
-      let allRows = [];
-      if (Array.isArray(data)) {
-        // If data is directly an array
-        allRows = data;
-      } else if (data && typeof data === 'object' && Array.isArray(data.data)) {
-        // If data is in the format { data: [...] }
-        allRows = data.data;
-      } else if (data && typeof data === 'object' && Array.isArray(data.entries)) {
-        // If data is in the format { entries: [...] }
-        allRows = data.entries;
-      } else {
-        console.error('Unexpected data structure:', data);
-        setFeedback({ message: 'Unexpected data format received', type: 'error' });
-        setRows([]);
-        setLoading(false);
-        return;
-      }
-      
-      console.log('Processed rows:', allRows.length);
+      const allRows = Array.isArray(data) ? data : [];
 
-      // Filter rows to only this group's customers using group information from backend
-      const filteredRows = allRows.filter(r => {
-        const match = r.group === selectedGroup;
-        console.log('Row group check:', { rowGroup: r.group, selectedGroup, match });
-        return match;
-      });
-      console.log('Filtered rows:', filteredRows.length);
+      // Get customers in the selected group
+      const groupCustomersList = customers.filter(c => c.group === selectedGroup);
+      const groupCustomerNames = groupCustomersList.map(c => c.name);
+      
+      // Filter rows to only this group's customers
+      const filteredRows = allRows.filter(r => groupCustomerNames.includes(r.party));
       setRows(filteredRows);
 
       if (filteredRows.length === 0) {
-        setFeedback({ message: 'No data available for selected group and date range', type: 'info' });
+        setFeedback({ message: 'No sales data found for this group in selected dates', type: 'info' });
       } else {
         setFeedback({ message: `Found ${filteredRows.length} sales records`, type: 'success' });
       }
     } catch (e) {
-      console.error('Error fetching data:', e);
-      setFeedback({ message: 'Failed to fetch data: ' + e.message, type: 'error' });
+      console.error(e);
+      setFeedback({ message: 'Failed to fetch data', type: 'error' });
       setRows([]);
     } finally {
       setLoading(false);
     }
-  }, [fromDate, toDate, selectedGroup]);
+  }, [fromDate, toDate, selectedGroup, customers]);
 
   const totals = useMemo(() => rows.reduce((acc, r) => ({
     qty:    acc.qty    + Number(r.qty   || 0),
@@ -124,13 +101,17 @@ export default function DailySaleView({ onCancel }) {
 
   // Get all customers in selected group that have sales in the date range
   const getGroupCustomers = useCallback(async () => {
-    if (!selectedGroup || rows.length === 0) return [];
+    if (!selectedGroup) return [];
     
     try {
-      // Get unique customer names from current filtered rows
-      const customersWithSales = new Set(rows.map(r => r.party));
+      // Fetch sales data for the date range
+      const data = await api.getDailySales(fromDate, toDate, null);
+      const allRows = Array.isArray(data) ? data : [];
       
-      // Filter group customers to only those with sales in current data
+      // Get unique customer names (party) that have sales in this date range
+      const customersWithSales = new Set(allRows.map(r => r.party));
+      
+      // Filter group customers to only those with sales in date range
       const groupCustomersWithSales = customers.filter(c => 
         c.group === selectedGroup && customersWithSales.has(c.name)
       );
@@ -140,7 +121,7 @@ export default function DailySaleView({ onCancel }) {
       console.error(e);
       return [];
     }
-  }, [selectedGroup, customers, rows]);
+  }, [selectedGroup, customers, fromDate, toDate]);
 
   // Get customer phone number
   const getCustomerPhone = (customerName) => {
@@ -148,24 +129,24 @@ export default function DailySaleView({ onCancel }) {
     return customer?.phone || null;
   };
 
-  // Build consolidated SMS message for a customer with totals
+  // Build SMS message for a customer
   const buildSmsForCustomer = (customerName, customerRows) => {
     if (customerRows.length === 0) return null;
     
-    const custQty = customerRows.reduce((s, r) => s + Number(r.qty||0), 0);
-    const custAmt = customerRows.reduce((s, r) => s + Number(r.total||0), 0);
-    
     const lines = [
       'DAILY SALE REPORT',
-      `Period: ${fromDate} to ${toDate}`,
+      `Date: ${fromDate} to ${toDate}`,
       `Customer: ${customerName}`,
       '',
-      `Total Quantity: ${custQty.toFixed(2)} kg`,
-      `Total Amount: ₹${custAmt.toFixed(2)}`,
-      '',
-      'Thank you for your business!'
     ];
-    
+    customerRows.forEach(r => {
+      lines.push(`${r.itemName}: ${Number(r.qty||0).toFixed(2)} kg @ ₹${Number(r.rate||0).toFixed(2)} = ₹${Number(r.total||0).toFixed(2)}`);
+    });
+    lines.push('');
+    const custQty = customerRows.reduce((s, r) => s + Number(r.qty||0), 0);
+    const custAmt = customerRows.reduce((s, r) => s + Number(r.total||0), 0);
+    lines.push(`Total Qty: ${custQty.toFixed(2)} kg`);
+    lines.push(`Total Amount: ₹${custAmt.toFixed(2)}`);
     return lines.join('\n');
   };
 
@@ -176,20 +157,15 @@ export default function DailySaleView({ onCancel }) {
       return;
     }
 
-    if (rows.length === 0) {
-      setFeedback({ message: 'No data available for selected group and date range', type: 'info' });
-      return;
-    }
-
     setSmsSending(true);
-    setFeedback({ message: 'Sending messages...', type: 'info' });
+    setFeedback({ message: '', type: '' });
 
     try {
-      // Get unique customers from the current filtered data
-      const uniqueCustomers = [...new Set(rows.map(r => r.party))];
+      // Get customers in this group with sales in date range
+      const groupCustomers = await getGroupCustomers();
       
-      if (uniqueCustomers.length === 0) {
-        setFeedback({ message: 'No customers found with sales data', type: 'info' });
+      if (groupCustomers.length === 0) {
+        setFeedback({ message: 'No customers with sales data in this group for selected dates', type: 'info' });
         setSmsSending(false);
         return;
       }
@@ -197,25 +173,26 @@ export default function DailySaleView({ onCancel }) {
       let successCount = 0;
       let failureCount = 0;
 
-      // Send SMS to each customer
-      for (const customerName of uniqueCustomers) {
-        // Get customer phone number
-        const customer = customers.find(c => c.name === customerName);
-        const phone = customer?.phone;
+      // Fetch fresh data for the date range
+      const data = await api.getDailySales(fromDate, toDate, null);
+      const allRows = Array.isArray(data) ? data : [];
+
+      // Send SMS to each customer in the group
+      for (const customer of groupCustomers) {
+        const phone = customer.phone;
         
-        if (!phone || !/^\d{10}$/.test(phone)) {
+        if (!phone) {
           failureCount++;
           continue;
         }
 
-        // Get this customer's sales data from current rows
-        const customerRows = rows.filter(r => r.party === customerName);
+        // Get this customer's sales for the date range
+        const customerRows = allRows.filter(r => r.party === customer.name);
         
-        // Build consolidated message with totals
-        const message = buildSmsForCustomer(customerName, customerRows);
+        // Build message only if customer has sales data
+        const message = buildSmsForCustomer(customer.name, customerRows);
         
         if (!message) {
-          failureCount++;
           continue;
         }
 
@@ -228,12 +205,10 @@ export default function DailySaleView({ onCancel }) {
           });
           successCount++;
         } catch (err) {
-          console.error(`Failed to send SMS to ${customerName}:`, err);
           failureCount++;
         }
       }
 
-      // Show appropriate feedback message
       if (successCount > 0 && failureCount === 0) {
         setFeedback({ 
           message: `Successfully sent to ${successCount} customer${successCount !== 1 ? 's' : ''}`, 
@@ -241,22 +216,22 @@ export default function DailySaleView({ onCancel }) {
         });
       } else if (successCount > 0 && failureCount > 0) {
         setFeedback({ 
-          message: `Sent to ${successCount}, failed for ${failureCount} customer${failureCount !== 1 ? 's' : ''}`, 
+          message: `Sent to ${successCount}, failed for ${failureCount}`, 
           type: 'error' 
         });
       } else if (failureCount > 0) {
         setFeedback({ 
-          message: `Failed to send messages. Check phone numbers.`, 
+          message: `Failed to send. Check phone numbers.`, 
           type: 'error' 
         });
       } else {
         setFeedback({ 
-          message: `No messages sent - no valid phone numbers found`, 
+          message: `No data to send for any customer in this group`, 
           type: 'info' 
         });
       }
     } catch (e) {
-      console.error('Error sending messages:', e);
+      console.error(e);
       setFeedback({ 
         message: 'Error sending messages', 
         type: 'error' 
@@ -446,8 +421,8 @@ export default function DailySaleView({ onCancel }) {
             <button
               ref={smsRef}
               onClick={handleSendSMS}
-              disabled={smsSending || !selectedGroup || rows.length === 0}
-              title={rows.length === 0 ? "No data available - click GO first" : "Send messages to all customers in group"}
+              disabled={smsSending || !selectedGroup}
+              title="Send messages to all customers in group"
               onKeyDown={e => {
                 if (e.key === 'Enter') { e.preventDefault(); handleSendSMS(); }
                 else if (e.key === 'ArrowRight' || e.key === 'ArrowDown') { e.preventDefault(); setTimeout(() => printRef.current?.focus(), 0); }

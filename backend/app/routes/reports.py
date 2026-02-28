@@ -878,6 +878,7 @@ def get_daily_sales_report(
             "date": entry_date,
             "vehicle": entry.get("vehicle", "N/A") if entry.get("vehicle") else (entry.get("vehicle_number", "N/A") if entry.get("vehicle_number") else "N/A"),
             "party": entry.get("party", "N/A"),
+            "group": entry.get("group", "Unknown"),
             "itemName": entry.get("item", "N/A"),
             "qty": f"{qty:.2f}",
             "rate": f"{rate:.2f}",

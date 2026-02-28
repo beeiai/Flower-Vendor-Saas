@@ -80,7 +80,7 @@ function GroupCustomerRegistryForm({ title = 'ADD GROUP', initialTab = 'group', 
       setCustForm({ groupName: custForm.groupName, name: '', contact: '', address: '' });
       showNotify?.('Customer added successfully', 'success');
       setTimeout(() => {
-        document.querySelector('input[placeholder="Enter customer name"]')?.focus();
+        document.querySelector('[data-enter="2"]')?.focus();
       }, 100);
     } catch (e) {
       setCustError(e.message);
@@ -205,7 +205,12 @@ function GroupCustomerRegistryForm({ title = 'ADD GROUP', initialTab = 'group', 
               className="w-full bg-gradient-to-r from-[#5B55E6] to-[#4A44D0] text-white py-3 font-bold uppercase text-sm shadow-lg hover:from-[#4A44D0] hover:to-[#3A34C0] rounded-xl transition-all hover:shadow-xl active:translate-y-0.5"
               style={{height: '48px'}}
               data-enter="5"
-              onKeyDown={e => { if (e.key === 'Enter') { e.preventDefault(); document.querySelector('[data-enter="1"]')?.focus(); } }}
+              onKeyDown={e => { 
+                if (e.key === 'Enter') { 
+                  e.preventDefault(); 
+                  addCustomer(); 
+                } 
+              }}
             >Add Customer</button>
             {custError && custForm.name && <div className="text-xs text-red-600 mt-2 font-semibold">{custError}</div>}
           </div>
@@ -217,7 +222,41 @@ function GroupCustomerRegistryForm({ title = 'ADD GROUP', initialTab = 'group', 
   );
 }
 
-function ItemRegistryForm({ form, setForm, onSave, onCancel }) {
+function ItemRegistryForm({ form, setForm, onSave, onCancel, showNotify }) {
+  const handleKeyDown = (e, nextIndex) => {
+    if (e.key === 'Enter') {
+      e.preventDefault();
+      document.querySelector(`[data-enter-index="${nextIndex}"]`)?.focus();
+    }
+  };
+
+  const handleAddItem = async () => {
+    if (!form.itemCode.trim()) {
+      showNotify?.('Item add failed: Enter item code', 'error');
+      document.querySelector('[data-enter-index="1"]')?.focus();
+      return;
+    }
+    
+    if (!form.itemName.trim()) {
+      showNotify?.('Item add failed: Enter product name', 'error');
+      document.querySelector('[data-enter-index="2"]')?.focus();
+      return;
+    }
+    
+    try {
+      await onSave();
+      showNotify?.('Item added to inventory successfully', 'success');
+      // Clear the form after successful save
+      setForm({ itemCode: '', itemName: '' });
+      // Focus back to the item code field
+      setTimeout(() => {
+        document.querySelector('[data-enter-index="1"]')?.focus();
+      }, 100);
+    } catch (error) {
+      showNotify?.(`Item add failed: ${error.message || 'Unknown error'}`, 'error');
+    }
+  };
+
   return (
     <div className="flex-1 flex flex-col h-full bg-gradient-to-br from-slate-50 to-slate-100 overflow-hidden">
       <div className="bg-gradient-to-r from-[#5B55E6] to-[#4A44D0] px-5 py-3 flex justify-between items-center text-white shrink-0 shadow-xl rounded-b-xl">
@@ -228,13 +267,48 @@ function ItemRegistryForm({ form, setForm, onSave, onCancel }) {
         <div className="max-w-[560px] mx-auto bg-white border border-slate-200 shadow-xl rounded-2xl p-6 space-y-6">
           <div className="bg-slate-50/50 p-4 rounded-xl border border-slate-200">
             <label className="text-xs font-bold uppercase text-slate-600 tracking-widest block mb-2">Code</label>
-            <input type="text" className="w-full border border-rose-200 rounded-lg px-4 py-3 text-sm font-medium bg-white outline-none focus:border-rose-500 focus:ring-2 focus:ring-rose-500/20 shadow-sm hover:shadow-md transition-all" style={{height: '46px'}} value={form.itemCode} onChange={e => setForm({ ...form, itemCode: e.target.value })} placeholder="Enter item code" data-enter-index="1" />
+            <input 
+              type="text" 
+              className="w-full border border-rose-200 rounded-lg px-4 py-3 text-sm font-medium bg-white outline-none focus:border-rose-500 focus:ring-2 focus:ring-rose-500/20 shadow-sm hover:shadow-md transition-all" 
+              style={{height: '46px'}} 
+              value={form.itemCode} 
+              onChange={e => setForm({ ...form, itemCode: e.target.value })} 
+              placeholder="Enter item code" 
+              data-enter-index="1" 
+              onKeyDown={(e) => handleKeyDown(e, 2)}
+            />
           </div>
           <div className="bg-slate-50/50 p-4 rounded-xl border border-slate-200">
             <label className="text-xs font-bold uppercase text-slate-600 tracking-widest block mb-2">Product Name</label>
-            <input type="text" className="w-full border border-rose-200 rounded-lg px-4 py-3 text-sm font-medium bg-white outline-none focus:border-rose-500 focus:ring-2 focus:ring-rose-500/20 shadow-sm hover:shadow-md transition-all" style={{height: '46px'}} value={form.itemName} onChange={e => setForm({...form, itemName: e.target.value})} placeholder="Enter product name" data-enter-index="2" />
+            <input 
+              type="text" 
+              className="w-full border border-rose-200 rounded-lg px-4 py-3 text-sm font-medium bg-white outline-none focus:border-rose-500 focus:ring-2 focus:ring-rose-500/20 shadow-sm hover:shadow-md transition-all" 
+              style={{height: '46px'}} 
+              value={form.itemName} 
+              onChange={e => setForm({...form, itemName: e.target.value})} 
+              placeholder="Enter product name" 
+              data-enter-index="2" 
+              onKeyDown={(e) => {
+                if (e.key === 'Enter') {
+                  e.preventDefault();
+                  handleAddItem();
+                }
+              }}
+            />
           </div>
-          <button data-action="primary" onClick={onSave} className="w-full bg-gradient-to-r from-[#5B55E6] to-[#4A44D0] text-white py-3 font-bold uppercase text-sm shadow-lg hover:from-[#4A44D0] hover:to-[#3A34C0] rounded-xl transition-all hover:shadow-xl active:translate-y-0.5" style={{height: '48px'}} data-enter-index="3">Add to Inventory</button>
+          <button 
+            data-action="primary" 
+            onClick={handleAddItem}
+            className="w-full bg-gradient-to-r from-[#5B55E6] to-[#4A44D0] text-white py-3 font-bold uppercase text-sm shadow-lg hover:from-[#4A44D0] hover:to-[#3A34C0] rounded-xl transition-all hover:shadow-xl active:translate-y-0.5" 
+            style={{height: '48px'}} 
+            data-enter-index="3"
+            onKeyDown={(e) => {
+              if (e.key === 'Enter') {
+                e.preventDefault();
+                handleAddItem();
+              }
+            }}
+          >Add to Inventory</button>
         </div>
       </div>
     </div>
@@ -550,20 +624,38 @@ function GroupPrintingView({ groups, customers, ledgerStore, onCancel }) {
   );
 }
 
-function VehicleView({ vehicles, setVehicles, onCancel }) {
+function VehicleView({ vehicles, setVehicles, onCancel, showNotify }) {
   const [newVehicle, setNewVehicle] = useState('');
+  
   const handleAdd = async () => {
     const name = String(newVehicle || '').trim();
-    if (!name) return;
+    if (!name) {
+      showNotify?.('Vehicle registration failed: Enter vehicle name', 'error');
+      document.querySelector('[data-enter-index="1"]')?.focus();
+      return;
+    }
     try {
       const created = await api.createVehicle(name);
       setVehicles([...vehicles, created]);
       setNewVehicle('');
+      showNotify?.('Vehicle registered successfully', 'success');
+      
+      // Focus back to the vehicle name field to add another vehicle
+      setTimeout(() => {
+        document.querySelector('[data-enter-index="1"]')?.focus();
+      }, 100);
     } catch (e) {
-      // eslint-disable-next-line no-alert
-      alert(e.message);
+      showNotify?.(`Vehicle registration failed: ${e.message}`, 'error');
     }
   };
+  
+  const handleKeyDown = (e) => {
+    if (e.key === 'Enter') {
+      e.preventDefault();
+      handleAdd();
+    }
+  };
+  
   return (
     <div className="flex-1 flex flex-col h-full bg-gradient-to-br from-slate-50 to-slate-100 overflow-hidden">
       <div className="bg-gradient-to-r from-[#5B55E6] to-[#4A44D0] px-5 py-3 flex justify-between items-center text-white shrink-0 shadow-xl rounded-b-xl"><h1 className="text-base font-bold uppercase flex items-center gap-2.5 tracking-wider"><Truck className="w-5 h-5 text-white" /> EXTRA VEHICLE MANAGEMENT</h1><button data-action="secondary" onClick={onCancel} className="p-1.5 rounded-lg hover:bg-white/20 transition-all"><X className="w-5 h-5" /></button></div>
@@ -573,9 +665,25 @@ function VehicleView({ vehicles, setVehicles, onCancel }) {
           <div className="space-y-5">
             <div>
               <label className="text-xs font-bold uppercase text-slate-600 tracking-widest block mb-2">Vehicle Name / Plate</label>
-              <input type="text" className="w-full border border-rose-200 rounded-lg px-4 py-3 text-sm font-medium bg-white outline-none focus:border-rose-500 focus:ring-2 focus:ring-rose-500/20 shadow-sm hover:shadow-md transition-all" style={{height: '46px'}} value={newVehicle} onChange={e => setNewVehicle(e.target.value)} placeholder="Enter vehicle name or plate" data-enter-index="1" />
+              <input 
+                type="text" 
+                className="w-full border border-rose-200 rounded-lg px-4 py-3 text-sm font-medium bg-white outline-none focus:border-rose-500 focus:ring-2 focus:ring-rose-500/20 shadow-sm hover:shadow-md transition-all" 
+                style={{height: '46px'}} 
+                value={newVehicle} 
+                onChange={e => setNewVehicle(e.target.value)} 
+                placeholder="Enter vehicle name or plate" 
+                data-enter-index="1" 
+                onKeyDown={handleKeyDown}
+              />
             </div>
-            <button data-action="primary" onClick={handleAdd} className="w-full bg-gradient-to-r from-[#5B55E6] to-[#4A44D0] text-white py-3 font-bold uppercase text-sm shadow-lg hover:from-[#4A44D0] hover:to-[#3A34C0] rounded-xl transition-all hover:shadow-xl active:translate-y-0.5" style={{height: '48px'}} data-enter-index="2">Register</button>
+            <button 
+              data-action="primary" 
+              onClick={handleAdd}
+              className="w-full bg-gradient-to-r from-[#5B55E6] to-[#4A44D0] text-white py-3 font-bold uppercase text-sm shadow-lg hover:from-[#4A44D0] hover:to-[#3A34C0] rounded-xl transition-all hover:shadow-xl active:translate-y-0.5" 
+              style={{height: '48px'}} 
+              data-enter-index="2"
+              onKeyDown={handleKeyDown}
+            >Register</button>
           </div>
         </div>
         <div className="flex-1 bg-white border border-slate-200 shadow-lg rounded-2xl overflow-hidden flex flex-col">
@@ -1816,7 +1924,7 @@ export default function App() {
           } catch (e) {
             showNotify(`Item add failed: ${e.message}`, 'error');
           }
-        }} onCancel={() => setActiveSection('daily')} />}
+        }} showNotify={showNotify} onCancel={() => setActiveSection('daily')} />}
         {activeSection === 'advance' && <AdvanceTrackerView groups={groups} customers={customers} advanceStore={advanceStore} setAdvanceStore={setAdvanceStore} showNotify={showNotify} onCancel={() => setActiveSection('daily')} />}
         {activeSection === 'daily-sale' && <DailySaleView onCancel={() => setActiveSection('daily')} />}
         {activeSection === 'saala' && <SaalaView catalog={catalog} onCancel={() => setActiveSection('daily')} showNotify={showNotify} />}
@@ -1863,7 +1971,7 @@ export default function App() {
         {activeSection === 'group-pay' && <GroupPaymentView groups={groups} customers={customers} ledgerStore={ledgerStore} onCancel={() => setActiveSection('daily')} />}
         {activeSection === 'sms' && <SmsView customers={customers} ledgerStore={ledgerStore} onCancel={() => setActiveSection('daily')} showNotify={showNotify} />}
         {activeSection === 'sms-single' && <SmsView customers={customers} ledgerStore={ledgerStore} onCancel={() => setActiveSection('daily')} showNotify={showNotify} />}
-        {activeSection === 'vehicle' && <VehicleView vehicles={vehicles} setVehicles={setVehicles} onCancel={() => setActiveSection('daily')} />}
+        {activeSection === 'vehicle' && <VehicleView vehicles={vehicles} setVehicles={setVehicles} showNotify={showNotify} onCancel={() => setActiveSection('daily')} />}
         {activeSection === 'daily-rate-sales' && <UtilityPlaceholderView title="Daily Rate Wise Sales" onCancel={() => setActiveSection('daily')} />}
         {activeSection === 'new-supplier' && <UtilityPlaceholderView title="New Supplier" onCancel={() => setActiveSection('daily')} />}
         {activeSection === 'supply-details' && <UtilityPlaceholderView title="Supply Details" onCancel={() => setActiveSection('daily')} />}

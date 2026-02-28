@@ -464,21 +464,18 @@ def get_daily_sales_data(
     if from_date is None or to_date is None:
         from_date, to_date = get_default_date_range()
     
-    # Query collection items with vehicle information and group details
+    # Query collection items with vehicle information
     query = db.query(
         CollectionItem.date,
         CollectionItem.vehicle_name,
         CollectionItem.vehicle_number,
         Farmer.name.label("party_name"),
-        FarmerGroup.name.label("group_name"),
         CollectionItem.item_name,
         CollectionItem.qty_kg,
         CollectionItem.rate_per_kg,
         CollectionItem.paid_amount
     ).outerjoin(
         Farmer, CollectionItem.farmer_id == Farmer.id
-    ).outerjoin(
-        FarmerGroup, Farmer.group_id == FarmerGroup.id
     ).filter(
         CollectionItem.vendor_id == vendor_id,
         CollectionItem.date >= from_date,
@@ -518,7 +515,6 @@ def get_daily_sales_data(
             "vehicle": vehicle_info,
             "vehicle_name": vehicle_info,  # For backward compatibility
             "party": row.party_name or "Unknown",
-            "group": row.group_name or "Unknown",  # Add group information
             "item": row.item_name or "Unspecified",
             "qty": str(qty),
             "rate": str(rate),

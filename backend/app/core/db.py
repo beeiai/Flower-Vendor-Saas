@@ -22,11 +22,7 @@ engine = create_engine(
     echo=False,
     # Connection optimization
     connect_args={
-        "connect_timeout": 10,
-        # Enable connection keepalive
-        "keepalives_idle": 300,
-        "keepalives_interval": 30,
-        "keepalives_count": 3,
+        "timeout": 10,
     }
 )
 
