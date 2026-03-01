@@ -1,4 +1,7 @@
-from fastapi import APIRouter, Depends, Query
+import logging
+
+# Configure logging
+logger = logging.getLogger(__name__)
 from fastapi.responses import HTMLResponse, JSONResponse
 from sqlalchemy.orm import Session
 from sqlalchemy import func
@@ -132,8 +135,12 @@ def get_ledger_report(
     - If format=html: Rendered HTML template (Content-Type: text/html)
     - If format=json: {html, metadata} with page count and record count
     """
+    logger.info(f"Ledger report requested - customer_id: {customer_id}, format: {format}")
+    logger.info(f"Date range: {from_date} to {to_date}")
+    
     if from_date is None or to_date is None:
         from_date, to_date = get_default_date_range()
+        logger.info(f"Using default date range: {from_date} to {to_date}")
     
     # Get data
     ledger_data = get_ledger_data(
@@ -144,7 +151,10 @@ def get_ledger_report(
         db=db
     )
     
+    logger.info(f"Ledger data retrieved - customer: {ledger_data.get('customer')}, entries count: {len(ledger_data.get('entries', []))}")
+    
     if not ledger_data.get("customer"):
+        logger.warning(f"Customer not found for ID: {customer_id}")
         return JSONResponse(
             status_code=404,
             content={"detail": "Customer not found"}
@@ -167,6 +177,8 @@ def get_ledger_report(
     luggage_total = 0
     coolie_total = 0
     
+    logger.info(f"Processing {len(ledger_data.get('entries', []))} entries for ledger report")
+    
     for entry in ledger_data.get("entries", []):
         gross = float(entry.get("amount", 0))
         commission = gross * (commission_pct / 100)
@@ -180,7 +192,7 @@ def get_ledger_report(
         date_val = entry.get("date", "N/A")
         vehicle_val = entry.get("vehicle", "N/A")
         
-        rows.append({
+        row_data = {
             "date": date_val,
             "vehicle": vehicle_val,
             "item_code": entry.get("item_code", "N/A"),
@@ -197,7 +209,10 @@ def get_ledger_report(
             "paid": f"{paid:.2f}",
             "balance": f"{balance:.2f}",
             "remarks": entry.get("remarks", "N/A")
-        })
+        }
+        
+        logger.debug(f"Entry processed - date: {date_val}, vehicle: {vehicle_val}, gross: {gross:.2f}")
+        rows.append(row_data)
         gross_total += gross
         commission_total += commission
         net_total += net
@@ -205,6 +220,8 @@ def get_ledger_report(
         balance_total += balance
         luggage_total += luggage
         coolie_total += coolie
+    
+    logger.info(f"Ledger report processing complete - {len(rows)} rows, gross_total: {gross_total:.2f}")
     
     # Get group name
     customer_obj = ledger_data.get("customer", {})
@@ -232,18 +249,23 @@ def get_ledger_report(
         "generated_at": generated_at
     }
     
+    logger.info(f"Template data prepared - rows: {len(rows)}, group_name: {group_name}")
+    logger.debug(f"Template data keys: {list(template_data.keys())}")
+    
     # Render HTML
     try:
+        logger.info(f"Rendering template: ledger_report.html")
         html_content = render_template("ledger_report.html", template_data)
+        logger.info("Template rendering successful")
     except Exception as e:
-        print(f"Error rendering ledger report template: {e}")
+        logger.error(f"Error rendering ledger report template: {e}")
         return JSONResponse(
             status_code=500,
             content={"detail": f"Template rendering error: {str(e)}"}
         )
     
     if format.lower() == "json":
-        return JSONResponse({
+        response_data = {
             "html": html_content,
             "metadata": {
                 "page_count": page_count,
@@ -256,8 +278,11 @@ def get_ledger_report(
                     "to": to_date.isoformat()
                 }
             }
-        })
+        }
+        logger.info(f"Returning JSON response - page_count: {page_count}, record_count: {record_count}")
+        return JSONResponse(response_data)
     else:
+        logger.info("Returning HTML response")
         return HTMLResponse(content=html_content)
 
 
@@ -286,8 +311,12 @@ def get_group_total_report(
     - If format=html: Rendered HTML template
     - If format=json: {html, metadata} with page and group counts
     """
+    logger.info(f"Group Total report requested - format: {format}")
+    logger.info(f"Date range: {from_date} to {to_date}")
+    
     if from_date is None or to_date is None:
         from_date, to_date = get_default_date_range()
+        logger.info(f"Using default date range: {from_date} to {to_date}")
     
     # Get data
     group_data = get_group_total_data(
@@ -296,6 +325,8 @@ def get_group_total_report(
         to_date=to_date,
         db=db
     )
+    
+    logger.info(f"Group Total data retrieved - groups count: {group_data.get('group_count', 0)}, entries count: {len(group_data.get('entries', []))}")
     
     # Calculate metadata
     group_count = group_data.get("group_count", 0)
@@ -319,6 +350,8 @@ def get_group_total_report(
     overall_paid = 0
     overall_balance = 0
     
+    logger.info(f"Processing {len(grouped_data)} groups for Group Total report")
+    
     # Create summary rows for each group (what the template expects)
     for group_id, group_entries in grouped_data.items():
         if not group_entries:
@@ -326,6 +359,8 @@ def get_group_total_report(
             
         # Get group name from first entry
         group_name = group_entries[0].get("group_name", "N/A") if group_entries else "N/A"
+        
+        logger.debug(f"Processing group: {group_name} (ID: {group_id}) with {len(group_entries)} entries")
         
         # Calculate group totals
         group_qty = 0
@@ -346,17 +381,22 @@ def get_group_total_report(
         customer_count = len(set(entry.get("farmer_id") for entry in group_entries if entry.get("farmer_id")))
         
         # Add summary row for this group (this is what the template expects)
-        rows.append({
+        row_data = {
             "group_name": group_name,
             "customer_count": customer_count,
             "total_qty": f"{group_qty:.2f}",
             "total_amount": f"{group_amount:.2f}"
-        })
+        }
         
+        logger.debug(f"Group {group_name} processed - customers: {customer_count}, qty: {group_qty:.2f}, amount: {group_amount:.2f}")
+        
+        rows.append(row_data)
         overall_qty += group_qty
         overall_amount += group_amount
         overall_paid += group_paid
         overall_balance += (group_amount - group_paid)
+    
+    logger.info(f"Group Total processing complete - {len(rows)} groups, overall_qty: {overall_qty:.2f}")
     
     # Prepare template data
     template_data = {
@@ -374,16 +414,18 @@ def get_group_total_report(
     
     # Render HTML
     try:
+        logger.info(f"Rendering template: group_total_report.html")
         html_content = render_template("group_total_report.html", template_data)
+        logger.info("Template rendering successful")
     except Exception as e:
-        print(f"Error rendering group total report template: {e}")
+        logger.error(f"Error rendering group total report template: {e}")
         return JSONResponse(
             status_code=500,
             content={"detail": f"Template rendering error: {str(e)}"}
         )
     
     if format.lower() == "json":
-        return JSONResponse({
+        response_data = {
             "html": html_content,
             "metadata": {
                 "page_count": page_count,
@@ -396,8 +438,11 @@ def get_group_total_report(
                     "to": to_date.isoformat()
                 }
             }
-        })
+        }
+        logger.info(f"Returning JSON response - page_count: {page_count}, record_count: {group_count}")
+        return JSONResponse(response_data)
     else:
+        logger.info("Returning HTML response")
         return HTMLResponse(content=html_content)
 
 
@@ -433,8 +478,12 @@ def get_group_total_report_by_group(
     - If format=html: Rendered HTML template from group_total_report.html
     - If format=json: {html, metadata} with page and record counts
     """
+    logger.info(f"Group Total by Group report requested - group_name: {group_name}, format: {format}")
+    logger.info(f"Date range: {start_date} to {end_date}")
+    
     # Validate required parameters
     if not group_name:
+        logger.warning("group_name parameter is required")
         return JSONResponse(
             status_code=400,
             content={"detail": "group_name parameter is required"}
@@ -443,6 +492,7 @@ def get_group_total_report_by_group(
     # Set default dates if not provided
     if start_date is None or end_date is None:
         start_date, end_date = get_default_date_range()
+        logger.info(f"Using default date range: {start_date} to {end_date}")
     
     # Get group by name for the specific vendor
     group = db.query(FarmerGroup).filter(
@@ -451,10 +501,13 @@ def get_group_total_report_by_group(
     ).first()
     
     if not group:
+        logger.warning(f"Group '{group_name}' not found for vendor_id: {user.vendor_id}")
         return JSONResponse(
             status_code=404,
             content={"detail": f"Group '{group_name}' not found"}
         )
+    
+    logger.info(f"Found group: {group.name} (ID: {group.id})")
     
     # Query collection items for this group's farmers within the date range
     try:
@@ -498,6 +551,8 @@ def get_group_total_report_by_group(
         'transaction_count': 0
     })
     
+    logger.info(f"Processing {len(results)} collection items for group: {group_name}")
+    
     # Process results to aggregate data by customer
     for row in results:
         farmer_key = row.farmer_id
@@ -509,6 +564,8 @@ def get_group_total_report_by_group(
         # Calculate commission (using default 12%)
         commission = (price * Decimal("12") / 100).quantize(Decimal("0.01"))
         net_amount = price - commission
+        
+        logger.debug(f"Processing farmer {row.farmer_name} (ID: {farmer_key}) - qty: {qty}, price: {price}")
         
         # Update customer data
         customer_data[farmer_key]['total_qty'] += qty
@@ -527,12 +584,14 @@ def get_group_total_report_by_group(
     overall_paid = Decimal("0")
     overall_luggage = Decimal("0")
     
+    logger.info(f"Creating {len(customer_data)} customer rows for template")
+    
     for farmer_id, data in customer_data.items():
         # Get farmer name
         farmer = next((r for r in results if r.farmer_id == farmer_id), None) if results else None
         farmer_name = farmer.farmer_name if farmer else "Unknown"
         
-        row = {
+        row_data = {
             "group_name": group_name,  # This is what the template expects
             "customer_count": 1,  # Each row represents one customer
             "total_qty": f"{data['total_qty']:.2f}",
@@ -544,14 +603,18 @@ def get_group_total_report_by_group(
             "total_net_amount": f"{data['total_net_amount']:.2f}",
             "total_paid": f"{data['total_paid']:.2f}"
         }
-        rows.append(row)
         
+        logger.debug(f"Customer row created - {farmer_name}: qty={data['total_qty']:.2f}, net_amount={data['total_net_amount']:.2f}")
+        
+        rows.append(row_data)
         overall_qty += data['total_qty']
         overall_price += data['total_price']  # Total price before commission
         overall_commission += data['total_commission']
         overall_net_amount += data['total_net_amount']
         overall_paid += data['total_paid']
         overall_luggage += data['total_luggage']
+    
+    logger.info(f"Group Total by Group processing complete - {len(rows)} customers, overall_qty: {overall_qty}")
     
     # Calculate metadata
     customer_count = len(customer_data)
@@ -580,8 +643,12 @@ def get_group_total_report_by_group(
             "generated_at": generated_at,
             "group_count": customer_count  # Number of customers in the group
         }
+        
+        logger.info(f"Template data prepared for group {group_name} - rows: {len(rows)}, overall_qty: {overall_qty:.2f}")
+        logger.debug(f"Template data keys: {list(template_data.keys())}")
+        
     except Exception as e:
-        print(f"Error preparing template data: {e}")
+        logger.error(f"Error preparing template data: {e}")
         return JSONResponse(
             status_code=500,
             content={"detail": f"Template data preparation error: {str(e)}"}
@@ -589,16 +656,18 @@ def get_group_total_report_by_group(
     
     # Render HTML using the existing template
     try:
+        logger.info(f"Rendering template: group_total_report.html for group {group_name}")
         html_content = render_template("group_total_report.html", template_data)
+        logger.info("Template rendering successful")
     except Exception as e:
-        print(f"Error rendering group total report by group template: {e}")
+        logger.error(f"Error rendering group total report by group template: {e}")
         return JSONResponse(
             status_code=500,
             content={"detail": f"Template rendering error: {str(e)}"}
         )
     
     if format.lower() == "json":
-        return JSONResponse({
+        response_data = {
             "html": html_content,
             "metadata": {
                 "page_count": page_count,
@@ -612,8 +681,11 @@ def get_group_total_report_by_group(
                 },
                 "group_name": group_name
             }
-        })
+        }
+        logger.info(f"Returning JSON response - page_count: {page_count}, record_count: {customer_count}, group_name: {group_name}")
+        return JSONResponse(response_data)
     else:
+        logger.info("Returning HTML response")
         return HTMLResponse(content=html_content)
 
 
@@ -644,8 +716,12 @@ def get_group_patti_report(
     - If format=html: Rendered multi-page HTML template
     - If format=json: {html, metadata} with detailed page and entry counts
     """
+    logger.info(f"Group Patti report requested - group_id: {group_id}, format: {format}")
+    logger.info(f"Date range: {from_date} to {to_date}")
+    
     if from_date is None or to_date is None:
         from_date, to_date = get_default_date_range()
+        logger.info(f"Using default date range: {from_date} to {to_date}")
     
     # Get data
     patti_data = get_group_patti_data(
@@ -655,6 +731,9 @@ def get_group_patti_report(
         to_date=to_date,
         db=db
     )
+    
+    logger.info(f"Group Patti data retrieved - group: {patti_data.get('group')}, farmers count: {patti_data.get('farmer_count', 0)}, entries count: {patti_data.get('entry_count', 0)}")
+    
     # Set commission default to 12 if missing or 0
     commission_pct = 12.0
     group_commission = patti_data.get("group", {}).get("commission_percent")
@@ -662,10 +741,13 @@ def get_group_patti_report(
         group_commission = float(group_commission)
         if group_commission > 0:
             commission_pct = group_commission
+            logger.info(f"Using group commission rate: {commission_pct}%")
     except (TypeError, ValueError):
+        logger.info(f"Using default commission rate: {commission_pct}%")
         pass
     
     if not patti_data.get("group"):
+        logger.warning(f"Group not found for ID: {group_id}")
         return JSONResponse(
             status_code=404,
             content={"detail": "Group not found"}
@@ -702,10 +784,14 @@ def get_group_patti_report(
     summary_luggage = 0
     summary_coolie = 0
     
+    logger.info(f"Processing {len(patti_data.get('farmers', []))} farmers for Group Patti report")
+    
     for farmer in patti_data.get("farmers", []):
         farmer_name = farmer.get("name", "Unknown")
         farmer_id = farmer.get("id", 0)
         farmer_address = farmer.get("address", "N/A")
+        
+        logger.debug(f"Processing farmer: {farmer_name} (ID: {farmer_id})")
         
         # Transform entries (from reports_db) to transactions (for template)
         transactions = []
@@ -730,7 +816,7 @@ def get_group_patti_report(
             # Date is already formatted as DD-MM-YYYY from reports_db
             date_val = entry.get("date", "N/A")
             
-            transactions.append({
+            transaction_data = {
                 "date": date_val,
                 "vehicle": vehicle,
                 "item_code": entry.get("item_code", "N/A"),
@@ -743,7 +829,9 @@ def get_group_patti_report(
                 "paid": f"{paid:.2f}",
                 "amount": f"{(total - paid - luggage - coolie):.2f}",
                 "remarks": entry.get("remarks", "N/A")
-            })
+            }
+            
+            transactions.append(transaction_data)
             farmer_qty += qty
             farmer_amount += total
             farmer_paid += paid
@@ -755,7 +843,7 @@ def get_group_patti_report(
         farmer_net_amount = farmer_amount - farmer_commission
         farmer_final_total = farmer_net_amount + 0.0 - farmer_paid - farmer_luggage - farmer_coolie
         
-        customers.append({
+        customer_data = {
             "id": farmer_id,
             "name": farmer_name,
             "address": farmer_address,
@@ -770,8 +858,9 @@ def get_group_patti_report(
             "net_amount": f"{farmer_net_amount:.2f}",
             "paid_amount": f"{farmer_paid:.2f}",
             "final_total": f"{farmer_final_total:.2f}"
-        })
-        summary_rows.append({
+        }
+        
+        summary_data = {
             "customer": farmer_name,
             "address": farmer_address,
             "qty": f"{farmer_qty:.2f}",
@@ -780,7 +869,12 @@ def get_group_patti_report(
             "coolie": f"{farmer_coolie:.2f}",
             "paid": f"{farmer_paid:.2f}",
             "balance": f"{farmer_balance:.2f}"
-        })
+        }
+        
+        logger.debug(f"Farmer {farmer_name} processed - qty: {farmer_qty:.2f}, amount: {farmer_amount:.2f}")
+        
+        customers.append(customer_data)
+        summary_rows.append(summary_data)
         grand_total_qty += farmer_qty
         grand_total_amount += farmer_amount
         grand_total_paid += farmer_paid
@@ -793,6 +887,8 @@ def get_group_patti_report(
         summary_balance += farmer_balance
         summary_luggage += farmer_luggage
         summary_coolie += farmer_coolie
+    
+    logger.info(f"Group Patti processing complete - {len(customers)} customers, grand_total_qty: {grand_total_qty:.2f}")
     
     # Prepare template data
     template_data = {
@@ -822,16 +918,18 @@ def get_group_patti_report(
     
     # Render HTML
     try:
+        logger.info(f"Rendering template: group_patti_report.html")
         html_content = render_template("group_patti_report.html", template_data)
+        logger.info("Template rendering successful")
     except Exception as e:
-        print(f"Error rendering group patti report template: {e}")
+        logger.error(f"Error rendering group patti report template: {e}")
         return JSONResponse(
             status_code=500,
             content={"detail": f"Template rendering error: {str(e)}"}
         )
     
     if format.lower() == "json":
-        return JSONResponse({
+        response_data = {
             "html": html_content,
             "metadata": {
                 "page_count": page_count,
@@ -845,8 +943,11 @@ def get_group_patti_report(
                 },
                 "farmer_count": farmer_count
             }
-        })
+        }
+        logger.info(f"Returning JSON response - page_count: {page_count}, record_count: {entry_count}, farmer_count: {farmer_count}")
+        return JSONResponse(response_data)
     else:
+        logger.info("Returning HTML response")
         return HTMLResponse(content=html_content)
 
 
