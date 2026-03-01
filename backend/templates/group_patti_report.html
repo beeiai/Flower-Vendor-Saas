@@ -148,12 +148,12 @@
             width: 100%;
             border-collapse: collapse;
             margin: 0 auto 20px auto;
-            font-size: 9.5px;
+            font-size: 7.5px;
         }
         
         .report-table th,
         .report-table td {
-            padding: 3px 4px;
+            padding: 2px 3px;
             border: 1px solid #aaa;
             text-align: center;
         }
@@ -162,27 +162,32 @@
             background-color: #f0f0f0;
             font-weight: bold;
             white-space: nowrap;
-            font-size: 9.5px;
+            font-size: 7.5px;
         }
         
         .report-table td {
             text-align: center;
-            font-size: 9.5px;
+            font-size: 7.5px;
         }
         
-        .report-table td:nth-child(2) {
+        .report-table td:nth-child(2),
+        .report-table td:nth-child(3),
+        .report-table td:nth-child(4) {
             text-align: left;
         }
         
-        /* Adjust column widths for A4 - 8 columns total */
-        .report-table th:nth-child(1) { width: 10%; }  /* Date */
-        .report-table th:nth-child(2) { width: 12%; }  /* Vehicle */
-        .report-table th:nth-child(3) { width: 8%; }   /* Qty */
-        .report-table th:nth-child(4) { width: 8%; }   /* Price */
-        .report-table th:nth-child(5) { width: 10%; }  /* Total */
-        .report-table th:nth-child(6) { width: 10%; }  /* Luggage */
-        .report-table th:nth-child(7) { width: 10%; }  /* Paid */
-        .report-table th:nth-child(8) { width: 10%; }  /* Amount */
+        /* Adjust column widths for A4 with new columns */
+        .report-table th:nth-child(1) { width: 6%; }   /* Date */
+        .report-table th:nth-child(2) { width: 6%; }  /* Vehicle */
+        .report-table th:nth-child(3) { width: 6%; }  /* Item Code */
+        .report-table th:nth-child(4) { width: 8%; } /* Product Name */
+        .report-table th:nth-child(5) { width: 5%; }  /* Qty */
+        .report-table th:nth-child(6) { width: 5%; }  /* Rate */
+        .report-table th:nth-child(7) { width: 5%; }  /* Total */
+        .report-table th:nth-child(8) { width: 5%; }  /* Luggage */
+        .report-table th:nth-child(9) { width: 5%; }  /* Coolie */
+        .report-table th:nth-child(10) { width: 5%; } /* Paid */
+        .report-table th:nth-child(11) { width: 5%; } /* Amount */
         
         .total-row {
             font-weight: bold;
@@ -265,12 +270,12 @@
             }
             
             .report-table {
-                font-size: 9px;
+                font-size: 7px;
             }
             
             .report-table th,
             .report-table td {
-                font-size: 9px;
+                font-size: 7px;
             }
         }
     </style>
@@ -377,8 +382,8 @@
         <tr>
             <td>Address:</td>
                 <td>{{ customer.address }}</td>
-            <td>Ledger:</td>
-                <td>{{ customer.ledger_name }}</td>
+            <td>Phone:</td>
+                <td>{{ customer.phone }}</td>
         </tr>
         <tr>
             <td>Balance:</td>
@@ -394,10 +399,13 @@
             <tr>
                 <th>Date</th>
                 <th>Vehicle</th>
+                <th>Item Code</th>
+                <th>Product Name</th>
                 <th>Qty</th>
-                <th>Price</th>
+                <th>Rate</th>
                 <th>Total</th>
                 <th>Luggage</th>
+                <th>Coolie</th>
                 <th>Paid</th>
                 <th>Amount</th>
             </tr>
@@ -407,10 +415,13 @@
             <tr>
                 <td>{{ row.date if row.date else '-' }}</td>
                 <td>{{ row.vehicle if row.vehicle else '-' }}</td>
+                <td>{{ row.item_code if row.item_code else '-' }}</td>
+                <td>{{ row.product_name if row.product_name else '-' }}</td>
                 <td>{{ row.qty if row.qty else '0.00' }}</td>
-                <td>{{ row.price if row.price else '0.00' }}</td>
+                <td>{{ row.rate if row.rate else '0.00' }}</td>
                 <td>{{ row.total if row.total else '0.00' }}</td>
                 <td>{{ row.luggage if row.luggage else '0.00' }}</td>
+                <td>{{ row.coolie if row.coolie else '0.00' }}</td>
                 <td>{{ row.paid if row.paid else '0.00' }}</td>
                 <td>{{ row.amount if row.amount else '0.00' }}</td>
             </tr>
@@ -419,9 +430,12 @@
             <tr class="total-row">
                 <td><b>TOTAL</b></td>
                 <td></td>
+                <td></td>
+                <td></td>
                 <td>₹ {{ customer.total_qty }}</td>
                 <td></td>
                 <td>₹ {{ customer.total_amount }}</td>
+                <td></td>
                 <td></td>
                 <td></td>
                 <td></td>

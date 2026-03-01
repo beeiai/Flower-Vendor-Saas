@@ -2,7 +2,7 @@
 <html lang="en">
 <head>
     <meta charset="UTF-8">
-    <title>Group Patti Report</title>
+    <title>Ledger Report</title>
     <link rel="stylesheet" href="/static/css/print.css">
     <style>
         /* A4 page settings */
@@ -87,11 +87,11 @@
             width: 100%;
             border-collapse: collapse;
             margin: 0 auto 20px auto;
-            font-size: 10px;
+            font-size: 8px;
         }
         .report-table th,
         .report-table td {
-            padding: 4px 5px;
+            padding: 3px 4px;
             border: 1px solid #aaa;
             text-align: center;
         }
@@ -99,24 +99,38 @@
             background-color: #f0f0f0;
             font-weight: bold;
             white-space: nowrap;
-            font-size: 10px;
+            font-size: 8px;
         }
         .report-table td {
             text-align: center;
-            font-size: 10px;
+            font-size: 8px;
         }
         .report-table td:first-child,
-        .report-table td:nth-child(2) {
+        .report-table td:nth-child(2),
+        .report-table td:nth-child(3),
+        .report-table td:nth-child(4),
+        .report-table td:nth-child(5),
+        .report-table td:nth-child(6),
+        .report-table td:nth-child(7) {
             text-align: left;
         }
-        /* Adjust column widths for A4 */
-        .report-table th:nth-child(1) { width: 22%; } /* Customer */
-        .report-table th:nth-child(2) { width: 18%; } /* Address */
-        .report-table th:nth-child(3) { width: 12%; } /* Gross */
-        .report-table th:nth-child(4) { width: 12%; } /* Commission */
-        .report-table th:nth-child(5) { width: 10%; } /* Net */
-        .report-table th:nth-child(6) { width: 10%; } /* Paid */
-        .report-table th:nth-child(7) { width: 12%; } /* Balance */
+        /* Adjust column widths for A4 with new columns */
+        .report-table th:nth-child(1) { width: 6%; }   /* Date */
+        .report-table th:nth-child(2) { width: 6%; }  /* Vehicle */
+        .report-table th:nth-child(3) { width: 6%; }  /* Item Code */
+        .report-table th:nth-child(4) { width: 8%; } /* Product Name */
+        .report-table th:nth-child(5) { width: 8%; } /* Customer */
+        .report-table th:nth-child(6) { width: 8%; } /* Address */
+        .report-table th:nth-child(7) { width: 7%; }  /* Phone */
+        .report-table th:nth-child(8) { width: 4%; }  /* Qty */
+        .report-table th:nth-child(9) { width: 5%; }  /* Rate */
+        .report-table th:nth-child(10) { width: 5%; } /* Luggage */
+        .report-table th:nth-child(11) { width: 5%; } /* Coolie */
+        .report-table th:nth-child(12) { width: 5%; } /* Paid */
+        .report-table th:nth-child(13) { width: 5%; } /* Gross */
+        .report-table th:nth-child(14) { width: 5%; } /* Commission */
+        .report-table th:nth-child(15) { width: 5%; } /* Net */
+        .report-table th:nth-child(16) { width: 5%; } /* Balance */
         /* Group totals in table format */
         .totals-table {
             width: 100%;
@@ -159,11 +173,11 @@
                 font-size: 10px;
             }
             .report-table {
-                font-size: 9.5px;
+                font-size: 7.5px;
             }
             .report-table th,
             .report-table td {
-                font-size: 9.5px;
+                font-size: 7.5px;
             }
         }
     </style>
@@ -212,12 +226,19 @@
             <tr>
                 <th>Date</th>
                 <th>Vehicle</th>
+                <th>Item Code</th>
+                <th>Product Name</th>
                 <th>Customer</th>
                 <th>Address</th>
+                <th>Phone</th>
+                <th>Qty</th>
+                <th>Rate</th>
+                <th>Luggage</th>
+                <th>Coolie</th>
+                <th>Paid</th>
                 <th>Gross</th>
                 <th>Commission</th>
                 <th>Net</th>
-                <th>Paid</th>
                 <th>Balance</th>
             </tr>
         </thead>
@@ -226,12 +247,19 @@
             <tr>
                 <td>{{ row.date }}</td>
                 <td>{{ row.vehicle }}</td>
+                <td>{{ row.item_code }}</td>
+                <td>{{ row.product_name }}</td>
                 <td>{{ row.customer }}</td>
                 <td>{{ row.address }}</td>
+                <td>{{ row.phone }}</td>
+                <td>{{ row.qty }}</td>
+                <td>₹ {{ row.rate }}</td>
+                <td>₹ {{ row.luggage }}</td>
+                <td>₹ {{ row.coolie }}</td>
+                <td>₹ {{ row.paid }}</td>
                 <td>₹ {{ row.gross }}</td>
                 <td>₹ {{ row.commission }}</td>
                 <td>₹ {{ row.net }}</td>
-                <td>₹ {{ row.paid }}</td>
                 <td>₹ {{ row.balance }}</td>
             </tr>
             {% endfor %}

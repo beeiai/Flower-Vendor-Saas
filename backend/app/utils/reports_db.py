@@ -113,15 +113,20 @@ def get_ledger_data(
         if group:
             group_name = group.name
     
-    # Fetch collection items (transactions) with proper date and vehicle info
+    # Fetch collection items (transactions) with all required fields
     entries = db.query(
         CollectionItem.id,
         CollectionItem.date,
         CollectionItem.vehicle_name,
         CollectionItem.vehicle_number,
+        CollectionItem.item_code,
+        CollectionItem.item_name,
         CollectionItem.qty_kg,
         CollectionItem.rate_per_kg,
-        CollectionItem.paid_amount
+        CollectionItem.transport_cost.label("luggage"),
+        CollectionItem.coolie,
+        CollectionItem.paid_amount,
+        CollectionItem.remarks
     ).filter(
         CollectionItem.vendor_id == vendor_id,
         CollectionItem.farmer_id == customer_id,
@@ -133,6 +138,8 @@ def get_ledger_data(
     total_qty = Decimal("0")
     total_amount = Decimal("0")
     total_paid = Decimal("0")
+    total_luggage = Decimal("0")
+    total_coolie = Decimal("0")
     
     entries_list = []
     for entry in entries:
@@ -140,10 +147,14 @@ def get_ledger_data(
         rate = Decimal(str(entry.rate_per_kg)) if entry.rate_per_kg is not None else Decimal("0")
         amount = qty * rate
         paid = Decimal(str(entry.paid_amount)) if entry.paid_amount is not None else Decimal("0")
+        luggage = Decimal(str(entry.luggage)) if entry.luggage is not None else Decimal("0")
+        coolie = Decimal(str(entry.coolie)) if entry.coolie is not None else Decimal("0")
         
         total_qty += qty
         total_amount += amount
         total_paid += paid
+        total_luggage += luggage
+        total_coolie += coolie
         
         # Format date as DD-MM-YYYY
         date_str = entry.date.strftime("%d-%m-%Y") if entry.date else "N/A"
@@ -155,10 +166,15 @@ def get_ledger_data(
             "id": entry.id,
             "date": date_str,
             "vehicle": vehicle_info,
+            "item_code": entry.item_code or "N/A",
+            "item_name": entry.item_name or "N/A",
             "qty": str(qty),
             "rate": str(rate),
+            "luggage": str(luggage),
+            "coolie": str(coolie),
             "amount": str(amount),
-            "paid": str(paid)
+            "paid": str(paid),
+            "remarks": entry.remarks or "N/A"
         })
     
     return {
@@ -166,6 +182,7 @@ def get_ledger_data(
             "id": customer.id,
             "name": customer.name,
             "code": customer.farmer_code,
+            "address": customer.address or "N/A",
             "phone": customer.phone,
             "group_name": group_name
         },
@@ -173,6 +190,8 @@ def get_ledger_data(
         "total_qty": str(total_qty),
         "total_amount": str(total_amount),
         "total_paid": str(total_paid),
+        "total_luggage": str(total_luggage),
+        "total_coolie": str(total_coolie),
         "record_count": len(entries_list)
     }
 
@@ -198,19 +217,25 @@ def get_group_total_data(
     if from_date is None or to_date is None:
         from_date, to_date = get_default_date_range()
     
-    # Query: get all collection items with group information
+    # Query: get all collection items with group information and all required fields
     results = db.query(
         FarmerGroup.id.label("group_id"),
         FarmerGroup.name.label("group_name"),
         Farmer.id.label("farmer_id"),
         Farmer.name.label("farmer_name"),
+        Farmer.address.label("farmer_address"),
+        Farmer.phone.label("farmer_phone"),
         CollectionItem.date,
         CollectionItem.vehicle_name,
         CollectionItem.vehicle_number,
+        CollectionItem.item_code,
         CollectionItem.item_name,
         CollectionItem.qty_kg,
         CollectionItem.rate_per_kg,
-        CollectionItem.paid_amount
+        CollectionItem.transport_cost.label("luggage"),
+        CollectionItem.coolie,
+        CollectionItem.paid_amount,
+        CollectionItem.remarks
     ).join(
         Farmer, Farmer.group_id == FarmerGroup.id
     ).join(
@@ -229,6 +254,8 @@ def get_group_total_data(
     grouped_data = defaultdict(list)
     
     grand_total = Decimal("0")
+    grand_total_luggage = Decimal("0")
+    grand_total_coolie = Decimal("0")
     entries_list = []
     
     for row in results:
@@ -236,6 +263,8 @@ def get_group_total_data(
         rate = Decimal(str(row.rate_per_kg or 0))
         amount = qty * rate
         paid = Decimal(str(row.paid_amount or 0))
+        luggage = Decimal(str(row.luggage or 0))
+        coolie = Decimal(str(row.coolie or 0))
         
         # Format date as DD-MM-YYYY
         date_str = row.date.strftime("%d-%m-%Y") if row.date else "N/A"
@@ -249,16 +278,24 @@ def get_group_total_data(
             "group_name": row.group_name,
             "farmer_id": row.farmer_id,
             "customer_name": row.farmer_name,
+            "customer_address": row.farmer_address or "N/A",
+            "customer_phone": row.farmer_phone or "N/A",
             "date": date_str,
             "vehicle": vehicle_info,
+            "item_code": row.item_code or "N/A",
             "item_name": row.item_name or "N/A",
             "qty": str(qty),
             "rate": str(rate),
+            "luggage": str(luggage),
+            "coolie": str(coolie),
             "amount": str(amount),
-            "paid": str(paid)
+            "paid": str(paid),
+            "remarks": row.remarks or "N/A"
         })
         
         grand_total += amount
+        grand_total_luggage += luggage
+        grand_total_coolie += coolie
         
         # Add to entries list for detailed view
         entries_list.append({
@@ -266,13 +303,19 @@ def get_group_total_data(
             "group_name": row.group_name,
             "farmer_id": row.farmer_id,
             "customer_name": row.farmer_name,
+            "customer_address": row.farmer_address or "N/A",
+            "customer_phone": row.farmer_phone or "N/A",
             "date": date_str,
             "vehicle": vehicle_info,
+            "item_code": row.item_code or "N/A",
             "item_name": row.item_name or "N/A",
             "qty": str(qty),
             "rate": str(rate),
+            "luggage": str(luggage),
+            "coolie": str(coolie),
             "amount": str(amount),
-            "paid": str(paid)
+            "paid": str(paid),
+            "remarks": row.remarks or "N/A"
         })
     
     # Create group summaries
@@ -300,6 +343,8 @@ def get_group_total_data(
         "groups": groups_list,
         "entries": entries_list,
         "grand_total_amount": str(grand_total),
+        "grand_total_luggage": str(grand_total_luggage),
+        "grand_total_coolie": str(grand_total_coolie),
         "group_count": len(groups_list),
         "from_date": from_date.isoformat(),
         "to_date": to_date.isoformat()
@@ -361,15 +406,20 @@ def get_group_patti_data(
     total_entry_count = 0
     
     for farmer in farmers:
-        # Get this farmer's collection items (transactions) with proper date and vehicle info
+        # Get this farmer's collection items (transactions) with all required fields
         entries = db.query(
             CollectionItem.id,
             CollectionItem.date,
             CollectionItem.vehicle_name,
             CollectionItem.vehicle_number,
+            CollectionItem.item_code,
+            CollectionItem.item_name,
             CollectionItem.qty_kg,
             CollectionItem.rate_per_kg,
-            CollectionItem.paid_amount
+            CollectionItem.transport_cost.label("luggage"),
+            CollectionItem.coolie,
+            CollectionItem.paid_amount,
+            CollectionItem.remarks
         ).filter(
             CollectionItem.vendor_id == vendor_id,
             CollectionItem.farmer_id == farmer.id,
@@ -380,6 +430,8 @@ def get_group_patti_data(
         farmer_total_qty = Decimal("0")
         farmer_total_amount = Decimal("0")
         farmer_total_paid = Decimal("0")
+        farmer_total_luggage = Decimal("0")
+        farmer_total_coolie = Decimal("0")
         entries_list = []
                 
         for entry in entries:
@@ -387,10 +439,14 @@ def get_group_patti_data(
             rate = Decimal(str(entry.rate_per_kg)) if entry.rate_per_kg is not None else Decimal("0")
             amount = qty * rate
             paid = Decimal(str(entry.paid_amount)) if entry.paid_amount is not None else Decimal("0")
+            luggage = Decimal(str(entry.luggage)) if entry.luggage is not None else Decimal("0")
+            coolie = Decimal(str(entry.coolie)) if entry.coolie is not None else Decimal("0")
                     
             farmer_total_qty += qty
             farmer_total_amount += amount
             farmer_total_paid += paid
+            farmer_total_luggage += luggage
+            farmer_total_coolie += coolie
                     
             # Format date as DD-MM-YYYY
             date_str = entry.date.strftime("%d-%m-%Y") if entry.date else "N/A"
@@ -401,12 +457,16 @@ def get_group_patti_data(
             entries_list.append({
                 "id": entry.id,
                 "date": date_str,
-                "vehicle_name": vehicle_info,
-                "vehicle": vehicle_info,  # For backward compatibility
+                "vehicle": vehicle_info,
+                "item_code": entry.item_code or "N/A",
+                "item_name": entry.item_name or "N/A",
                 "qty": str(qty),
                 "rate": str(rate),
+                "luggage": str(luggage),
+                "coolie": str(coolie),
                 "amount": str(amount),
-                "paid": str(paid)
+                "paid": str(paid),
+                "remarks": entry.remarks or "N/A"
             })
                 
         grand_total_qty += farmer_total_qty
@@ -420,11 +480,14 @@ def get_group_patti_data(
             "id": farmer.id,
             "name": farmer.name,
             "code": farmer.farmer_code,
+            "address": farmer.address or "N/A",
             "phone": farmer.phone,
             "entries": entries_list,
             "total_qty": str(farmer_total_qty),
             "total_amount": str(farmer_total_amount),
             "total_paid": str(farmer_total_paid),
+            "total_luggage": str(farmer_total_luggage),
+            "total_coolie": str(farmer_total_coolie),
             "commission": str(farmer_commission),
             "entry_count": len(entries_list)
         })
@@ -464,16 +527,22 @@ def get_daily_sales_data(
     if from_date is None or to_date is None:
         from_date, to_date = get_default_date_range()
     
-    # Query collection items with vehicle information
+    # Query collection items with vehicle information and all required fields
     query = db.query(
         CollectionItem.date,
         CollectionItem.vehicle_name,
         CollectionItem.vehicle_number,
         Farmer.name.label("party_name"),
+        Farmer.address.label("party_address"),
+        Farmer.phone.label("party_phone"),
+        CollectionItem.item_code,
         CollectionItem.item_name,
         CollectionItem.qty_kg,
         CollectionItem.rate_per_kg,
-        CollectionItem.paid_amount
+        CollectionItem.transport_cost.label("luggage"),
+        CollectionItem.coolie,
+        CollectionItem.paid_amount,
+        CollectionItem.remarks
     ).outerjoin(
         Farmer, CollectionItem.farmer_id == Farmer.id
     ).filter(
@@ -515,17 +584,25 @@ def get_daily_sales_data(
             "vehicle": vehicle_info,
             "vehicle_name": vehicle_info,  # For backward compatibility
             "party": row.party_name or "Unknown",
+            "party_address": row.party_address or "N/A",
+            "party_phone": row.party_phone or "N/A",
+            "item_code": row.item_code or "N/A",
             "item": row.item_name or "Unspecified",
             "qty": str(qty),
             "rate": str(rate),
+            "luggage": str(luggage),
+            "coolie": str(coolie),
             "amount": str(amount),
-            "paid": str(paid)
+            "paid": str(paid),
+            "remarks": row.remarks or "N/A"
         })
     
     return {
         "entries": entries_list,
         "grand_total_qty": str(grand_total_qty),
         "grand_total_amount": str(grand_total_amount),
+        "grand_total_luggage": str(grand_total_luggage),
+        "grand_total_coolie": str(grand_total_coolie),
         "record_count": len(entries_list),
         "from_date": from_date.isoformat(),
         "to_date": to_date.isoformat()

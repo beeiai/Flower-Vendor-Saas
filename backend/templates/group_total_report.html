@@ -87,11 +87,11 @@
             width: 100%;
             border-collapse: collapse;
             margin: 0 auto 20px auto;
-            font-size: 10px;
+            font-size: 8px;
         }
         .report-table th,
         .report-table td {
-            padding: 4px 5px;
+            padding: 3px 4px;
             border: 1px solid #aaa;
             text-align: center;
         }
@@ -99,21 +99,24 @@
             background-color: #f0f0f0;
             font-weight: bold;
             white-space: nowrap;
-            font-size: 10px;
+            font-size: 8px;
         }
         .report-table td {
             text-align: center;
-            font-size: 10px;
+            font-size: 8px;
         }
-        /* Left align for Group Name column */
+        /* Left align for Group Name and Customer Name columns */
         .report-table td:first-child {
             text-align: left;
         }
-        /* Adjust column widths for A4 - 4 columns now */
-        .report-table th:nth-child(1) { width: 35%; } /* Group Name */
-        .report-table th:nth-child(2) { width: 20%; } /* Customers */
-        .report-table th:nth-child(3) { width: 20%; } /* Total Qty */
-        .report-table th:nth-child(4) { width: 25%; } /* Total Amount */
+        /* Adjust column widths for A4 with new columns */
+        .report-table th:nth-child(1) { width: 12%; } /* Group Name/Customer Name */
+        .report-table th:nth-child(2) { width: 8%; }  /* Customers/Total Qty */
+        .report-table th:nth-child(3) { width: 8%; }  /* Total Qty/Total Price */
+        .report-table th:nth-child(4) { width: 8%; }  /* Total Price/Total Commission */
+        .report-table th:nth-child(5) { width: 8%; }  /* Total Commission/Total Luggage */
+        .report-table th:nth-child(6) { width: 8%; }  /* Total Luggage/Total Net Amount */
+        .report-table th:nth-child(7) { width: 8%; }  /* Total Net Amount */
         /* Overall totals in table format */
         .totals-table {
             width: 100%;
@@ -156,11 +159,11 @@
                 font-size: 10px;
             }
             .report-table {
-                font-size: 10px; /* Slightly larger since we have fewer columns */
+                font-size: 7.5px;
             }
             .report-table th,
             .report-table td {
-                font-size: 10px;
+                font-size: 7.5px;
             }
         }
     </style>
@@ -222,10 +225,13 @@
                 {% if rows and rows[0].farmer_name is defined %}
                     <!-- Detailed view for specific group: show customer details -->
                     <th>Customer Name</th>
+                    <th>Address</th>
+                    <th>Phone</th>
                     <th>Total Qty</th>
                     <th>Total Price</th>
                     <th>Total Commission</th>
                     <th>Total Luggage</th>
+                    <th>Total Coolie</th>
                     <th>Total Net Amount</th>
                 {% else %}
                     <!-- Aggregated view: show group details -->
@@ -233,6 +239,10 @@
                     <th>Customers</th>
                     <th>Total Qty</th>
                     <th>Total Amount</th>
+                    <th>Total Commission</th>
+                    <th>Total Luggage</th>
+                    <th>Total Coolie</th>
+                    <th>Total Net Amount</th>
                 {% endif %}
             </tr>
         </thead>
@@ -242,10 +252,13 @@
                 {% if row.farmer_name is defined %}
                     <!-- Detailed view for specific group: show customer details -->
                     <td>{{ row.farmer_name }}</td>
+                    <td>{{ row.address }}</td>
+                    <td>{{ row.phone }}</td>
                     <td>{{ row.total_qty }}</td>
                     <td>₹ {{ row.total_price }}</td>
                     <td>₹ {{ row.total_commission }}</td>
                     <td>{{ row.total_luggage }}</td>
+                    <td>{{ row.total_coolie }}</td>
                     <td>₹ {{ row.total_net_amount }}</td>
                 {% else %}
                     <!-- Aggregated view: show group details -->
@@ -253,6 +266,10 @@
                     <td>{{ row.customer_count }}</td>
                     <td>{{ row.total_qty }}</td>
                     <td>₹ {{ row.total_amount }}</td>
+                    <td>₹ {{ row.total_commission }}</td>
+                    <td>{{ row.total_luggage }}</td>
+                    <td>{{ row.total_coolie }}</td>
+                    <td>₹ {{ row.total_net_amount }}</td>
                 {% endif %}
             </tr>
             {% endfor %}
@@ -282,8 +299,14 @@
         <tr>
             <td>Total Luggage:</td>
             <td>{{ overall_luggage|default(0) }}</td>
+            <td>Total Coolie:</td>
+            <td>{{ overall_coolie|default(0) }}</td>
+        </tr>
+        <tr>
             <td><b>Net Amount:</b></td>
             <td><b>₹ {{ overall_net_amount|default(overall_amount) }}</b></td>
+            <td></td>
+            <td></td>
         </tr>
     </table>
 

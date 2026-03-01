@@ -164,31 +164,48 @@ def get_ledger_report(
     net_total = 0
     paid_total = 0
     balance_total = 0
+    luggage_total = 0
+    coolie_total = 0
+    
     for entry in ledger_data.get("entries", []):
         gross = float(entry.get("amount", 0))
         commission = gross * (commission_pct / 100)
         net = gross - commission
         paid = float(entry.get("paid", 0)) if entry.get("paid") is not None else 0.0
-        balance = net - paid
+        luggage = float(entry.get("luggage", 0)) if entry.get("luggage") is not None else 0.0
+        coolie = float(entry.get("coolie", 0)) if entry.get("coolie") is not None else 0.0
+        balance = net - paid - luggage - coolie
+        
         # Date and vehicle are already properly formatted in the data
         date_val = entry.get("date", "N/A")
         vehicle_val = entry.get("vehicle", "N/A")
+        
         rows.append({
             "date": date_val,
             "vehicle": vehicle_val,
+            "item_code": entry.get("item_code", "N/A"),
+            "item_name": entry.get("item_name", "N/A"),
             "customer": ledger_data.get("customer", {}).get("name", "N/A"),
-            "address": ledger_data.get("customer", {}).get("phone", "N/A"),
+            "address": ledger_data.get("customer", {}).get("address", "N/A"),
+            "phone": ledger_data.get("customer", {}).get("phone", "N/A"),
+            "qty": entry.get("qty", "0"),
+            "rate": entry.get("rate", "0"),
+            "luggage": f"{luggage:.2f}",
+            "coolie": f"{coolie:.2f}",
             "gross": f"{gross:.2f}",
             "commission": f"{commission:.2f}",
             "net": f"{net:.2f}",
             "paid": f"{paid:.2f}",
-            "balance": f"{balance:.2f}"
+            "balance": f"{balance:.2f}",
+            "remarks": entry.get("remarks", "N/A")
         })
         gross_total += gross
         commission_total += commission
         net_total += net
         paid_total += paid
         balance_total += balance
+        luggage_total += luggage
+        coolie_total += coolie
     
     # Get group name
     customer_obj = ledger_data.get("customer", {})
@@ -204,7 +221,9 @@ def get_ledger_report(
             "commission_total": f"{commission_total:.2f}",
             "net_total": f"{net_total:.2f}",
             "paid_total": f"{paid_total:.2f}",
-            "balance_total": f"{balance_total:.2f}"
+            "balance_total": f"{balance_total:.2f}",
+            "luggage_total": f"{luggage_total:.2f}",
+            "coolie_total": f"{coolie_total:.2f}"
         },
         "group_name": group_name,
         "commission_pct": 12.0,
@@ -451,10 +470,9 @@ def get_group_total_report_by_group(
             CollectionItem.rate_per_kg,
             CollectionItem.paid_amount
         ).join(
-            Farmer, Farmer.group_id == group.id
-        ).join(
             CollectionItem, CollectionItem.farmer_id == Farmer.id
         ).filter(
+            Farmer.group_id == group.id,
             CollectionItem.vendor_id == user.vendor_id,
             CollectionItem.date >= start_date,
             CollectionItem.date <= end_date
@@ -676,6 +694,8 @@ def get_group_patti_report(
     grand_total_amount = 0
     grand_total_paid = 0
     grand_total_balance = 0
+    grand_total_luggage = 0
+    grand_total_coolie = 0
     
     # Summary rows for the summary table
     summary_rows = []
@@ -683,59 +703,76 @@ def get_group_patti_report(
     summary_amount = 0
     summary_paid = 0
     summary_balance = 0
+    summary_luggage = 0
+    summary_coolie = 0
     
     for farmer in patti_data.get("farmers", []):
         farmer_name = farmer.get("name", "Unknown")
         farmer_id = farmer.get("id", 0)
-        # Use phone as address if available
-        farmer_address = farmer.get("phone", "N/A")
+        farmer_address = farmer.get("address", "N/A")
+        farmer_phone = farmer.get("phone", "N/A")
+        
         # Transform entries (from reports_db) to transactions (for template)
         transactions = []
         farmer_qty = 0
         farmer_amount = 0
         farmer_paid = 0
         farmer_balance = 0
+        farmer_luggage = 0
+        farmer_coolie = 0
+        
         for entry in farmer.get("entries", []):
             qty = float(entry.get("qty", 0))
             rate = float(entry.get("rate", 0))
             # Use the pre-calculated amount from the database instead of recalculating
             total = float(entry.get("amount", 0))
             paid = float(entry.get("paid", 0))  # Get paid amount from the entry
+            luggage = float(entry.get("luggage", 0))
+            coolie = float(entry.get("coolie", 0))
+            
             # Get vehicle info - entries from get_group_patti_data now have proper date/vehicle fields
             vehicle = entry.get("vehicle_name", entry.get("vehicle", "N/A"))
             # Date is already formatted as DD-MM-YYYY from reports_db
             date_val = entry.get("date", "N/A")
+            
             transactions.append({
                 "date": date_val,
                 "vehicle": vehicle,
+                "item_code": entry.get("item_code", "N/A"),
+                "item_name": entry.get("item_name", "N/A"),
                 "qty": f"{qty:.2f}",
-                "price": f"{rate:.2f}",
+                "rate": f"{rate:.2f}",
+                "luggage": f"{luggage:.2f}",
+                "coolie": f"{coolie:.2f}",
                 "total": f"{total:.2f}",
-                "luggage": "0.00",  # Default to 0.00, could be from transport_cost if available
-                "paid": f"{paid:.2f}",  # Use actual paid amount
-                "amount": f"{(total - paid):.2f}"  # Amount after paid deduction
+                "paid": f"{paid:.2f}",
+                "amount": f"{(total - paid - luggage - coolie):.2f}",
+                "remarks": entry.get("remarks", "N/A")
             })
             farmer_qty += qty
             farmer_amount += total
             farmer_paid += paid
+            farmer_luggage += luggage
+            farmer_coolie += coolie
         
         # Calculate commission based on commission percentage
         farmer_commission = farmer_amount * (commission_pct / 100)
         farmer_net_amount = farmer_amount - farmer_commission
-        farmer_final_total = farmer_net_amount + 0.0 - farmer_paid  # luggage is 0.0 for now
+        farmer_final_total = farmer_net_amount + 0.0 - farmer_paid - farmer_luggage - farmer_coolie
         
         customers.append({
             "id": farmer_id,
             "name": farmer_name,
             "address": farmer_address,
+            "phone": farmer_phone,
             "ledger_name": farmer.get("code", "N/A"),
             "balance": f"{farmer_final_total:.2f}",
             "transactions": transactions,
             "total_qty": f"{farmer_qty:.2f}",
             "total_amount": f"{farmer_amount:.2f}",
             "commission": f"{farmer_commission:.2f}",
-            "luggage_total": "0.00",  # Default to 0.00
-            "coolie": "0.00",  # Default to 0.00
+            "luggage_total": f"{farmer_luggage:.2f}",
+            "coolie_total": f"{farmer_coolie:.2f}",
             "net_amount": f"{farmer_net_amount:.2f}",
             "paid_amount": f"{farmer_paid:.2f}",
             "final_total": f"{farmer_final_total:.2f}"
@@ -743,8 +780,11 @@ def get_group_patti_report(
         summary_rows.append({
             "customer": farmer_name,
             "address": farmer_address,
+            "phone": farmer_phone,
             "qty": f"{farmer_qty:.2f}",
             "total": f"{farmer_amount:.2f}",
+            "luggage": f"{farmer_luggage:.2f}",
+            "coolie": f"{farmer_coolie:.2f}",
             "paid": f"{farmer_paid:.2f}",
             "balance": f"{farmer_balance:.2f}"
         })
@@ -752,10 +792,14 @@ def get_group_patti_report(
         grand_total_amount += farmer_amount
         grand_total_paid += farmer_paid
         grand_total_balance += farmer_balance
+        grand_total_luggage += farmer_luggage
+        grand_total_coolie += farmer_coolie
         summary_qty += farmer_qty
         summary_amount += farmer_amount
         summary_paid += farmer_paid
         summary_balance += farmer_balance
+        summary_luggage += farmer_luggage
+        summary_coolie += farmer_coolie
     
     # Prepare template data
     template_data = {
