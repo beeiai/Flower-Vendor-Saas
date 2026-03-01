@@ -110,13 +110,14 @@
             text-align: left;
         }
         /* Adjust column widths for A4 with new columns */
-        .report-table th:nth-child(1) { width: 12%; } /* Group Name/Customer Name */
-        .report-table th:nth-child(2) { width: 8%; }  /* Customers/Total Qty */
-        .report-table th:nth-child(3) { width: 8%; }  /* Total Qty/Total Price */
-        .report-table th:nth-child(4) { width: 8%; }  /* Total Price/Total Commission */
-        .report-table th:nth-child(5) { width: 8%; }  /* Total Commission/Total Luggage */
-        .report-table th:nth-child(6) { width: 8%; }  /* Total Luggage/Total Net Amount */
-        .report-table th:nth-child(7) { width: 8%; }  /* Total Net Amount */
+        .report-table th:nth-child(1) { width: 14%; } /* Group Name/Customer Name */
+        .report-table th:nth-child(2) { width: 10%; }  /* Address/Customers */
+        .report-table th:nth-child(3) { width: 10%; }  /* Total Qty */
+        .report-table th:nth-child(4) { width: 10%; }  /* Total Price */
+        .report-table th:nth-child(5) { width: 10%; }  /* Total Commission */
+        .report-table th:nth-child(6) { width: 10%; }  /* Total Luggage */
+        .report-table th:nth-child(7) { width: 10%; }  /* Total Coolie */
+        .report-table th:nth-child(8) { width: 10%; }  /* Total Net Amount */
         /* Overall totals in table format */
         .totals-table {
             width: 100%;
@@ -226,7 +227,6 @@
                     <!-- Detailed view for specific group: show customer details -->
                     <th>Customer Name</th>
                     <th>Address</th>
-                    <th>Phone</th>
                     <th>Total Qty</th>
                     <th>Total Price</th>
                     <th>Total Commission</th>
@@ -253,7 +253,6 @@
                     <!-- Detailed view for specific group: show customer details -->
                     <td>{{ row.farmer_name }}</td>
                     <td>{{ row.address }}</td>
-                    <td>{{ row.phone }}</td>
                     <td>{{ row.total_qty }}</td>
                     <td>₹ {{ row.total_price }}</td>
                     <td>₹ {{ row.total_commission }}</td>

@@ -486,7 +486,7 @@ def get_group_patti_report_docx(
             customers.append({
                 'id': farmer.id,
                 'name': farmer.name,
-                'address': farmer.phone or "N/A",
+                'address': farmer.address or "N/A",
                 'ledger_name': farmer.farmer_code or "N/A",
                 'balance': f"{farmer_balance:.2f}",
                 'total_qty': f"{farmer_qty:.2f}",

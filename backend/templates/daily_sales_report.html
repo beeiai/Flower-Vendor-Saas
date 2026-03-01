@@ -110,20 +110,19 @@
         .report-table td:nth-child(6) {
             text-align: left;
         }
-        /* Adjust column widths for A4 with new columns */
-        .report-table th:nth-child(1) { width: 6%; }  /* Date */
-        .report-table th:nth-child(2) { width: 6%; }  /* Vehicle */
-        .report-table th:nth-child(3) { width: 6%; }  /* Item Code */
-        .report-table th:nth-child(4) { width: 8%; } /* Product Name */
-        .report-table th:nth-child(5) { width: 8%; } /* Party/Customer */
-        .report-table th:nth-child(6) { width: 8%; } /* Address */
-        .report-table th:nth-child(7) { width: 7%; }  /* Phone */
-        .report-table th:nth-child(8) { width: 5%; }  /* Qty */
-        .report-table th:nth-child(9) { width: 5%; }  /* Rate */
-        .report-table th:nth-child(10) { width: 5%; } /* Luggage */
-        .report-table th:nth-child(11) { width: 5%; } /* Coolie */
-        .report-table th:nth-child(12) { width: 5%; } /* Paid */
-        .report-table th:nth-child(13) { width: 6%; } /* Total */
+        /* Adjust column widths for A4 with new columns (removed phone) */
+        .report-table th:nth-child(1) { width: 7%; }  /* Date */
+        .report-table th:nth-child(2) { width: 7%; }  /* Vehicle */
+        .report-table th:nth-child(3) { width: 7%; }  /* Item Code */
+        .report-table th:nth-child(4) { width: 10%; } /* Product Name */
+        .report-table th:nth-child(5) { width: 10%; } /* Party/Customer */
+        .report-table th:nth-child(6) { width: 10%; } /* Address */
+        .report-table th:nth-child(7) { width: 6%; }  /* Qty */
+        .report-table th:nth-child(8) { width: 6%; }  /* Rate */
+        .report-table th:nth-child(9) { width: 6%; }  /* Luggage */
+        .report-table th:nth-child(10) { width: 6%; } /* Coolie */
+        .report-table th:nth-child(11) { width: 6%; } /* Paid */
+        .report-table th:nth-child(12) { width: 7%; } /* Total */
         /* Sales summary in table format */
         .summary-table {
             width: 100%;
@@ -229,7 +228,6 @@
                 <th>Product Name</th>
                 <th>Party</th>
                 <th>Address</th>
-                <th>Phone</th>
                 <th>Qty</th>
                 <th>Rate</th>
                 <th>Luggage</th>
@@ -247,7 +245,6 @@
                 <td>{{ row.product_name }}</td>
                 <td>{{ row.party }}</td>
                 <td>{{ row.address }}</td>
-                <td>{{ row.phone }}</td>
                 <td>{{ row.qty }}</td>
                 <td>₹ {{ row.rate }}</td>
                 <td>₹ {{ row.luggage }}</td>

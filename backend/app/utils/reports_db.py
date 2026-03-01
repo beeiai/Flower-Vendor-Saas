@@ -183,7 +183,6 @@ def get_ledger_data(
             "name": customer.name,
             "code": customer.farmer_code,
             "address": customer.address or "N/A",
-            "phone": customer.phone,
             "group_name": group_name
         },
         "entries": entries_list,
@@ -224,7 +223,7 @@ def get_group_total_data(
         Farmer.id.label("farmer_id"),
         Farmer.name.label("farmer_name"),
         Farmer.address.label("farmer_address"),
-        Farmer.phone.label("farmer_phone"),
+        
         CollectionItem.date,
         CollectionItem.vehicle_name,
         CollectionItem.vehicle_number,
@@ -279,7 +278,6 @@ def get_group_total_data(
             "farmer_id": row.farmer_id,
             "customer_name": row.farmer_name,
             "customer_address": row.farmer_address or "N/A",
-            "customer_phone": row.farmer_phone or "N/A",
             "date": date_str,
             "vehicle": vehicle_info,
             "item_code": row.item_code or "N/A",
@@ -304,7 +302,6 @@ def get_group_total_data(
             "farmer_id": row.farmer_id,
             "customer_name": row.farmer_name,
             "customer_address": row.farmer_address or "N/A",
-            "customer_phone": row.farmer_phone or "N/A",
             "date": date_str,
             "vehicle": vehicle_info,
             "item_code": row.item_code or "N/A",
@@ -481,7 +478,7 @@ def get_group_patti_data(
             "name": farmer.name,
             "code": farmer.farmer_code,
             "address": farmer.address or "N/A",
-            "phone": farmer.phone,
+            
             "entries": entries_list,
             "total_qty": str(farmer_total_qty),
             "total_amount": str(farmer_total_amount),
@@ -534,7 +531,7 @@ def get_daily_sales_data(
         CollectionItem.vehicle_number,
         Farmer.name.label("party_name"),
         Farmer.address.label("party_address"),
-        Farmer.phone.label("party_phone"),
+        
         CollectionItem.item_code,
         CollectionItem.item_name,
         CollectionItem.qty_kg,
@@ -585,7 +582,7 @@ def get_daily_sales_data(
             "vehicle_name": vehicle_info,  # For backward compatibility
             "party": row.party_name or "Unknown",
             "party_address": row.party_address or "N/A",
-            "party_phone": row.party_phone or "N/A",
+            
             "item_code": row.item_code or "N/A",
             "item": row.item_name or "Unspecified",
             "qty": str(qty),

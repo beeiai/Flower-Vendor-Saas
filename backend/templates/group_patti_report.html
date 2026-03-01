@@ -176,18 +176,18 @@
             text-align: left;
         }
         
-        /* Adjust column widths for A4 with new columns */
-        .report-table th:nth-child(1) { width: 6%; }   /* Date */
-        .report-table th:nth-child(2) { width: 6%; }  /* Vehicle */
-        .report-table th:nth-child(3) { width: 6%; }  /* Item Code */
-        .report-table th:nth-child(4) { width: 8%; } /* Product Name */
-        .report-table th:nth-child(5) { width: 5%; }  /* Qty */
-        .report-table th:nth-child(6) { width: 5%; }  /* Rate */
-        .report-table th:nth-child(7) { width: 5%; }  /* Total */
-        .report-table th:nth-child(8) { width: 5%; }  /* Luggage */
-        .report-table th:nth-child(9) { width: 5%; }  /* Coolie */
-        .report-table th:nth-child(10) { width: 5%; } /* Paid */
-        .report-table th:nth-child(11) { width: 5%; } /* Amount */
+        /* Adjust column widths for A4 with new columns (removed phone) */
+        .report-table th:nth-child(1) { width: 7%; }   /* Date */
+        .report-table th:nth-child(2) { width: 7%; }  /* Vehicle */
+        .report-table th:nth-child(3) { width: 7%; }  /* Item Code */
+        .report-table th:nth-child(4) { width: 10%; } /* Product Name */
+        .report-table th:nth-child(5) { width: 6%; }  /* Qty */
+        .report-table th:nth-child(6) { width: 6%; }  /* Rate */
+        .report-table th:nth-child(7) { width: 7%; }  /* Total */
+        .report-table th:nth-child(8) { width: 6%; }  /* Luggage */
+        .report-table th:nth-child(9) { width: 6%; }  /* Coolie */
+        .report-table th:nth-child(10) { width: 6%; } /* Paid */
+        .report-table th:nth-child(11) { width: 7%; } /* Amount */
         
         .total-row {
             font-weight: bold;
@@ -382,8 +382,8 @@
         <tr>
             <td>Address:</td>
                 <td>{{ customer.address }}</td>
-            <td>Phone:</td>
-                <td>{{ customer.phone }}</td>
+            <td></td>
+            <td></td>
         </tr>
         <tr>
             <td>Balance:</td>

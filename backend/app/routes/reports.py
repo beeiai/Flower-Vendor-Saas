@@ -187,7 +187,6 @@ def get_ledger_report(
             "item_name": entry.get("item_name", "N/A"),
             "customer": ledger_data.get("customer", {}).get("name", "N/A"),
             "address": ledger_data.get("customer", {}).get("address", "N/A"),
-            "phone": ledger_data.get("customer", {}).get("phone", "N/A"),
             "qty": entry.get("qty", "0"),
             "rate": entry.get("rate", "0"),
             "luggage": f"{luggage:.2f}",
@@ -462,7 +461,7 @@ def get_group_total_report_by_group(
         results = db.query(
             Farmer.id.label("farmer_id"),
             Farmer.name.label("farmer_name"),
-            Farmer.phone.label("farmer_phone"),
+            
             CollectionItem.date,
             CollectionItem.vehicle_name,
             CollectionItem.vehicle_number,
@@ -496,8 +495,7 @@ def get_group_total_report_by_group(
         'total_commission': Decimal("0"),
         'total_luggage': Decimal("0"),
         'total_net_amount': Decimal("0"),
-        'transaction_count': 0,
-        'farmer_phone': ""
+        'transaction_count': 0
     })
     
     # Process results to aggregate data by customer
@@ -519,7 +517,6 @@ def get_group_total_report_by_group(
         customer_data[farmer_key]['total_commission'] += commission
         customer_data[farmer_key]['total_net_amount'] += net_amount
         customer_data[farmer_key]['transaction_count'] += 1
-        customer_data[farmer_key]['farmer_phone'] = row.farmer_phone or ""
     
     # Prepare rows for the template (one row per customer)
     rows = []
@@ -541,7 +538,6 @@ def get_group_total_report_by_group(
             "total_qty": f"{data['total_qty']:.2f}",
             "total_amount": f"{data['total_net_amount']:.2f}",  # Using net amount for display
             "farmer_name": farmer_name,
-            "farmer_phone": data['farmer_phone'],
             "total_price": f"{data['total_price']:.2f}",
             "total_commission": f"{data['total_commission']:.2f}",
             "total_luggage": f"{data['total_luggage']:.2f}",
@@ -710,7 +706,6 @@ def get_group_patti_report(
         farmer_name = farmer.get("name", "Unknown")
         farmer_id = farmer.get("id", 0)
         farmer_address = farmer.get("address", "N/A")
-        farmer_phone = farmer.get("phone", "N/A")
         
         # Transform entries (from reports_db) to transactions (for template)
         transactions = []
@@ -764,7 +759,6 @@ def get_group_patti_report(
             "id": farmer_id,
             "name": farmer_name,
             "address": farmer_address,
-            "phone": farmer_phone,
             "ledger_name": farmer.get("code", "N/A"),
             "balance": f"{farmer_final_total:.2f}",
             "transactions": transactions,
@@ -780,7 +774,6 @@ def get_group_patti_report(
         summary_rows.append({
             "customer": farmer_name,
             "address": farmer_address,
-            "phone": farmer_phone,
             "qty": f"{farmer_qty:.2f}",
             "total": f"{farmer_amount:.2f}",
             "luggage": f"{farmer_luggage:.2f}",
