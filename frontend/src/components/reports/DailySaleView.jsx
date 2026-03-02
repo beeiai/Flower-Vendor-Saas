@@ -10,7 +10,9 @@ const DailySaleReport = ({ onCancel }) => {
     fromDate,
     toDate,
     selectedGroup,
+    selectedItem,
     groups,
+    items,
     customers,
     filteredData,
     loading,
@@ -20,7 +22,9 @@ const DailySaleReport = ({ onCancel }) => {
   const setFromDate = useCallback((value) => setState(prev => ({ ...prev, fromDate: value })), []);
   const setToDate = useCallback((value) => setState(prev => ({ ...prev, toDate: value })), []);
   const setSelectedGroup = useCallback((value) => setState(prev => ({ ...prev, selectedGroup: value })), []);
+  const setSelectedItem = useCallback((value) => setState(prev => ({ ...prev, selectedItem: value })), []);
   const setGroups = useCallback((value) => setState(prev => ({ ...prev, groups: value })), []);
+  const setItems = useCallback((value) => setState(prev => ({ ...prev, items: value })), []);
   const setCustomers = useCallback((value) => setState(prev => ({ ...prev, customers: value })), []);
   const setFilteredData = useCallback((value) => setState(prev => ({ ...prev, filteredData: value })), []);
   const setLoading = useCallback((value) => setState(prev => ({ ...prev, loading: value })), []);
@@ -29,6 +33,7 @@ const DailySaleReport = ({ onCancel }) => {
   // ✅ FIX: Use a ref to always have latest customers without stale closure
   const customersRef = useRef([]);
   const selectedGroupRef = useRef('');
+  const selectedItemRef = useRef('');
 
   useEffect(() => {
     customersRef.current = customers;
@@ -38,9 +43,14 @@ const DailySaleReport = ({ onCancel }) => {
     selectedGroupRef.current = selectedGroup;
   }, [selectedGroup]);
 
+  useEffect(() => {
+    selectedItemRef.current = selectedItem;
+  }, [selectedItem]);
+
   // ✅ FIX: handleFilter accepts optional fresh customers to avoid stale state
   const handleFilter = useCallback(async (customersOverride) => {
     const currentGroup = selectedGroupRef.current;
+    const currentItem = selectedItemRef.current;
     if (!currentGroup) return;
 
     const currentCustomers = customersOverride || customersRef.current;
@@ -48,7 +58,7 @@ const DailySaleReport = ({ onCancel }) => {
     setLoading(true);
     setError(null);
     try {
-      const data = await api.getDailySales(fromDate, toDate, null);
+      const data = await api.getDailySales(fromDate, toDate, currentItem);
 
       const groupCustomers = currentCustomers.filter(c => c.group === currentGroup);
       const groupCustomerNames = groupCustomers.map(c => c.name);
@@ -86,15 +96,18 @@ const DailySaleReport = ({ onCancel }) => {
   useEffect(() => {
     const fetchMasterData = async () => {
       try {
-        const [groupsData, customersData] = await Promise.all([
+        const [groupsData, customersData, itemsData] = await Promise.all([
           api.listGroups(),
-          api.listCustomers()
+          api.listCustomers(),
+          api.getDailySalesItems()
         ]);
         const safeGroups = groupsData || [];
         const safeCustomers = customersData || [];
+        const safeItems = itemsData || [];
 
         setGroups(safeGroups);
         setCustomers(safeCustomers);
+        setItems(safeItems);
         customersRef.current = safeCustomers; // ✅ update ref immediately
 
         // If group already selected, re-run filter with fresh customers
@@ -226,6 +239,24 @@ const DailySaleReport = ({ onCancel }) => {
               />
             </div>
 
+            {/* Item Filter */}
+            <div className="col-span-2">
+              <label className="text-[10px] font-black uppercase text-slate-600 mb-1.5 block tracking-wider">Item Filter</label>
+              <div className="relative">
+                <select
+                  value={selectedItem}
+                  onChange={(e) => setSelectedItem(e.target.value)}
+                  className="w-full bg-amber-50 border-2 border-amber-200 rounded-lg p-2.5 text-sm font-bold text-slate-800 outline-none transition-all duration-200 hover:border-amber-300 focus:border-amber-400 focus:ring-2 focus:ring-amber-100 appearance-none"
+                >
+                  <option value="">All Items</option>
+                  {items.map(item => (
+                    <option key={item} value={item}>{item}</option>
+                  ))}
+                </select>
+                <ChevronDown className="absolute right-3 top-1/2 -translate-y-1/2 w-4 h-4 text-amber-400 pointer-events-none" />
+              </div>
+            </div>
+            
             {/* Go Button */}
             <div className="col-span-2 flex justify-end">
               <button
