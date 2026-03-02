@@ -44,7 +44,8 @@ app = FastAPI(
     # Security: Disable OpenAPI in production
     docs_url=None if settings.REQUIRE_SECURE_SECRETS else "/docs",
     redoc_url=None if settings.REQUIRE_SECURE_SECRETS else "/redoc",
-    openapi_url=None if settings.REQUIRE_SECURE_SECRETS else "/openapi.json"
+    openapi_url=None if settings.REQUIRE_SECURE_SECRETS else "/openapi.json",
+    redirect_slashes=False
 )
 
 # Startup and shutdown events
