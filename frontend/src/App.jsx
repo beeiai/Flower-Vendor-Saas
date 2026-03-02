@@ -10,7 +10,7 @@ import SearchableSelect from './components/shared/SearchableSelect';
 import DailyTransactionsView from './components/transactions/DailyTransactionsView';
 import Toast from './components/shared/Toast';
 import { api } from './utils/api';
-import ReportsWindow from './components/reports/ReportsView';
+import ReportsView from './components/reports/ReportsView';
 import DailySaleView from './components/reports/DailySaleView';
 import PartyDetailsView from './components/utility/PartyDetailsView';
 import AdvanceTrackerView from './components/utility/AdvanceTrackerView';
@@ -515,6 +515,7 @@ export default function App() {
     }} />;
   }
   const [activeSection, setActiveSection] = useState('daily');
+  console.log('Current activeSection:', activeSection);
   const [notification, setNotification] = useState({ message: '', type: 'info' });
   const [itemForm, setItemForm] = useState({ itemCode: '', itemName: '' });
   
@@ -954,6 +955,7 @@ export default function App() {
         
         setGroups(groupData);
         const mappedCustomers = customerData.map(c => ({ id: c.id, group: c.groupName || '', name: c.name, contact: c.contact, address: c.address }));
+        console.log('Mapped customers:', mappedCustomers);
         setCustomers(mappedCustomers);
         setCatalog(catalogData);
         setVehicles(vehicleData);
@@ -1264,6 +1266,7 @@ export default function App() {
                     return;
                   }
                   if (item.id === 'sms-single') {
+                    console.log('Setting activeSection to sms');
                     setActiveSection('sms');
                     return;
                   }
@@ -1378,7 +1381,7 @@ export default function App() {
         {activeSection === 'saala' && <SaalaView catalog={catalog} onCancel={() => setActiveSection('daily')} showNotify={showNotify} />}
         {activeSection === 'silk' && <SilkSummaryView ledgerStore={ledgerStore} customers={customers} onCancel={() => setActiveSection('daily')} />}
         {activeSection === 'reports' && (
-          <ReportsWindow 
+          <ReportsView 
             groups={groups} 
             customers={customers} 
             vehicles={vehicles} 
@@ -1428,7 +1431,30 @@ export default function App() {
         )}
         {activeSection === 'group-adv' && <GroupAdvanceView groups={groups} customers={customers} advanceStore={advanceStore} onCancel={() => setActiveSection('daily')} />}
         {activeSection === 'group-pay' && <GroupPaymentView groups={groups} customers={customers} ledgerStore={ledgerStore} onCancel={() => setActiveSection('daily')} />}
-        {activeSection === 'sms' && <SmsView customers={customers} ledgerStore={ledgerStore} onCancel={() => setActiveSection('daily')} showNotify={showNotify} />}
+        {activeSection === 'sms' && (
+          <div>
+            <div style={{position: 'absolute', top: 80, right: 0, background: 'green', color: 'white', padding: '5px', zIndex: 9999, fontSize: '12px'}}>
+              SMS Component Rendered - Customers: {customers?.length || 0}
+            </div>
+            {customers && customers.length > 0 ? (
+              <SmsView 
+                customers={customers} 
+                ledgerStore={ledgerStore} 
+                onCancel={() => setActiveSection('daily')} 
+                showNotify={showNotify} 
+              />
+            ) : (
+              <div className="flex-1 flex items-center justify-center bg-slate-100">
+                <div className="text-center p-8 bg-white rounded-xl shadow-lg border border-slate-200">
+                  <div className="text-red-600 mb-4 text-xl">⚠️ Error</div>
+                  <div className="text-slate-600 mb-2">Customers data not loaded</div>
+                  <div className="text-sm text-slate-500">Please refresh the page or contact support</div>
+                  <div className="mt-4 text-xs text-slate-400">Customers length: {customers?.length || 0}</div>
+                </div>
+              </div>
+            )}
+          </div>
+        )}
         {activeSection === 'sms-single' && <SmsView customers={customers} ledgerStore={ledgerStore} onCancel={() => setActiveSection('daily')} showNotify={showNotify} />}
         {activeSection === 'vehicle' && <VehicleView vehicles={vehicles} setVehicles={setVehicles} showNotify={showNotify} onCancel={() => setActiveSection('daily')} />}
         {activeSection === 'daily-rate-sales' && <UtilityPlaceholderView title="Daily Rate Wise Sales" onCancel={() => setActiveSection('daily')} />}
