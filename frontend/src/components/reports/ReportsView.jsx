@@ -1,7 +1,8 @@
 import React, { useEffect, useMemo, useState, useCallback, useRef } from 'react';
-import SearchableSelect from '../shared/SearchableSelect';
+import { EnhancedSearchableSelect } from '../shared/EnhancedSearchableSelect';
 import { api } from '../../utils/api';
 import { DEFAULT_STATES } from '../../utils/stateManager';
+import { useKeyboardListNavigation } from '../../hooks/useKeyboardListNavigation';
 
 // Import unified navigation hook from App.jsx
 // This will be passed as a prop or imported from a shared hooks file
@@ -31,6 +32,7 @@ export default function ReportsView({ groups, customers, vehicles, advanceStore 
 	} = state;
 
 	const containerRef = useRef(null);
+	const tableRef = useRef(null);
 	
 	// Refs for form elements
 	const groupRef = useRef(null);
@@ -39,6 +41,38 @@ export default function ReportsView({ groups, customers, vehicles, advanceStore 
 	const fromDateRef = useRef(null);
 	const toDateRef = useRef(null);
 	const vehicleRef = useRef(null);
+
+	// Keyboard navigation hook for form elements
+	const formNav = useKeyboardListNavigation({
+		itemCount: 6, // From date, To date, Group, Vehicle, Customer, Submit
+		onEnter: (index) => {
+			// Map index to action
+			const actions = [
+				() => toDateRef.current?.focus(),     // 0: From date -> To date
+				() => groupRef.current?.focus(),      // 1: To date -> Group
+				() => vehicleRef.current?.focus(),    // 2: Group -> Vehicle
+				() => customerRef.current?.focus(),   // 3: Vehicle -> Customer
+				() => submitRef.current?.focus(),     // 4: Customer -> Submit
+				() => handleFilterSubmit()            // 5: Submit button
+			];
+			actions[index]?.();
+		},
+		listRef: containerRef
+	});
+
+	// Keyboard navigation hook for table rows
+	const tableNav = useKeyboardListNavigation({
+		itemCount: filteredRows.length,
+		onEnter: (index) => {
+			// Handle row selection/activation
+			const row = filteredRows[index];
+			if (row) {
+				// Could trigger row-specific actions here
+				console.log('Row selected:', row);
+			}
+		},
+		listRef: tableRef
+	});
 
 	const setFromDate = useCallback((value) => setState(prev => ({ ...prev, fromDate: value })), []);
 	const setToDate = useCallback((value) => setState(prev => ({ ...prev, toDate: value })), []);
@@ -229,7 +263,13 @@ export default function ReportsView({ groups, customers, vehicles, advanceStore 
 	};
 
 	return (
-		<div className="flex-1 flex flex-col h-full overflow-hidden bg-white" ref={containerRef} data-testid="reports-view">
+		<div 
+			className="flex-1 flex flex-col h-full overflow-hidden bg-white" 
+			ref={containerRef} 
+			onKeyDown={formNav.handleKeyDown}
+			tabIndex={0}
+			data-testid="reports-view"
+		>
 			<div className="bg-slate-800 px-5 py-3 text-white shrink-0">
 				<h2 className="text-base font-semibold tracking-wide">Reports</h2>
 			</div>
@@ -275,7 +315,7 @@ export default function ReportsView({ groups, customers, vehicles, advanceStore 
 
 									<div className="col-span-4">
 										<div className="relative">
-											<SearchableSelect
+											<EnhancedSearchableSelect
 												label="Group Name"
 												options={groups.map(g => g.name)}
 												value={groupName}
@@ -283,18 +323,11 @@ export default function ReportsView({ groups, customers, vehicles, advanceStore 
 												placeholder="Select group"
 												inputRef={groupRef}
 												onSelectionComplete={() => {
-													// After group selection, move to customer dropdown and auto-open it
+													// After group selection, move to vehicle dropdown
 													setTimeout(() => {
-														const customerInput = customerRef.current?.querySelector('input');
-														if (customerInput) {
-															customerInput.focus();
-															// Trigger dropdown open
-															const event = new KeyboardEvent('keydown', { key: 'Enter' });
-															customerInput.dispatchEvent(event);
-														}
+														vehicleRef.current?.focus();
 													}, 100);
 												}}
-												
 												className={`focus:border-rose-500 focus:ring-rose-500/20 rounded-lg shadow-sm hover:shadow-md transition-all border-rose-200 w-full ${filterError && !groupName ? 'border-red-500 ring-2 ring-red-100' : ''}`}
 												error={filterError && !groupName}
 											/>
@@ -303,7 +336,7 @@ export default function ReportsView({ groups, customers, vehicles, advanceStore 
 
 									<div className="col-span-2">
 										<div className="relative">
-											<SearchableSelect
+											<EnhancedSearchableSelect
 												label="Vehicle"
 												options={vehicles.map(v => v.name)}
 												value={vehicle}
@@ -314,7 +347,6 @@ export default function ReportsView({ groups, customers, vehicles, advanceStore 
 													// After vehicle selection, move to customer dropdown
 													setTimeout(() => customerRef.current?.focus(), 100);
 												}}
-												
 												className="focus:border-rose-500 focus:ring-rose-500/20 rounded-lg shadow-sm hover:shadow-md transition-all border-rose-200 w-full"
 											/>
 										</div>
@@ -327,7 +359,7 @@ export default function ReportsView({ groups, customers, vehicles, advanceStore 
 										<label className="text-xs font-medium text-slate-600 block mb-1">Customer Name</label>
 										<div className="flex items-end gap-1.5">
 											<div className="flex-1 relative">
-												<SearchableSelect
+												<EnhancedSearchableSelect
 													label={null}
 													options={filteredCustomers.map(c => c.name)}
 													value={customerName}
@@ -337,7 +369,6 @@ export default function ReportsView({ groups, customers, vehicles, advanceStore 
 													onSelectionComplete={() => {
 														setTimeout(() => submitRef.current?.focus(), 100);
 													}}
-													
 													className={`focus:border-rose-500 focus:ring-rose-500/20 rounded-lg shadow-sm hover:shadow-md transition-all border-rose-200 w-full ${filterError && !customerName ? 'border-red-500 ring-2 ring-red-100' : ''}`}
 													error={filterError && !customerName}
 												/>
@@ -398,7 +429,7 @@ export default function ReportsView({ groups, customers, vehicles, advanceStore 
 
 					<div className="flex-1 overflow-hidden p-3">
 						<div className="h-full bg-white border border-slate-200 shadow-card rounded-sm overflow-hidden flex flex-col">
-							<div className="flex-1 overflow-auto bg-white custom-table-scroll">
+							<div className="flex-1 overflow-auto bg-white custom-table-scroll" ref={tableRef} onKeyDown={tableNav.handleKeyDown} tabIndex={0}>
 								<table className="w-full text-sm border-collapse relative">
 									<thead className="sticky top-0 bg-gradient-to-r from-[#5B55E6] to-[#4A44D0] text-white z-20 border-b-2 font-semibold uppercase text-xs shadow-lg rounded-t-lg">
 										<tr>
@@ -422,7 +453,12 @@ export default function ReportsView({ groups, customers, vehicles, advanceStore 
 											const total = r.qty * r.rate;
 											const lagAmt = r.qty * r.laguage;
 											return (
-												<tr key={r.id ?? `${r.date}-${idx}`} className="hover:bg-gradient-to-r hover:from-[#5B55E6]/5 hover:to-[#4A44D0]/5 border-b border-slate-200 group transition-all duration-200">
+												<tr 
+													key={r.id ?? `${r.date}-${idx}`} 
+													className="hover:bg-gradient-to-r hover:from-[#5B55E6]/5 hover:to-[#4A44D0]/5 border-b border-slate-200 group transition-all duration-200"
+													tabIndex={tableNav.focusedIndex === idx ? 0 : -1}
+													onFocus={() => tableNav.setFocusedIndex(idx)}
+												>
 													<td className="px-3 py-3 border-r border-slate-200 text-center text-slate-500 font-semibold">{idx + 1}</td>
 													<td className="px-3 py-3 border-r border-slate-200 text-center text-slate-700 font-medium">{String(r.date || '')}</td>
 													<td className="px-3 py-3 border-r border-slate-200 font-semibold text-slate-800">{String(r.vehicle || '--')}</td>
