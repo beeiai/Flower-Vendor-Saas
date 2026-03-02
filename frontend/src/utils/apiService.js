@@ -108,10 +108,10 @@ function normalizeBackendPath(path) {
   // always ensure a single leading slash (BACKEND_API already has no trailing slash)
   if (!p.startsWith('/')) p = `/${p}`;
   // ensure trailing slash for non-auth collection-style endpoints to avoid 307 redirects
-  // but exclude silk ledger endpoint which expects no trailing slash
+  // but exclude silk ledger and admin endpoints which expect no trailing slash
   if (!p.endsWith('/')) {
-    // keep /auth endpoints as-is; FastAPI handles both, but avoid surprises
-    if (!p.startsWith('/auth') && !p.includes('/silk/ledger')) {
+    // keep /auth, /admin, and /silk/ledger endpoints as-is; FastAPI handles both, but avoid surprises
+    if (!p.startsWith('/auth') && !p.startsWith('/admin') && !p.includes('/silk/ledger')) {
       p = `${p}/`;
     }
   }
