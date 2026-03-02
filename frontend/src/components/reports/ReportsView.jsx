@@ -42,6 +42,30 @@ export default function ReportsView({ groups, customers, vehicles, advanceStore 
 	const toDateRef = useRef(null);
 	const vehicleRef = useRef(null);
 
+	//✅ MOVE filteredRows useMemo UP HERE, before tableNav
+	const filteredRows = useMemo(() => {
+		const f = String(fromDate || '').trim();
+		const t = String(toDate || '').trim();
+		const hasFrom = Boolean(f);
+		const hasTo = Boolean(t);
+		return rows
+			.filter(r => {
+				const d = String(r.date || '').trim();
+				if (hasFrom && d && d < f) return false;
+				if (hasTo && d && d > t) return false;
+				if (vehicle && String(r.vehicle || '') !== vehicle) return false;
+				return true;
+			})
+			.map(r => ({
+				...r,
+				qty: toNum(r.qty),
+				rate: toNum(r.rate),
+				laguage: toNum(r.laguage),
+				coolie: toNum(r.coolie),
+				paidAmt: toNum(r.paidAmt),
+			}));
+	}, [rows, fromDate, toDate, vehicle]);
+
 	// Keyboard navigation hook for form elements
 	const formNav = useKeyboardListNavigation({
 		itemCount: 6, // From date, To date, Group, Vehicle, Customer, Submit
@@ -162,29 +186,6 @@ export default function ReportsView({ groups, customers, vehicles, advanceStore 
 
 	// Navigation is handled by the unified navigation system passed as props
 	// The onSelectionComplete callbacks ensure proper focus movement between dropdowns
-
-	const filteredRows = useMemo(() => {
-		const f = String(fromDate || '').trim();
-		const t = String(toDate || '').trim();
-		const hasFrom = Boolean(f);
-		const hasTo = Boolean(t);
-		return rows
-			.filter(r => {
-				const d = String(r.date || '').trim();
-				if (hasFrom && d && d < f) return false;
-				if (hasTo && d && d > t) return false;
-				if (vehicle && String(r.vehicle || '') !== vehicle) return false;
-				return true;
-			})
-			.map(r => ({
-				...r,
-				qty: toNum(r.qty),
-				rate: toNum(r.rate),
-				laguage: toNum(r.laguage),
-				coolie: toNum(r.coolie),
-				paidAmt: toNum(r.paidAmt),
-			}));
-	}, [rows, fromDate, toDate, vehicle]);
 
 	const summary = useMemo(() => {
 		const qty = filteredRows.reduce((acc, r) => acc + r.qty, 0);

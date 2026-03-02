@@ -10,22 +10,6 @@ import { api } from '../../utils/api';
 import { DEFAULT_STATES, resetComponentState } from '../../utils/stateManager';
 
 const SmsView = ({ customers, ledgerStore, onCancel, showNotify }) => {
-  console.log('SmsView rendered with props:', { customers: customers?.length, ledgerStore, onCancel, showNotify });
-  
-  // Test if component is being called
-  if (!customers) {
-    console.log('Customers is null or undefined');
-    return (
-      <div className="flex-1 flex items-center justify-center bg-slate-100">
-        <div className="text-center p-8 bg-white rounded-xl shadow-lg border border-slate-200">
-          <div className="text-red-600 mb-4 text-xl">⚠️ Error</div>
-          <div className="text-slate-600 mb-2">Customers data not available</div>
-          <div className="text-sm text-slate-500">Please refresh the page or contact support</div>
-        </div>
-      </div>
-    );
-  }
-  
   const [state, setState] = useState(() => ({
     // Initialize with default SMS state
     ...DEFAULT_STATES.smsView,
@@ -190,9 +174,6 @@ const SmsView = ({ customers, ledgerStore, onCancel, showNotify }) => {
 
   return (
     <div className="flex-1 flex flex-col h-full bg-gradient-to-br from-slate-50 to-slate-100 overflow-hidden">
-      <div style={{position: 'absolute', top: 0, right: 0, background: 'red', color: 'white', padding: '5px', zIndex: 9999, fontSize: '12px'}}>
-        SMS VIEW ACTIVE - Customers: {customers?.length || 0}
-      </div>
       
       {/* Header */}
       <div className="bg-gradient-to-r from-[#5B55E6] to-[#4A44D0] px-5 py-3 flex justify-between items-center text-white shrink-0 shadow-xl rounded-b-xl">

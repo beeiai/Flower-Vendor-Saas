@@ -362,13 +362,12 @@ export const api = {
 
   // SMS Module APIs
   sendSms: async (payload) => {
-    const params = {
-      phone: payload.phoneNumber,
-      message: payload.message
-    };
     const result = await request('/sms/send', { 
       method: 'POST', 
-      params: params
+      body: JSON.stringify({
+        phone: payload.phoneNumber,
+        message: payload.message
+      })
     });
     return result;
   },
