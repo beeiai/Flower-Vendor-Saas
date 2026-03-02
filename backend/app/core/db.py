@@ -1,67 +1,109 @@
-from sqlalchemy import create_engine
+from sqlalchemy import create_engine, text
 from sqlalchemy.orm import sessionmaker, declarative_base
 from app.core.config import settings
+import time
 import logging
+from contextlib import contextmanager
 
+logger = logging.getLogger(__name__)
 
 DATABASE_URL = settings.DATABASE_URL
 
-# Configure connection pool with production-appropriate settings
-# Optimized for performance: larger pool for high-concurrency scenarios
+
+# ===============================
+# 🔌 RENDER + POSTGRES CONNECTION
+# ===============================
+
+connect_args = {
+    "connect_timeout": 10,
+}
+
+# Render Postgres requires SSL
+if "render.com" in DATABASE_URL:
+    connect_args["sslmode"] = "require"
+
+
 engine = create_engine(
     DATABASE_URL,
+
+    # ✅ Pool sizing (safe for Render free tier)
     pool_size=settings.DB_POOL_SIZE,
     max_overflow=settings.DB_MAX_OVERFLOW,
     pool_timeout=settings.DB_POOL_TIMEOUT,
     pool_recycle=settings.DB_POOL_RECYCLE,
-    pool_pre_ping=True,  # Verify connections before use
+
+    # ✅ Stability
+    pool_pre_ping=True,
     pool_reset_on_return="rollback",
-    # Performance: Enable prepared statement caching
-    query_cache_size=1200,
-    # Security: Disable statement logging in production
+
+    # ✅ Logging
     echo=False,
-    # Connection optimization
-    connect_args={
-        "connect_timeout": 10,
-    }
+
+    connect_args=connect_args,
 )
+
+
+# ===============================
+# 🧠 SESSION FACTORY
+# ===============================
 
 SessionLocal = sessionmaker(
     autocommit=False,
     autoflush=False,
     bind=engine,
-    # Expire objects on commit to prevent stale data
-    expire_on_commit=True
+    expire_on_commit=True,
 )
 
 Base = declarative_base()
 
+
+# ===============================
+# 🔁 DB RETRY (for Render startup race)
+# ===============================
+
+def wait_for_db(max_retries: int = 10, delay: int = 3):
+    for attempt in range(max_retries):
+        try:
+            with engine.connect() as conn:
+                conn.execute(text("SELECT 1"))
+            logger.info("✅ Database connected")
+            return
+        except Exception as e:
+            logger.warning(f"⏳ DB not ready (attempt {attempt+1}): {e}")
+            time.sleep(delay)
+
+    raise RuntimeError("❌ Database not available after retries")
+
+
+# ===============================
+# 📦 FASTAPI / FLASK DEPENDENCY
+# ===============================
+
 def get_db():
-    """Dependency for getting database session with proper cleanup."""
     db = SessionLocal()
     try:
         yield db
     except Exception:
-        # Rollback on any exception
         db.rollback()
         raise
     finally:
-        # Always close the session
         db.close()
 
 
+# ===============================
+# 🧰 SESSION MANAGER (for services)
+# ===============================
+
 class DatabaseSessionManager:
-    """Lightweight session manager to reduce session creation overhead."""
-    
+
     def __init__(self):
         self.Session = SessionLocal
-    
+
     def get_session(self):
-        """Get a session from the pool."""
         return self.Session()
-    
+
+    @contextmanager
     def get_session_context(self):
-        """Context manager for session that ensures proper cleanup."""
         session = self.Session()
         try:
             yield session
@@ -74,3 +116,16 @@ class DatabaseSessionManager:
 
 db_manager = DatabaseSessionManager()
 
+
+# ===============================
+# ❤️ HEALTH CHECK
+# ===============================
+
+def check_db_health() -> bool:
+    try:
+        with engine.connect() as conn:
+            conn.execute(text("SELECT 1"))
+        return True
+    except Exception as e:
+        logger.error(f"DB health check failed: {e}")
+        return False

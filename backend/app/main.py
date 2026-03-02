@@ -29,6 +29,7 @@ from app.core.redis_client import redis_client
 from app.core.request_id_middleware import RequestIDMiddleware
 from app.core.cache_middleware import CacheMiddleware
 import uvicorn
+from app.core.db import engine, wait_for_db, Base
 
 # Initialize structured logging
 from app.core.structured_logging import setup_structured_logging
@@ -49,16 +50,18 @@ app = FastAPI(
 # Startup and shutdown events
 @app.on_event("startup")
 async def startup_event():
-    """Initialize application resources on startup."""
     logger.info("Starting application...")
-    
-    # Validate master admin credentials are configured
+
+    # ✅ Wait for database to be ready
+    wait_for_db()
+
+    # ✅ Create tables (ONLY if you are not using Alembic)
+    Base.metadata.create_all(bind=engine)
+
+    # ✅ Validate master admin
     if not settings.MASTER_ADMIN_USERNAME or not settings.MASTER_ADMIN_PASSWORD_HASH:
-        logger.error("MASTER_ADMIN_USERNAME and MASTER_ADMIN_PASSWORD_HASH must be set in environment variables")
-        raise RuntimeError("Master admin credentials not configured. Application cannot start.")
-    
-    # Redis connection will be initialized lazily when first needed
-    # This prevents startup failures if Redis is unavailable
+        raise RuntimeError("Master admin credentials not configured")
+
     logger.info("Application started successfully")
 
 @app.on_event("shutdown")
