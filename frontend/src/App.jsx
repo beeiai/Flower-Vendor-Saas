@@ -1263,6 +1263,10 @@ export default function App() {
                     setActiveSection('daily-sale');
                     return;
                   }
+                  if (item.id === 'sms-single') {
+                    setActiveSection('sms');
+                    return;
+                  }
                   setActiveSection(item.id);
                 }} className={`w-full text-left px-4 py-2.5 text-sm font-medium flex items-center gap-3 transition-colors ${activeSection === item.id ? 'bg-primary-50 text-primary-700' : 'text-slate-700 hover:bg-slate-50'} navbar-element`} data-navbar-element><item.i className="w-4 h-4" /> {item.l}</button>
               ))}
