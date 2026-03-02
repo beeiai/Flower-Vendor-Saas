@@ -315,49 +315,6 @@ export function GroupTotalView({ groups, customers, ledgerStore, onCancel, setAc
               )}
             </div>
           </div>
-
-          {/* Report Preview Table */}
-          <div className="bg-slate-50/50 rounded-xl p-5 border border-slate-100">
-            <h2 className="text-sm font-bold uppercase text-slate-600 tracking-widest mb-4 flex items-center gap-2">
-              <svg xmlns="http://www.w3.org/2000/svg" className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 17v-2m3 2v-4m3 4v-6m2 10H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
-              </svg>
-              Report Preview
-            </h2>
-            <div className="border border-slate-200 rounded-lg overflow-hidden">
-              <table className="w-full text-sm">
-                <thead className="bg-slate-50">
-                  <tr>
-                    <th className="px-4 py-3 text-left text-slate-600 font-semibold">Group Name</th>
-                    <th className="px-4 py-3 text-center text-slate-600 font-semibold">Customers</th>
-                    <th className="px-4 py-3 text-right text-slate-600 font-semibold">Total Qty</th>
-                    <th className="px-4 py-3 text-right text-slate-600 font-semibold">Gross Value</th>
-                    <th className="px-4 py-3 text-right text-emerald-700 font-semibold">Total Paid</th>
-                    <th className="px-4 py-3 text-right text-rose-600 font-semibold">Net Dues</th>
-                  </tr>
-                </thead>
-                <tbody>
-                  {reportData.map((row, idx) => (
-                    <tr key={idx} className="border-t border-slate-100 hover:bg-slate-50 transition-colors">
-                      <td className="px-4 py-3 font-semibold text-slate-800">{String(row.groupName)}</td>
-                      <td className="px-4 py-3 text-center text-slate-500">{String(row.custCount)}</td>
-                      <td className="px-4 py-3 text-right font-bold">{String(row.qtyTotal)}</td>
-                      <td className="px-4 py-3 text-right font-bold">₹{row.grossTotal.toLocaleString()}</td>
-                      <td className="px-4 py-3 text-right font-bold text-emerald-600">₹{row.paidTotal.toLocaleString()}</td>
-                      <td className="px-4 py-3 text-right font-bold text-rose-600 bg-rose-50/30">₹{row.balance.toLocaleString()}</td>
-                    </tr>
-                  ))}
-                  {reportData.length === 0 && (
-                    <tr>
-                      <td colSpan="6" className="px-4 py-8 text-center text-slate-400 italic">
-                        No data available for selected criteria
-                      </td>
-                    </tr>
-                  )}
-                </tbody>
-              </table>
-            </div>
-          </div>
         </div>
       </div>
     </div>
