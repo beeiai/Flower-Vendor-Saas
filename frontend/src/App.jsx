@@ -1350,7 +1350,7 @@ export default function App() {
           }
         }} advanceStore={advanceStore} commissionPct={commissionPct} setCommissionPct={setCommissionPct} onViewReport={() => setActiveSection('reports')} totalPaidAmount={totalPaidAmount} activeSection={activeSection} />}
         {activeSection === 'group-reg' && <GroupCustomerRegistryForm title="NEW GROUP" initialTab="group" groups={groups} setGroups={setGroups} customers={customers} setCustomers={setCustomers} showNotify={showNotify} onCancel={() => setActiveSection('daily')} />}
-        {activeSection === 'party' && <PartyDetailsView customers={customers} showNotify={showNotify} onCancel={() => setActiveSection('daily')} />}
+        {activeSection === 'party' && customers !== undefined && <PartyDetailsView customers={customers} showNotify={showNotify} onCancel={() => setActiveSection('daily')} />}
         {activeSection === 'item-reg' && <ItemRegistryForm form={itemForm} setForm={setItemForm} onSave={async () => {
           try {
             const created = await api.createCatalogItem({
@@ -1369,11 +1369,11 @@ export default function App() {
             showNotify(`Item add failed: ${e.message}`, 'error');
           }
         }} showNotify={showNotify} onCancel={() => setActiveSection('daily')} />}
-        {activeSection === 'advance' && <AdvanceTrackerView groups={groups} customers={customers} advanceStore={advanceStore} setAdvanceStore={setAdvanceStore} showNotify={showNotify} onCancel={() => setActiveSection('daily')} />}
+        {activeSection === 'advance' && groups !== undefined && customers !== undefined && <AdvanceTrackerView groups={groups} customers={customers} advanceStore={advanceStore} setAdvanceStore={setAdvanceStore} showNotify={showNotify} onCancel={() => setActiveSection('daily')} />}
         {activeSection === 'daily-sale' && <DailySaleView onCancel={() => setActiveSection('daily')} />}
-        {activeSection === 'saala' && <SaalaView catalog={catalog} onCancel={() => setActiveSection('daily')} showNotify={showNotify} />}
-        {activeSection === 'silk' && <SilkSummaryView ledgerStore={ledgerStore} customers={customers} onCancel={() => setActiveSection('daily')} />}
-        {activeSection === 'reports' && (
+        {activeSection === 'saala' && catalog !== undefined && <SaalaView catalog={catalog} onCancel={() => setActiveSection('daily')} showNotify={showNotify} />}
+        {activeSection === 'silk' && customers !== undefined && ledgerStore !== undefined && <SilkSummaryView ledgerStore={ledgerStore} customers={customers} onCancel={() => setActiveSection('daily')} />}
+        {activeSection === 'reports' && groups !== undefined && customers !== undefined && (
           <ReportsWindow 
             groups={groups} 
             customers={customers} 
@@ -1384,7 +1384,7 @@ export default function App() {
         )}
         {activeSection === 'group-total' && (
           <div>
-            {groups.length > 0 ? (
+            {groups !== undefined ? (
               <GroupTotalView 
                 groups={groups} 
                 customers={customers} 
@@ -1405,7 +1405,7 @@ export default function App() {
 
         {activeSection === 'group-print' && (
           <div>
-            {groups.length > 0 ? (
+            {groups !== undefined ? (
               <GroupPattiView 
                 groups={groups} 
                 customers={customers} 
@@ -1422,10 +1422,24 @@ export default function App() {
             )}
           </div>
         )}
-        {activeSection === 'group-adv' && <GroupAdvanceView groups={groups} customers={customers} advanceStore={advanceStore} onCancel={() => setActiveSection('daily')} />}
-        {activeSection === 'group-pay' && <GroupPaymentView groups={groups} customers={customers} ledgerStore={ledgerStore} onCancel={() => setActiveSection('daily')} />}
-        {activeSection === 'sms' && <SmsView customers={customers} ledgerStore={ledgerStore} onCancel={() => setActiveSection('daily')} showNotify={showNotify} />}
-        {activeSection === 'sms-single' && <SmsView customers={customers} ledgerStore={ledgerStore} onCancel={() => setActiveSection('daily')} showNotify={showNotify} />}
+        {activeSection === 'group-adv' && groups !== undefined && customers !== undefined && <GroupAdvanceView groups={groups} customers={customers} advanceStore={advanceStore} onCancel={() => setActiveSection('daily')} />}
+        {activeSection === 'group-pay' && groups !== undefined && customers !== undefined && ledgerStore !== undefined && <GroupPaymentView groups={groups} customers={customers} ledgerStore={ledgerStore} onCancel={() => setActiveSection('daily')} />}
+        {activeSection === 'sms' && customers !== undefined && (
+          <SmsView 
+            customers={customers} 
+            ledgerStore={ledgerStore} 
+            onCancel={() => setActiveSection('daily')} 
+            showNotify={showNotify} 
+          />
+        )}
+        {activeSection === 'sms-single' && customers !== undefined && (
+          <SmsView 
+            customers={customers} 
+            ledgerStore={ledgerStore} 
+            onCancel={() => setActiveSection('daily')} 
+            showNotify={showNotify} 
+          />
+        )}
         {activeSection === 'vehicle' && <VehicleView vehicles={vehicles} setVehicles={setVehicles} showNotify={showNotify} onCancel={() => setActiveSection('daily')} />}
         {activeSection === 'daily-rate-sales' && <UtilityPlaceholderView title="Daily Rate Wise Sales" onCancel={() => setActiveSection('daily')} />}
         {activeSection === 'new-supplier' && <UtilityPlaceholderView title="New Supplier" onCancel={() => setActiveSection('daily')} />}
