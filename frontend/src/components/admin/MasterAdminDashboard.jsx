@@ -2,7 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { X, Users, UserPlus, Building, Mail, Lock, Phone, UserCheck, Shield, Settings2, Edit2 } from 'lucide-react';
 import ChangePasswordModal from './ChangePasswordModal';
 import CreateUserModal from './CreateUserModal';
-import { authApi } from '../../utils/apiService';
+import { authApi, getAuthToken } from '../../utils/apiService';
 import { api } from '../../utils/api';
 
 export default function MasterAdminDashboard({ onLogout }) {
@@ -33,12 +33,13 @@ export default function MasterAdminDashboard({ onLogout }) {
     setMessage('');
 
     try {
+      const token = getAuthToken();
       const result = await authApi.createVendor({
         vendor_name: formData.vendorName,
         owner_name: formData.ownerName,
         email: formData.email,
         password: formData.password
-      });
+      }, token);
 
       setMessage({
         type: 'success',
