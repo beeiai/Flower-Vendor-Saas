@@ -1,6 +1,7 @@
 import React, { useState } from 'react';
 import { X, UserPlus, Mail, Lock, UserCheck, Users } from 'lucide-react';
 import { api } from '../../utils/api';
+import { authApi, getAuthToken } from '../../utils/apiService';
 
 export default function CreateUserModal({ isOpen, onClose, vendor, onCreateUser }) {
   const [formData, setFormData] = useState({
@@ -62,13 +63,14 @@ export default function CreateUserModal({ isOpen, onClose, vendor, onCreateUser 
     setLoading(true);
 
     try {
-      const result = await api.createVendorUser({
+      const token = getAuthToken();
+      const result = await authApi.createUserForVendor({
         vendor_id: vendor.id,
         name: formData.name,
         email: formData.email,
         password: formData.password,
         role: formData.role
-      });
+      }, token);
 
       setMessage({
         type: 'success',

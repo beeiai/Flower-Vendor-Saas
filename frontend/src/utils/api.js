@@ -240,7 +240,9 @@ export const api = {
   deleteSaalaCustomer: (id) => request(`/saala/customers/${id}/`, { method: 'DELETE' }),
 
   // Admin APIs
+  // NOTE: createVendorUser is deprecated; use authApi.createUserForVendor instead for proper master admin auth
   createVendorUser: (payload) => request('/admin/create-user-for-vendor', { method: 'POST', body: JSON.stringify(payload) }),
+  // NOTE: changeVendorPassword is deprecated; use authApi.changeVendorPassword instead for proper master admin auth
   changeVendorPassword: (payload) => request('/admin/change-vendor-password', { method: 'POST', body: JSON.stringify(payload) }),
   getVendors: () => request('/admin/vendors', { method: 'GET' }),
 

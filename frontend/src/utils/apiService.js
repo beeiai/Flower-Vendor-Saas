@@ -240,6 +240,28 @@ export const authApi = {
       auth: !!masterToken,
     });
   },
+
+  /**
+   * Create user for vendor (master admin only)
+   */
+  async createUserForVendor(userData, masterToken) {
+    return backendRequest('/admin/create-user-for-vendor', {
+      method: 'POST',
+      body: userData,
+      auth: !!masterToken,
+    });
+  },
+
+  /**
+   * Change vendor password (master admin only)
+   */
+  async changeVendorPassword(passwordData, masterToken) {
+    return backendRequest('/admin/change-vendor-password', {
+      method: 'POST',
+      body: passwordData,
+      auth: !!masterToken,
+    });
+  },
 };
 
 export {
