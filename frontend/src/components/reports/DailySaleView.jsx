@@ -1,5 +1,5 @@
-import React, { useState, useMemo, useCallback } from 'react';
-import { X, Send, Filter, Calendar, Users, ChevronRight, Printer } from 'lucide-react';
+import React, { useState, useMemo, useCallback, useEffect, useRef } from 'react';
+import { X, Send, Filter, Calendar, Users, ChevronRight, Printer, CheckCircle, Clock, Search, ChevronDown } from 'lucide-react';
 
 /** * Mock API for SMS integration 
  * Replace this with your actual API utility
@@ -52,9 +52,9 @@ const SmsView = ({ customers = [], onCancel, showNotify }) => {
     } catch (e) {
       showNotify?.('Operation failed', 'error');
     } finally {
-      setLoading(false);
+      setState(prev => ({ ...prev, sending: false }));
     }
-  }, [fromDate, toDate, setLoading, setError, setFilteredData]);
+  };
 
   // ✅ FIX: Fetch master data first, then trigger filter with fresh customers
   useEffect(() => {
@@ -209,8 +209,7 @@ const SmsView = ({ customers = [], onCancel, showNotify }) => {
                 type="date" 
                 className="bg-transparent py-1.5 text-xs font-semibold outline-none w-28" 
                 value={toDate}
-                onChange={(e) => setToDate(e.target.value)}
-                className="w-full bg-rose-50 border-2 border-rose-200 rounded-lg p-2.5 text-sm font-bold text-slate-800 outline-none transition-all duration-200 hover:border-rose-300 focus:border-rose-400 focus:ring-2 focus:ring-rose-100"
+                onChange={(e) => setState(prev => ({ ...prev, toDate: e.target.value }))}
               />
             </div>
 
