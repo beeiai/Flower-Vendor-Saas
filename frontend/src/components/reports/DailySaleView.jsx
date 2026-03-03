@@ -1,62 +1,98 @@
-import React, { useState, useMemo, useCallback } from 'react';
-import { X, Send, Filter, Calendar, Users, ChevronRight, Printer } from 'lucide-react';
+import React, { useState, useMemo, useCallback, useEffect, useRef } from 'react';
+import { X, Send, Filter, Calendar, Users, ChevronRight, Printer, Search, CheckCircle, Clock } from 'lucide-react';
+import { api } from '../../utils/api';
+import { DEFAULT_STATES } from '../../utils/stateManager';
 
-/** * Mock API for SMS integration 
- * Replace this with your actual API utility
- */
-const api = {
-  sendSms: async () => {
-    await new Promise(resolve => setTimeout(resolve, 800));
-    return { success: true };
-  }
-};
+const DailySaleReport = ({ onCancel }) => {
+  const [state, setState] = useState(DEFAULT_STATES.dailySaleReport);
+  
+  const {
+    fromDate,
+    toDate,
+    selectedGroup,
+    selectedItem,
+    groups,
+    items,
+    customers,
+    filteredData,
+    loading,
+    error
+  } = state;
 
-const SmsView = ({ customers = [], onCancel, showNotify }) => {
-  const [state, setState] = useState({
-    selectedGroup: '',
-    selectedCustomer: '',
-    fromDate: new Date().toISOString().split('T')[0],
-    toDate: new Date().toISOString().split('T')[0],
-    sending: false,
-    phoneNumber: ''
-  });
+  const setFromDate = useCallback((value) => setState(prev => ({ ...prev, fromDate: value })), []);
+  const setToDate = useCallback((value) => setState(prev => ({ ...prev, toDate: value })), []);
+  const setSelectedGroup = useCallback((value) => setState(prev => ({ ...prev, selectedGroup: value })), []);
+  const setSelectedItem = useCallback((value) => setState(prev => ({ ...prev, selectedItem: value })), []);
+  const setGroups = useCallback((value) => setState(prev => ({ ...prev, groups: value })), []);
+  const setItems = useCallback((value) => setState(prev => ({ ...prev, items: value })), []);
+  const setCustomers = useCallback((value) => setState(prev => ({ ...prev, customers: value })), []);
+  const setFilteredData = useCallback((value) => setState(prev => ({ ...prev, filteredData: value })), []);
+  const setLoading = useCallback((value) => setState(prev => ({ ...prev, loading: value })), []);
+  const setError = useCallback((value) => setState(prev => ({ ...prev, error: value })), []);
 
-  const { selectedGroup, selectedCustomer, fromDate, toDate, sending } = state;
+  // ✅ FIX: Use a ref to always have latest customers without stale closure
+  const customersRef = useRef([]);
+  const selectedGroupRef = useRef('');
+  const selectedItemRef = useRef('');
 
-  const groups = useMemo(() => {
-    if (!customers || !Array.isArray(customers)) return [];
-    return [...new Set(customers.map(c => c.group).filter(Boolean))];
+  useEffect(() => {
+    customersRef.current = customers;
   }, [customers]);
 
-  const filteredCustomers = useMemo(() => {
-    if (!customers || !Array.isArray(customers)) return [];
-    if (!selectedGroup) return customers;
-    return customers.filter(c => c.group === selectedGroup);
-  }, [customers, selectedGroup]);
+  useEffect(() => {
+    selectedGroupRef.current = selectedGroup;
+  }, [selectedGroup]);
 
-  const handleCustomerChange = (name) => {
-    const customer = customers.find(c => c.name === name);
-    setState(prev => ({ 
-      ...prev, 
-      selectedCustomer: name,
-      phoneNumber: customer?.contact || ''
-    }));
-  };
+  useEffect(() => {
+    selectedItemRef.current = selectedItem;
+  }, [selectedItem]);
 
-  const handleSendSms = async () => {
-    if (!selectedCustomer) return;
-    setState(prev => ({ ...prev, sending: true }));
+  // ✅ FIX: handleFilter accepts optional fresh customers to avoid stale state
+  const handleFilter = useCallback(async (customersOverride) => {
+    const currentGroup = selectedGroupRef.current;
+    const currentItem = selectedItemRef.current;
+    if (!currentGroup) return;
+
+    const currentCustomers = customersOverride || customersRef.current;
+
+    setLoading(true);
+    setError(null);
     try {
-      await api.sendSms();
-      showNotify?.('SMS Task triggered successfully', 'success');
-    } catch (e) {
-      showNotify?.('Operation failed', 'error');
+      const data = await api.getDailySales(fromDate, toDate, currentItem);
+
+      const groupCustomers = currentCustomers.filter(c => c.group === currentGroup);
+      const groupCustomerNames = groupCustomers.map(c => c.name);
+
+      const customerSalesMap = {};
+      data.forEach(sale => {
+        if (!customerSalesMap[sale.party]) {
+          customerSalesMap[sale.party] = {
+            party: sale.party,
+            items: [],
+            totalQty: 0,
+            totalAmount: 0,
+            smsStatus: sale.smsStatus || 'pending'
+          };
+        }
+        customerSalesMap[sale.party].items.push(sale);
+        customerSalesMap[sale.party].totalQty += sale.qty;
+        customerSalesMap[sale.party].totalAmount += sale.total;
+      });
+
+      const filteredSales = Object.values(customerSalesMap)
+        .filter(cs => groupCustomerNames.includes(cs.party));
+
+      setFilteredData(filteredSales);
+    } catch (err) {
+      console.error('Failed to fetch daily sales:', err);
+      setError(err?.message || 'Failed to load sales data');
+      setFilteredData([]);
     } finally {
       setLoading(false);
     }
   }, [fromDate, toDate, setLoading, setError, setFilteredData]);
 
-  // ✅ FIX: Fetch master data first, then trigger filter with fresh customers
+  //✅ FIX: Fetch master data first, then trigger filter with fresh customers
   useEffect(() => {
     const fetchMasterData = async () => {
       try {
@@ -85,7 +121,7 @@ const SmsView = ({ customers = [], onCancel, showNotify }) => {
     fetchMasterData();
   }, []); // eslint-disable-line react-hooks/exhaustive-deps
 
-  // ✅ Re-fetch when group or dates change (customers already loaded by now)
+  //✅ Re-fetch when group or dates change (customers already loaded by now)
   useEffect(() => {
     if (selectedGroup) {
       handleFilter();
@@ -143,79 +179,64 @@ const SmsView = ({ customers = [], onCancel, showNotify }) => {
   };
 
   return (
-    <div className="flex flex-col h-full bg-slate-50 font-sans text-slate-800 overflow-hidden rounded-2xl shadow-2xl border border-slate-200">
+    <div className="flex-1 flex flex-col h-full bg-gradient-to-br from-slate-50 to-slate-100 overflow-hidden">
       
-      {/* Premium Header */}
-      <div className="bg-gradient-to-r from-indigo-700 to-indigo-600 text-white px-6 py-4 flex justify-between items-center shrink-0">
-        <div className="flex items-center gap-3">
-          <div className="bg-white/20 p-2 rounded-lg backdrop-blur-sm">
-            <Users className="w-5 h-5 text-white" />
-          </div>
-          <div>
-            <h1 className="text-sm font-bold tracking-wider uppercase">Items Daily Sale Rate</h1>
-            <p className="text-[10px] text-indigo-100 font-medium opacity-80 uppercase tracking-widest">Management System</p>
-          </div>
-        </div>
-        <button 
-          onClick={onCancel} 
-          className="p-2 hover:bg-white/10 rounded-full transition-colors group"
-        >
-          <X size={20} className="group-hover:rotate-90 transition-transform duration-200" />
+      {/* Header */}
+      <div className="bg-gradient-to-r from-emerald-600 to-emerald-700 px-5 py-3 flex justify-between items-center text-white shrink-0 shadow-xl">
+        <h1 className="text-lg font-bold uppercase flex items-center gap-2 tracking-wider">
+          <Users className="w-5 h-5" /> DAILY SALES REPORT
+        </h1>
+        <button onClick={handleCancel} className="p-2 rounded-lg hover:bg-white/20 transition-all">
+          <X className="w-5 h-5" />
         </button>
       </div>
 
       <div className="p-4 flex-1 flex flex-col gap-4 overflow-hidden">
         
-        {/* Single Row Filter Bar */}
-        <div className="bg-white p-3 rounded-xl border border-slate-200 shadow-sm flex items-center gap-4 flex-wrap">
-          
-          <div className="flex items-center gap-2 border-r border-slate-100 pr-4">
-            <div className="relative">
-              <select 
-                className="pl-8 pr-4 py-2 bg-slate-50 border border-slate-200 rounded-lg text-xs font-semibold focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 outline-none appearance-none cursor-pointer"
-                value={selectedGroup}
-                onChange={(e) => setState(prev => ({ ...prev, selectedGroup: e.target.value }))}
-              >
-                <option value="">All Groups</option>
-                {groups.map(g => <option key={g} value={g}>{g}</option>)}
-              </select>
-              <Filter className="w-3.5 h-3.5 absolute left-2.5 top-1/2 -translate-y-1/2 text-slate-400" />
+        {/* Filters */}
+        <div className="bg-white rounded-xl border border-slate-200 p-4 shadow-lg">
+          <div className="grid grid-cols-12 gap-4">
+            
+            {/* Group Selection */}
+            <div className="col-span-3">
+              <label className="text-[10px] font-black uppercase text-slate-600 mb-1.5 block tracking-wider">Group</label>
+              <div className="relative">
+                <select
+                  value={selectedGroup}
+                  onChange={(e) => setSelectedGroup(e.target.value)}
+                  className="w-full bg-emerald-50 border-2 border-emerald-200 rounded-lg p-2.5 text-sm font-bold text-slate-800 outline-none transition-all duration-200 hover:border-emerald-300 focus:border-emerald-400 focus:ring-2 focus:ring-emerald-100 appearance-none"
+                >
+                  <option value="">Select Group</option>
+                  {groups.map(group => (
+                    <option key={group.id} value={group.name}>{group.name}</option>
+                  ))}
+                </select>
+                <Filter className="absolute right-3 top-1/2 -translate-y-1/2 w-4 h-4 text-emerald-400 pointer-events-none" />
+              </div>
             </div>
 
-            <div className="relative">
-              <select 
-                className="pl-8 pr-10 py-2 bg-slate-50 border border-slate-200 rounded-lg text-xs font-semibold focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 outline-none appearance-none cursor-pointer w-48"
-                value={selectedCustomer}
-                onChange={(e) => handleCustomerChange(e.target.value)}
-              >
-                <option value="">Select Customer</option>
-                {filteredCustomers.map(c => <option key={c.id} value={c.name}>{c.name}</option>)}
-              </select>
-              <Users className="w-3.5 h-3.5 absolute left-2.5 top-1/2 -translate-y-1/2 text-slate-400" />
-            </div>
-          </div>
-
-          <div className="flex items-center gap-2 border-r border-slate-100 pr-4">
-            <div className="flex items-center gap-1.5 bg-slate-50 border border-slate-200 rounded-lg px-2">
-              <Calendar className="w-3.5 h-3.5 text-slate-400" />
-              <input 
-                type="date" 
-                className="bg-transparent py-1.5 text-xs font-semibold outline-none w-28" 
-                value={fromDate}
-                onChange={(e) => setState(prev => ({ ...prev, fromDate: e.target.value }))}
-              />
-              <span className="text-[10px] font-bold text-slate-400">TO</span>
-              <input 
-                type="date" 
-                className="bg-transparent py-1.5 text-xs font-semibold outline-none w-28" 
-                value={toDate}
-                onChange={(e) => setToDate(e.target.value)}
-                className="w-full bg-rose-50 border-2 border-rose-200 rounded-lg p-2.5 text-sm font-bold text-slate-800 outline-none transition-all duration-200 hover:border-rose-300 focus:border-rose-400 focus:ring-2 focus:ring-rose-100"
-              />
+            {/* Date Range */}
+            <div className="col-span-4">
+              <label className="text-[10px] font-black uppercase text-slate-600 mb-1.5 block tracking-wider">Date Range</label>
+              <div className="flex items-center gap-2">
+                <input
+                  type="date"
+                  value={fromDate}
+                  onChange={(e) => setFromDate(e.target.value)}
+                  className="w-full bg-rose-50 border-2 border-rose-200 rounded-lg p-2.5 text-sm font-bold text-slate-800 outline-none transition-all duration-200 hover:border-rose-300 focus:border-rose-400 focus:ring-2 focus:ring-rose-100"
+                />
+                <span className="text-slate-400 font-bold">to</span>
+                <input
+                  type="date"
+                  value={toDate}
+                  onChange={(e) => setToDate(e.target.value)}
+                  className="w-full bg-rose-50 border-2 border-rose-200 rounded-lg p-2.5 text-sm font-bold text-slate-800 outline-none transition-all duration-200 hover:border-rose-300 focus:border-rose-400 focus:ring-2 focus:ring-rose-100"
+                />
+              </div>
             </div>
 
             {/* Item Filter */}
-            <div className="col-span-2">
+            <div className="col-span-3">
               <label className="text-[10px] font-black uppercase text-slate-600 mb-1.5 block tracking-wider">Item Filter</label>
               <div className="relative">
                 <select
@@ -228,16 +249,16 @@ const SmsView = ({ customers = [], onCancel, showNotify }) => {
                     <option key={item} value={item}>{item}</option>
                   ))}
                 </select>
-                <ChevronDown className="absolute right-3 top-1/2 -translate-y-1/2 w-4 h-4 text-amber-400 pointer-events-none" />
+                <ChevronRight className="absolute right-3 top-1/2 -translate-y-1/2 w-4 h-4 text-amber-400 pointer-events-none" />
               </div>
             </div>
             
             {/* Go Button */}
-            <div className="col-span-2 flex justify-end">
+            <div className="col-span-2 flex items-end">
               <button
                 onClick={() => handleFilter()}
                 disabled={loading || !selectedGroup}
-                className="bg-gradient-to-r from-rose-500 to-rose-600 text-white px-6 py-2.5 font-black uppercase text-xs rounded-lg shadow-lg hover:from-rose-600 hover:to-rose-700 disabled:opacity-50 disabled:cursor-not-allowed transition-all duration-200 flex items-center gap-2 tracking-wider"
+                className="bg-gradient-to-r from-emerald-500 to-emerald-600 text-white px-6 py-2.5 font-black uppercase text-xs rounded-lg shadow-lg hover:from-emerald-600 hover:to-emerald-700 disabled:opacity-50 disabled:cursor-not-allowed transition-all duration-200 flex items-center gap-2 tracking-wider w-full justify-center"
               >
                 <Search size={16} /> {loading ? 'Loading...' : 'GO'}
               </button>
@@ -245,85 +266,103 @@ const SmsView = ({ customers = [], onCancel, showNotify }) => {
           </div>
         </div>
 
-        {/* Data Grid with 10-row visibility logic */}
-        <div className="flex-1 bg-white border border-slate-200 rounded-xl overflow-hidden shadow-sm flex flex-col min-h-[450px]">
-          <div className="overflow-auto flex-1">
-            <table className="w-full text-left border-collapse table-fixed">
-              <thead className="sticky top-0 z-10">
-                <tr className="bg-emerald-600 text-white">
-                  <th className="px-4 py-3 text-[10px] font-black uppercase tracking-widest border-r border-emerald-500/30 w-16 text-center">Sl.No</th>
-                  <th className="px-4 py-3 text-[10px] font-black uppercase tracking-widest border-r border-emerald-500/30 w-32">Date</th>
-                  <th className="px-4 py-3 text-[10px] font-black uppercase tracking-widest border-r border-emerald-500/30">Party Name</th>
-                  <th className="px-4 py-3 text-[10px] font-black uppercase tracking-widest border-r border-emerald-500/30">Item Details</th>
-                  <th className="px-4 py-3 text-[10px] font-black uppercase tracking-widest border-r border-emerald-500/30 w-20 text-center">Qty</th>
-                  <th className="px-4 py-3 text-[10px] font-black uppercase tracking-widest border-r border-emerald-500/30 w-24 text-center">Rate</th>
-                  <th className="px-4 py-3 text-[10px] font-black uppercase tracking-widest w-24 text-center">Total</th>
+        {/* Data Grid */}
+        <div className="flex-1 bg-white rounded-xl border-2 border-slate-200 overflow-auto shadow-lg">
+          <table className="w-full text-left text-sm border-collapse">
+            <thead className="bg-gradient-to-r from-emerald-600 to-emerald-700 sticky top-0 text-white uppercase font-bold text-xs z-10 border-b-2 border-black/20 shadow-lg">
+              <tr>
+                <th className="p-3.5 w-14 border-r border-black/20">Sl.No</th>
+                <th className="p-3.5 border-r border-black/20">Customer Name</th>
+                <th className="p-3.5 border-r border-black/20">Items</th>
+                <th className="p-3.5 w-24 text-center border-r border-black/20">Total Qty</th>
+                <th className="p-3.5 w-28 text-center border-r border-black/20">Total Amount</th>
+                <th className="p-3.5 w-24 text-center">SMS Status</th>
+              </tr>
+            </thead>
+            <tbody>
+              {filteredData.length === 0 ? (
+                <tr>
+                  <td colSpan="6" className="p-16 text-center text-slate-500 text-sm font-bold">
+                    {loading ? 'Loading data...' : 'No data available'}
+                  </td>
                 </tr>
-              </thead>
-              <tbody className="divide-y divide-slate-100">
-                {filteredCustomers.map((c, i) => (
-                  <tr key={c.id || i} className="hover:bg-indigo-50/50 transition-colors group h-[45px]">
-                    <td className="px-4 py-2 text-xs font-bold text-slate-400 text-center">{i + 1}</td>
-                    <td className="px-4 py-2 text-xs font-medium text-slate-500">{fromDate}</td>
-                    <td className="px-4 py-2 text-xs font-bold text-slate-800 uppercase tracking-tight truncate">{c.name}</td>
-                    <td className="px-4 py-2 text-xs text-slate-400 italic truncate">Daily Entry</td>
-                    <td className="px-4 py-2 text-xs text-right font-medium text-slate-600">0</td>
-                    <td className="px-4 py-2 text-xs text-right font-medium text-slate-600">0.00</td>
-                    <td className="px-4 py-2 text-xs text-right font-black text-indigo-700">0.00</td>
+              ) : (
+                filteredData.map((customer, idx) => (
+                  <tr
+                    key={customer.party}
+                    className="border-b border-black/10 hover:bg-slate-50 transition-all duration-150"
+                  >
+                    <td className="p-3.5 font-bold text-slate-700 border-r border-black/10">{idx + 1}</td>
+                    <td className="p-3.5 font-bold text-slate-800 border-r border-black/10">{customer.party}</td>
+                    <td className="p-3.5 text-slate-600 border-r border-black/10">
+                      <div className="flex flex-wrap gap-1">
+                        {customer.items.slice(0, 3).map((item, i) => (
+                          <span key={i} className="bg-slate-100 px-2 py-1 rounded text-xs">
+                            {item.itemName}
+                          </span>
+                        ))}
+                        {customer.items.length > 3 && (
+                          <span className="text-slate-400 text-xs">+{customer.items.length - 3} more</span>
+                        )}
+                      </div>
+                    </td>
+                    <td className="p-3.5 text-center font-bold text-slate-700 border-r border-black/10">
+                      {customer.totalQty.toFixed(2)}
+                    </td>
+                    <td className="p-3.5 text-center font-bold text-emerald-600 border-r border-black/10">
+                      ₹{customer.totalAmount.toFixed(2)}
+                    </td>
+                    <td className="p-3.5 text-center">
+                      <span className="flex items-center justify-center gap-1">
+                        {getSMSStatusIcon(customer.smsStatus)}
+                        <span className="text-xs font-black uppercase text-slate-600">
+                          {getSMSStatusText(customer.smsStatus)}
+                        </span>
+                      </span>
+                    </td>
                   </tr>
-                ))}
-                {/* Padding with empty rows if less than 10 */}
-                {filteredCustomers.length < 10 && [...Array(10 - filteredCustomers.length)].map((_, i) => (
-                  <tr key={`empty-${i}`} className="h-[45px]">
-                    <td className="px-4 py-2 border-r border-slate-50"></td>
-                    <td className="px-4 py-2 border-r border-slate-50"></td>
-                    <td className="px-4 py-2 border-r border-slate-50"></td>
-                    <td className="px-4 py-2 border-r border-slate-50"></td>
-                    <td className="px-4 py-2 border-r border-slate-50"></td>
-                    <td className="px-4 py-2 border-r border-slate-50"></td>
-                    <td className="px-4 py-2"></td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
-          </div>
+                ))
+              )}
+            </tbody>
+          </table>
         </div>
 
-        {/* Action Footer Area */}
-        <div className="flex justify-end items-end shrink-0 pt-2">
-          <div className="flex flex-col items-end gap-1.5">
-            <div className="flex items-center gap-6">
-              <span className="text-[10px] font-black text-slate-400 uppercase tracking-widest">Total Quantity</span>
-              <span className="text-sm font-black text-slate-700 w-24 text-right tabular-nums">0</span>
-            </div>
-            <div className="flex items-center gap-6">
-              <span className="text-[10px] font-black text-slate-400 uppercase tracking-widest">Amount Total</span>
-              <span className="text-lg font-black text-emerald-600 w-24 text-right tabular-nums">0.00</span>
+        {/* Totals and Actions */}
+        <div className="bg-white rounded-xl border border-slate-200 p-4 shadow-lg">
+          <div className="flex justify-between items-end">
+            <div className="flex items-center gap-8">
+              <div className="flex items-center gap-3">
+                <span className="text-[10px] font-black uppercase text-slate-600 tracking-wider">Total Quantity</span>
+                <span className="text-xl font-black text-slate-800 tabular-nums">
+                  {totals.qty.toFixed(2)}
+                </span>
+              </div>
+              <div className="flex items-center gap-3">
+                <span className="text-[10px] font-black uppercase text-slate-600 tracking-wider">Amount Total</span>
+                <span className="text-2xl font-black text-emerald-600 tabular-nums">
+                  ₹{totals.amount.toFixed(2)}
+                </span>
+              </div>
             </div>
             
-            <div className="flex gap-3 mt-3">
-              <button className="flex items-center gap-2 bg-white border border-slate-200 hover:border-indigo-400 hover:text-indigo-600 px-6 py-2 rounded-lg font-bold text-[11px] uppercase transition-all shadow-sm">
-                <Printer size={14} /> Print Report
-              </button>
-              
-              <button 
-                onClick={handleSendSms}
-                disabled={sending || !selectedCustomer}
-                className="flex items-center gap-2 bg-indigo-600 hover:bg-indigo-700 text-white px-8 py-2 rounded-lg font-bold text-[11px] uppercase shadow-lg shadow-indigo-100 transition-all active:scale-95 disabled:opacity-50"
+            <div className="flex gap-3">
+              <button
+                onClick={handlePrint}
+                className="bg-gradient-to-r from-slate-700 to-slate-800 text-white px-5 py-2.5 font-black uppercase text-xs rounded-lg shadow-lg hover:from-slate-800 hover:to-slate-900 transition-all duration-200 flex items-center gap-2 tracking-wider"
               >
-                {sending ? (
-                  <div className="w-3 h-3 border-2 border-white/30 border-t-white rounded-full animate-spin" />
-                ) : (
-                  <Send size={14} />
-                )}
-                {sending ? 'Wait...' : 'Send SMS'}
+                <Printer size={16} /> PRINT REPORT
               </button>
-
-              <button 
-                onClick={onCancel}
-                className="bg-slate-800 text-white hover:bg-slate-900 px-8 py-2 rounded-lg font-bold text-[11px] uppercase transition-all shadow-lg active:scale-95"
+              <button
+                onClick={handleSendSMS}
+                className="bg-gradient-to-r from-emerald-500 to-emerald-600 text-white px-5 py-2.5 font-black uppercase text-xs rounded-lg shadow-lg hover:from-emerald-600 hover:to-emerald-700 transition-all duration-200 flex items-center gap-2 tracking-wider"
               >
-                Cancel
+                <Send size={16} /> SEND SMS
+              </button>
+              <button
+                onClick={handleCancel}
+                className="bg-gradient-to-r from-slate-200 to-slate-300 text-slate-700 px-5 py-2.5 font-black uppercase text-xs rounded-lg shadow-lg hover:from-slate-300 hover:to-slate-400 transition-all duration-200 flex items-center gap-2 tracking-wider border border-slate-300"
+              >
+                CANCEL
               </button>
             </div>
           </div>
@@ -333,4 +372,4 @@ const SmsView = ({ customers = [], onCancel, showNotify }) => {
   );
 };
 
-export default SmsView;
+export default DailySaleReport;
