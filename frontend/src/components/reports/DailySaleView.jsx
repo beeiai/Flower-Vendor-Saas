@@ -1,38 +1,50 @@
 import React, { useState, useMemo, useCallback, useEffect, useRef } from 'react';
-import { X, Send, Filter, Calendar, Users, ChevronRight, Printer, CheckCircle, Clock, Search, ChevronDown } from 'lucide-react';
+import { X, Send, Filter, Calendar, Users, Printer, Search, ChevronDown } from 'lucide-react';
+import { api } from '../../utils/api';
+import { DEFAULT_STATES } from '../../utils/stateManager';
 
-/** * Mock API for SMS integration 
- * Replace this with your actual API utility
- */
-const api = {
-  sendSms: async () => {
-    await new Promise(resolve => setTimeout(resolve, 800));
-    return { success: true };
-  }
-};
+const DailySaleView = ({ onCancel }) => {
+  const [state, setState] = useState(DEFAULT_STATES.dailySaleReport);
+  const [filteredData, setFilteredData] = useState([]);
+  const [loading, setLoading] = useState(false);
+  const [groups, setGroups] = useState([]);
+  const [customers, setCustomers] = useState([]);
+  const [items, setItems] = useState([]);
+  
+  const customersRef = useRef([]);
+  const selectedGroupRef = useRef('');
 
-const SmsView = ({ customers = [], onCancel, showNotify }) => {
-  const [state, setState] = useState({
-    selectedGroup: '',
-    selectedCustomer: '',
-    fromDate: new Date().toISOString().split('T')[0],
-    toDate: new Date().toISOString().split('T')[0],
-    sending: false,
-    phoneNumber: ''
-  });
+  const { selectedGroup, selectedCustomer, fromDate, toDate, sending, selectedItem } = state;
 
-  const { selectedGroup, selectedCustomer, fromDate, toDate, sending } = state;
-
-  const groups = useMemo(() => {
-    if (!customers || !Array.isArray(customers)) return [];
-    return [...new Set(customers.map(c => c.group).filter(Boolean))];
-  }, [customers]);
+  const setFromDate = useCallback((value) => setState(prev => ({ ...prev, fromDate: value })), []);
+  const setToDate = useCallback((value) => setState(prev => ({ ...prev, toDate: value })), []);
+  const setSelectedItem = useCallback((value) => setState(prev => ({ ...prev, selectedItem: value })), []);
 
   const filteredCustomers = useMemo(() => {
     if (!customers || !Array.isArray(customers)) return [];
     if (!selectedGroup) return customers;
     return customers.filter(c => c.group === selectedGroup);
   }, [customers, selectedGroup]);
+
+  const handleFilter = useCallback(async (customerData = null) => {
+    const dataToUse = customerData || customers;
+    if (!dataToUse || dataToUse.length === 0) return;
+
+    setLoading(true);
+    try {
+      const response = await api.getDailySales({
+        fromDate,
+        toDate,
+        group: selectedGroup
+      });
+      setFilteredData(response.data || []);
+    } catch (error) {
+      console.error('Filter error:', error);
+      setFilteredData([]);
+    } finally {
+      setLoading(false);
+    }
+  }, [fromDate, toDate, selectedGroup, customers]);
 
   const handleCustomerChange = (name) => {
     const customer = customers.find(c => c.name === name);
@@ -48,15 +60,14 @@ const SmsView = ({ customers = [], onCancel, showNotify }) => {
     setState(prev => ({ ...prev, sending: true }));
     try {
       await api.sendSms();
-      showNotify?.('SMS Task triggered successfully', 'success');
+      // showNotify?.('SMS Task triggered successfully', 'success');
     } catch (e) {
-      showNotify?.('Operation failed', 'error');
+      // showNotify?.('Operation failed', 'error');
     } finally {
       setState(prev => ({ ...prev, sending: false }));
     }
   };
 
-  // ✅ FIX: Fetch master data first, then trigger filter with fresh customers
   useEffect(() => {
     const fetchMasterData = async () => {
       try {
@@ -72,9 +83,8 @@ const SmsView = ({ customers = [], onCancel, showNotify }) => {
         setGroups(safeGroups);
         setCustomers(safeCustomers);
         setItems(safeItems);
-        customersRef.current = safeCustomers; // ✅ update ref immediately
+        customersRef.current = safeCustomers;
 
-        // If group already selected, re-run filter with fresh customers
         if (selectedGroupRef.current) {
           handleFilter(safeCustomers);
         }
@@ -85,17 +95,16 @@ const SmsView = ({ customers = [], onCancel, showNotify }) => {
     fetchMasterData();
   }, []); // eslint-disable-line react-hooks/exhaustive-deps
 
-  // ✅ Re-fetch when group or dates change (customers already loaded by now)
   useEffect(() => {
     if (selectedGroup) {
       handleFilter();
     }
-  }, [selectedGroup, fromDate, toDate]); // eslint-disable-line react-hooks/exhaustive-deps
+  }, [selectedGroup, fromDate, toDate, handleFilter]);
 
   const totals = useMemo(() => {
     return filteredData.reduce((acc, curr) => ({
-      qty: acc.qty + curr.totalQty,
-      amount: acc.amount + curr.totalAmount
+      qty: acc.qty + (curr.totalQty || 0),
+      amount: acc.amount + (curr.totalAmount || 0)
     }), { qty: 0, amount: 0 });
   }, [filteredData]);
 
@@ -118,19 +127,6 @@ const SmsView = ({ customers = [], onCancel, showNotify }) => {
       console.error('Print error:', error);
       alert(`Print failed: ${error.message}`);
     }
-  };
-
-  const handleSendSMS = () => {
-    alert('SMS feature coming soon!');
-  };
-
-  const getSMSStatusIcon = (status) => {
-    if (status === 'sent') return <CheckCircle size={16} className="text-green-600" />;
-    return <Clock size={16} className="text-orange-500" />;
-  };
-
-  const getSMSStatusText = (status) => {
-    return status === 'sent' ? 'Sent' : 'Pending';
   };
 
   useEffect(() => {
@@ -195,32 +191,32 @@ const SmsView = ({ customers = [], onCancel, showNotify }) => {
             </div>
           </div>
 
-          <div className="flex items-center gap-2 border-r border-slate-100 pr-4">
+          <div className="flex items-center gap-2 flex-wrap">
             <div className="flex items-center gap-1.5 bg-slate-50 border border-slate-200 rounded-lg px-2">
               <Calendar className="w-3.5 h-3.5 text-slate-400" />
               <input 
                 type="date" 
                 className="bg-transparent py-1.5 text-xs font-semibold outline-none w-28" 
                 value={fromDate}
-                onChange={(e) => setState(prev => ({ ...prev, fromDate: e.target.value }))}
+                onChange={(e) => setFromDate(e.target.value)}
               />
               <span className="text-[10px] font-bold text-slate-400">TO</span>
               <input 
                 type="date" 
                 className="bg-transparent py-1.5 text-xs font-semibold outline-none w-28" 
                 value={toDate}
-                onChange={(e) => setState(prev => ({ ...prev, toDate: e.target.value }))}
+                onChange={(e) => setToDate(e.target.value)}
               />
             </div>
 
             {/* Item Filter */}
-            <div className="col-span-2">
+            <div className="">
               <label className="text-[10px] font-black uppercase text-slate-600 mb-1.5 block tracking-wider">Item Filter</label>
               <div className="relative">
                 <select
                   value={selectedItem}
                   onChange={(e) => setSelectedItem(e.target.value)}
-                  className="w-full bg-amber-50 border-2 border-amber-200 rounded-lg p-2.5 text-sm font-bold text-slate-800 outline-none transition-all duration-200 hover:border-amber-300 focus:border-amber-400 focus:ring-2 focus:ring-amber-100 appearance-none"
+                  className="w-full bg-amber-50 border-2 border-amber-200 rounded-lg p-2.5 text-sm font-bold text-slate-800 outline-none transition-all duration-200 hover:border-amber-300 focus:border-amber-400 focus:ring-2 focus:ring-amber-100 appearance-none min-w-[200px]"
                 >
                   <option value="">All Items</option>
                   {items.map(item => (
@@ -232,11 +228,11 @@ const SmsView = ({ customers = [], onCancel, showNotify }) => {
             </div>
             
             {/* Go Button */}
-            <div className="col-span-2 flex justify-end">
+            <div className="flex items-end">
               <button
                 onClick={() => handleFilter()}
                 disabled={loading || !selectedGroup}
-                className="bg-gradient-to-r from-rose-500 to-rose-600 text-white px-6 py-2.5 font-black uppercase text-xs rounded-lg shadow-lg hover:from-rose-600 hover:to-rose-700 disabled:opacity-50 disabled:cursor-not-allowed transition-all duration-200 flex items-center gap-2 tracking-wider"
+                className="bg-gradient-to-r from-rose-500 to-rose-600 text-white px-6 py-2.5 font-black uppercase text-xs rounded-lg shadow-lg hover:from-rose-600 hover:to-rose-700 disabled:opacity-50 disabled:cursor-not-allowed transition-all duration-200 flex items-center gap-2 tracking-wider h-[42px]"
               >
                 <Search size={16} /> {loading ? 'Loading...' : 'GO'}
               </button>
@@ -260,19 +256,27 @@ const SmsView = ({ customers = [], onCancel, showNotify }) => {
                 </tr>
               </thead>
               <tbody className="divide-y divide-slate-100">
-                {filteredCustomers.map((c, i) => (
-                  <tr key={c.id || i} className="hover:bg-indigo-50/50 transition-colors group h-[45px]">
-                    <td className="px-4 py-2 text-xs font-bold text-slate-400 text-center">{i + 1}</td>
-                    <td className="px-4 py-2 text-xs font-medium text-slate-500">{fromDate}</td>
-                    <td className="px-4 py-2 text-xs font-bold text-slate-800 uppercase tracking-tight truncate">{c.name}</td>
-                    <td className="px-4 py-2 text-xs text-slate-400 italic truncate">Daily Entry</td>
-                    <td className="px-4 py-2 text-xs text-right font-medium text-slate-600">0</td>
-                    <td className="px-4 py-2 text-xs text-right font-medium text-slate-600">0.00</td>
-                    <td className="px-4 py-2 text-xs text-right font-black text-indigo-700">0.00</td>
+                {filteredData.length === 0 ? (
+                  <tr>
+                    <td colSpan="7" className="px-4 py-8 text-center text-sm text-slate-500">
+                      {loading ? 'Loading...' : 'No data available. Please select a group and click GO.'}
+                    </td>
                   </tr>
-                ))}
+                ) : (
+                  filteredData.map((row, i) => (
+                    <tr key={row.id || i} className="hover:bg-indigo-50/50 transition-colors group h-[45px]">
+                      <td className="px-4 py-2 text-xs font-bold text-slate-400 text-center">{i + 1}</td>
+                      <td className="px-4 py-2 text-xs font-medium text-slate-500">{row.date}</td>
+                      <td className="px-4 py-2 text-xs font-bold text-slate-800 uppercase tracking-tight truncate">{row.partyName}</td>
+                      <td className="px-4 py-2 text-xs text-slate-400 italic truncate">{row.itemDetails}</td>
+                      <td className="px-4 py-2 text-xs text-right font-medium text-slate-600">{row.qty}</td>
+                      <td className="px-4 py-2 text-xs text-right font-medium text-slate-600">{row.rate?.toFixed(2)}</td>
+                      <td className="px-4 py-2 text-xs text-right font-black text-indigo-700">{row.totalAmount?.toFixed(2)}</td>
+                    </tr>
+                  ))
+                )}
                 {/* Padding with empty rows if less than 10 */}
-                {filteredCustomers.length < 10 && [...Array(10 - filteredCustomers.length)].map((_, i) => (
+                {filteredData.length > 0 && filteredData.length < 10 && [...Array(10 - filteredData.length)].map((_, i) => (
                   <tr key={`empty-${i}`} className="h-[45px]">
                     <td className="px-4 py-2 border-r border-slate-50"></td>
                     <td className="px-4 py-2 border-r border-slate-50"></td>
@@ -293,15 +297,18 @@ const SmsView = ({ customers = [], onCancel, showNotify }) => {
           <div className="flex flex-col items-end gap-1.5">
             <div className="flex items-center gap-6">
               <span className="text-[10px] font-black text-slate-400 uppercase tracking-widest">Total Quantity</span>
-              <span className="text-sm font-black text-slate-700 w-24 text-right tabular-nums">0</span>
+              <span className="text-sm font-black text-slate-700 w-24 text-right tabular-nums">{totals.qty}</span>
             </div>
             <div className="flex items-center gap-6">
               <span className="text-[10px] font-black text-slate-400 uppercase tracking-widest">Amount Total</span>
-              <span className="text-lg font-black text-emerald-600 w-24 text-right tabular-nums">0.00</span>
+              <span className="text-lg font-black text-emerald-600 w-24 text-right tabular-nums">{totals.amount.toFixed(2)}</span>
             </div>
             
             <div className="flex gap-3 mt-3">
-              <button className="flex items-center gap-2 bg-white border border-slate-200 hover:border-indigo-400 hover:text-indigo-600 px-6 py-2 rounded-lg font-bold text-[11px] uppercase transition-all shadow-sm">
+              <button 
+                onClick={handlePrint}
+                className="flex items-center gap-2 bg-white border border-slate-200 hover:border-indigo-400 hover:text-indigo-600 px-6 py-2 rounded-lg font-bold text-[11px] uppercase transition-all shadow-sm"
+              >
                 <Printer size={14} /> Print Report
               </button>
               
@@ -319,7 +326,7 @@ const SmsView = ({ customers = [], onCancel, showNotify }) => {
               </button>
 
               <button 
-                onClick={onCancel}
+                onClick={handleCancel}
                 className="bg-slate-800 text-white hover:bg-slate-900 px-8 py-2 rounded-lg font-bold text-[11px] uppercase transition-all shadow-lg active:scale-95"
               >
                 Cancel
