@@ -18,6 +18,7 @@ import { SilkSummaryView } from './components/utility/SilkSummaryView';
 import SaalaView from './components/saala/SaalaView';
 import { GroupPattiView } from './components/utility/GroupPattiView';
 import { GroupTotalView } from './components/utility/GroupTotalView';
+import SmsView from './components/utility/SmsView';
 import { DEFAULT_STATES, resetComponentState } from './utils/stateManager';
 
 // --- SHARED UI COMPONENTS ---
