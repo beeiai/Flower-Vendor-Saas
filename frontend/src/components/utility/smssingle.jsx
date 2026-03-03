@@ -14,24 +14,7 @@ import {
   Printer,
   Search
 } from 'lucide-react';
-
-/**
- * Internal API definition to ensure the component is runnable within the preview environment.
- */
-const api = {
-  getDailySales: async (fromDate, toDate) => {
-    await new Promise(resolve => setTimeout(resolve, 800));
-    return [
-      { id: 1, date: '03-03-2026', party: 'John Doe', item_name: 'Rose (Red)', qty: 15.5, rate: 45 },
-      { id: 2, date: '03-03-2026', party: 'Jane Smith', item_name: 'Lily (White)', qty: 10.0, rate: 50 },
-      { id: 3, date: '03-03-2026', party: 'John Doe', item_name: 'Jasmine', qty: 5.2, rate: 42 },
-    ];
-  },
-  sendSms: async ({ phoneNumber, message }) => {
-    await new Promise(resolve => setTimeout(resolve, 1500));
-    return { success: true };
-  }
-};
+import { api } from '../../utils/api';
 
 const SmsSingle = ({ customers = [], onCancel, showNotify }) => {
   const [state, setState] = useState({
@@ -128,11 +111,18 @@ const SmsSingle = ({ customers = [], onCancel, showNotify }) => {
 
     setState(prev => ({ ...prev, loading: true, error: null }));
     try {
+      // Get all daily sales data for the date range
       const data = await api.getDailySales(fromDate, toDate);
-      const customerData = data.filter(item => 
-        item.party === selectedCustomer || 
-        item.farmer_name === selectedCustomer
-      );
+      
+      // Filter data for the selected customer
+      // First try to match by party name, then by farmer_name
+      let customerData = [];
+      if (Array.isArray(data)) {
+        customerData = data.filter(item => 
+          (item.party && item.party.toLowerCase().includes(selectedCustomer.toLowerCase())) || 
+          (item.farmer_name && item.farmer_name.toLowerCase().includes(selectedCustomer.toLowerCase()))
+        );
+      }
 
       const totals = customerData.reduce((acc, item) => {
         const qty = parseFloat(item.qty) || 0;
@@ -158,7 +148,7 @@ const SmsSingle = ({ customers = [], onCancel, showNotify }) => {
   }, [selectedCustomer, fromDate, toDate, showNotify]);
 
   const handleSendSms = async () => {
-    if (!selectedCustomer || !phoneNumber) return;
+    if (!selectedCustomer || !phoneNumber || !customMessage) return;
     const msg = customMessage || generateSmsMessage();
     setState(prev => ({ ...prev, sending: true }));
     try {
@@ -384,39 +374,4 @@ const SmsSingle = ({ customers = [], onCancel, showNotify }) => {
   );
 };
 
-/**
- * DEFAULT EXPORT WRAPPER FOR PREVIEW
- */
-export default function App() {
-  const [notification, setNotification] = useState(null);
-
-  const sampleCustomers = [
-    { id: 1, name: 'John Doe', group: 'Farmers', contact: '9876543210' },
-    { id: 2, name: 'Jane Smith', group: 'Farmers', contact: '9123456789' },
-    { id: 3, name: 'Alex Green', group: 'Retailers', contact: '9988776655' },
-  ];
-
-  const showNotify = (msg, type) => {
-    setNotification({ msg, type });
-    setTimeout(() => setNotification(null), 3000);
-  };
-
-  return (
-    <div className="min-h-screen">
-      <SmsSingle 
-        customers={sampleCustomers} 
-        onCancel={() => console.log('Window closed')}
-        showNotify={showNotify}
-      />
-
-      {notification && (
-        <div className={`fixed bottom-8 left-1/2 -translate-x-1/2 px-6 py-3 rounded-2xl text-white font-bold shadow-2xl z-50 flex items-center gap-3 transition-all animate-bounce ${
-          notification.type === 'success' ? 'bg-emerald-500' : 'bg-rose-500'
-        }`}>
-          {notification.type === 'success' ? <CheckCircle size={20} /> : <AlertCircle size={20} />}
-          {notification.msg}
-        </div>
-      )}
-    </div>
-  );
-}
+export default SmsSingle;
