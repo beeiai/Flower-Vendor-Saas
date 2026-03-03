@@ -54,12 +54,12 @@ const SmsView = ({ customers, ledgerStore, onCancel, showNotify }) => {
   }, []);
 
   const groups = useMemo(() => {
-    if (!customers || !Array.isArray(customers)) return [];
+    if (!customers || !Array.isArray(customers) || customers.length === 0) return [];
     return [...new Set(customers.map(c => c.group).filter(Boolean))];
   }, [customers]);
 
   const filteredCustomers = useMemo(() => {
-    if (!customers || !Array.isArray(customers)) return [];
+    if (!customers || !Array.isArray(customers) || customers.length === 0) return [];
     if (!selectedGroup || selectedGroup === 'All Groups') return customers;
     return customers.filter(c => c.group === selectedGroup);
   }, [customers, selectedGroup]);
@@ -98,6 +98,10 @@ const SmsView = ({ customers, ledgerStore, onCancel, showNotify }) => {
     }
     if (!phoneNumber.trim()) {
       showNotify && showNotify('Please enter a phone number', 'error');
+      return;
+    }
+    if (!customers || !Array.isArray(customers) || customers.length === 0) {
+      showNotify && showNotify('No customers available to send SMS', 'error');
       return;
     }
 
@@ -193,6 +197,7 @@ const SmsView = ({ customers, ledgerStore, onCancel, showNotify }) => {
                   value={selectedCustomer}
                   onChange={(e) => handleCustomerSelect(e.target.value)}
                   className="w-full bg-rose-50 border-2 border-rose-200 rounded-lg p-2 text-xs font-bold text-slate-800 outline-none transition-all hover:border-rose-300 focus:border-rose-400 focus:ring-2 focus:ring-rose-100 appearance-none"
+                  disabled={filteredCustomers.length === 0}
                 >
                   <option value="">-- Select Customer --</option>
                   {filteredCustomers.map(customer => (
@@ -279,7 +284,9 @@ const SmsView = ({ customers, ledgerStore, onCancel, showNotify }) => {
               {filteredCustomers.length === 0 ? (
                 <tr>
                   <td colSpan="4" className="p-16 text-center text-slate-500 text-sm font-bold">
-                    No customers available
+                    {customers && Array.isArray(customers) && customers.length === 0 
+                      ? 'No customers found in database' 
+                      : 'No customers available for selected group'}
                   </td>
                 </tr>
               ) : (
