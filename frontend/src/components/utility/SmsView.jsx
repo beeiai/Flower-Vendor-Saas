@@ -1,15 +1,6 @@
-import React, { useState, useMemo, useCallback } from 'react';
-import { X, Send, Filter, Calendar, Users, ChevronRight, Printer } from 'lucide-react';
-
-/** * Mock API for SMS integration 
- * Replace this with your actual API utility
- */
-const api = {
-  sendSms: async () => {
-    await new Promise(resolve => setTimeout(resolve, 800));
-    return { success: true };
-  }
-};
+import React, { useState, useMemo, useCallback, useEffect } from 'react';
+import { X, Send, Filter, Calendar, Users, ChevronRight, Printer, Loader2 } from 'lucide-react';
+import { api } from '../../utils/api';
 
 const SmsView = ({ customers = [], onCancel, showNotify }) => {
   const [state, setState] = useState({
@@ -18,10 +9,15 @@ const SmsView = ({ customers = [], onCancel, showNotify }) => {
     fromDate: new Date().toISOString().split('T')[0],
     toDate: new Date().toISOString().split('T')[0],
     sending: false,
-    phoneNumber: ''
+    phoneNumber: '',
+    loading: false,
+    salesData: [],
+    totalQty: 0,
+    totalAmount: 0,
+    messageTemplate: 'Dear {{customer}}, your daily sales report from {{fromDate}} to {{toDate}}:\nTotal Quantity: {{qty}} kg\nTotal Amount: ₹{{amount}}\nThank you!'
   });
 
-  const { selectedGroup, selectedCustomer, fromDate, toDate, sending } = state;
+  const { selectedGroup, selectedCustomer, fromDate, toDate, sending, loading, salesData, totalQty, totalAmount, messageTemplate } = state;
 
   const groups = useMemo(() => {
     if (!customers || !Array.isArray(customers)) return [];
@@ -34,6 +30,31 @@ const SmsView = ({ customers = [], onCancel, showNotify }) => {
     return customers.filter(c => c.group === selectedGroup);
   }, [customers, selectedGroup]);
 
+  // Filter sales data by selected customer
+  const filteredSalesData = useMemo(() => {
+    if (!salesData || salesData.length === 0) return [];
+    if (!selectedCustomer) return salesData;
+    return salesData.filter(item => item.party === selectedCustomer);
+  }, [salesData, selectedCustomer]);
+
+  // Calculate totals for filtered data
+  const calculatedTotals = useMemo(() => {
+    if (filteredSalesData.length === 0) return { qty: 0, amount: 0 };
+    
+    const totals = filteredSalesData.reduce((acc, item) => {
+      const qty = parseFloat(item.qty) || 0;
+      const rate = parseFloat(item.rate) || 0;
+      const amount = qty * rate;
+      
+      return {
+        qty: acc.qty + qty,
+        amount: acc.amount + amount
+      };
+    }, { qty: 0, amount: 0 });
+    
+    return totals;
+  }, [filteredSalesData]);
+
   const handleCustomerChange = (name) => {
     const customer = customers.find(c => c.name === name);
     setState(prev => ({ 
@@ -43,14 +64,110 @@ const SmsView = ({ customers = [], onCancel, showNotify }) => {
     }));
   };
 
+  // Generate SMS message with template
+  const generateSmsMessage = useCallback(() => {
+    if (!selectedCustomer || calculatedTotals.qty === 0) return '';
+    
+    return messageTemplate
+      .replace('{{customer}}', selectedCustomer)
+      .replace('{{fromDate}}', fromDate)
+      .replace('{{toDate}}', toDate)
+      .replace('{{qty}}', calculatedTotals.qty.toFixed(2))
+      .replace('{{amount}}', calculatedTotals.amount.toFixed(2));
+  }, [messageTemplate, selectedCustomer, fromDate, toDate, calculatedTotals]);
+
+  // Fetch daily sales data
+  const fetchDailySales = useCallback(async () => {
+    if (!fromDate || !toDate) {
+      showNotify?.('Please select valid date range', 'error');
+      return;
+    }
+    
+    setState(prev => ({ ...prev, loading: true }));
+    try {
+      const data = await api.getDailySales(fromDate, toDate);
+      
+      // Transform data to match component expectations
+      const transformedData = data.map(item => ({
+        date: item.date,
+        party: item.party || item.farmer_name || 'Unknown',
+        itemName: item.itemName || item.item_name || 'N/A',
+        qty: item.qty || '0',
+        rate: item.rate || item.rate_per_kg || '0.00',
+        vehicle: item.vehicle || item.vehicle_name || 'N/A',
+        group: item.group || 'Unknown'
+      }));
+      
+      // Calculate overall totals
+      const totals = transformedData.reduce((acc, item) => {
+        const qty = parseFloat(item.qty) || 0;
+        const rate = parseFloat(item.rate) || 0;
+        const amount = qty * rate;
+        
+        return {
+          qty: acc.qty + qty,
+          amount: acc.amount + amount
+        };
+      }, { qty: 0, amount: 0 });
+      
+      setState(prev => ({
+        ...prev,
+        salesData: transformedData,
+        totalQty: totals.qty,
+        totalAmount: totals.amount,
+        loading: false
+      }));
+      
+      showNotify?.(`Loaded ${transformedData.length} records`, 'success');
+    } catch (error) {
+      console.error('Failed to fetch daily sales:', error);
+      showNotify?.('Failed to load daily sales data: ' + (error.message || 'Unknown error'), 'error');
+      setState(prev => ({ ...prev, loading: false }));
+    }
+  }, [fromDate, toDate, showNotify]);
+
+  // Handle GO button click
+  const handleGo = useCallback(() => {
+    fetchDailySales();
+  }, [fetchDailySales]);
+
   const handleSendSms = async () => {
-    if (!selectedCustomer) return;
+    if (!selectedCustomer) {
+      showNotify?.('Please select a customer first', 'error');
+      return;
+    }
+    
+    if (filteredSalesData.length === 0) {
+      showNotify?.('No sales data available for selected customer', 'error');
+      return;
+    }
+    
+    if (!phoneNumber || phoneNumber.length < 10) {
+      showNotify?.('Valid phone number required for SMS', 'error');
+      return;
+    }
+    
+    const message = generateSmsMessage();
+    if (!message) {
+      showNotify?.('Unable to generate SMS message', 'error');
+      return;
+    }
+    
     setState(prev => ({ ...prev, sending: true }));
     try {
-      await api.sendSms();
-      showNotify?.('SMS Task triggered successfully', 'success');
-    } catch (e) {
-      showNotify?.('Operation failed', 'error');
+      await api.sendSms({ phoneNumber, message });
+      showNotify?.('SMS sent successfully', 'success');
+      
+      // Reset form after successful send
+      setState(prev => ({
+        ...prev,
+        selectedCustomer: '',
+        phoneNumber: '',
+        messageTemplate: 'Dear {{customer}}, your daily sales report from {{fromDate}} to {{toDate}}:\nTotal Quantity: {{qty}} kg\nTotal Amount: ₹{{amount}}\nThank you!'
+      }));
+    } catch (error) {
+      console.error('Failed to send SMS:', error);
+      showNotify?.('Failed to send SMS: ' + (error.message || 'Unknown error'), 'error');
     } finally {
       setState(prev => ({ ...prev, sending: false }));
     }
@@ -128,8 +245,21 @@ const SmsView = ({ customers = [], onCancel, showNotify }) => {
             </div>
           </div>
 
-          <button className="flex items-center gap-1.5 bg-indigo-50 text-indigo-700 hover:bg-indigo-100 border border-indigo-200 px-4 py-2 rounded-lg font-bold text-xs transition-colors group uppercase">
-            GO <ChevronRight size={14} className="group-hover:translate-x-0.5 transition-transform" />
+          <button 
+            onClick={handleGo}
+            disabled={loading}
+            className="flex items-center gap-1.5 bg-indigo-50 text-indigo-700 hover:bg-indigo-100 border border-indigo-200 px-4 py-2 rounded-lg font-bold text-xs transition-colors group uppercase disabled:opacity-50 disabled:cursor-not-allowed"
+          >
+            {loading ? (
+              <>
+                <Loader2 className="w-3 h-3 animate-spin" />
+                Loading...
+              </>
+            ) : (
+              <>
+                GO <ChevronRight size={14} className="group-hover:translate-x-0.5 transition-transform" />
+              </>
+            )}
           </button>
         </div>
 
@@ -149,19 +279,29 @@ const SmsView = ({ customers = [], onCancel, showNotify }) => {
                 </tr>
               </thead>
               <tbody className="divide-y divide-slate-100">
-                {filteredCustomers.map((c, i) => (
-                  <tr key={c.id || i} className="hover:bg-indigo-50/50 transition-colors group h-[45px]">
-                    <td className="px-4 py-2 text-xs font-bold text-slate-400 text-center">{i + 1}</td>
-                    <td className="px-4 py-2 text-xs font-medium text-slate-500">{fromDate}</td>
-                    <td className="px-4 py-2 text-xs font-bold text-slate-800 uppercase tracking-tight truncate">{c.name}</td>
-                    <td className="px-4 py-2 text-xs text-slate-400 italic truncate">Daily Entry</td>
-                    <td className="px-4 py-2 text-xs text-right font-medium text-slate-600">0</td>
-                    <td className="px-4 py-2 text-xs text-right font-medium text-slate-600">0.00</td>
-                    <td className="px-4 py-2 text-xs text-right font-black text-indigo-700">0.00</td>
+                {filteredSalesData.length > 0 ? (
+                  filteredSalesData.map((item, i) => (
+                    <tr key={i} className="hover:bg-indigo-50/50 transition-colors group h-[45px]">
+                      <td className="px-4 py-2 text-xs font-bold text-slate-400 text-center">{i + 1}</td>
+                      <td className="px-4 py-2 text-xs font-medium text-slate-500">{item.date || fromDate}</td>
+                      <td className="px-4 py-2 text-xs font-bold text-slate-800 uppercase tracking-tight truncate">{item.party}</td>
+                      <td className="px-4 py-2 text-xs text-slate-400 italic truncate">{item.itemName}</td>
+                      <td className="px-4 py-2 text-xs text-right font-medium text-slate-600">{item.qty}</td>
+                      <td className="px-4 py-2 text-xs text-right font-medium text-slate-600">{item.rate}</td>
+                      <td className="px-4 py-2 text-xs text-right font-black text-indigo-700">
+                        {(parseFloat(item.qty) * parseFloat(item.rate)).toFixed(2)}
+                      </td>
+                    </tr>
+                  ))
+                ) : (
+                  <tr>
+                    <td colSpan="7" className="px-4 py-8 text-center text-slate-500 text-sm font-medium">
+                      {loading ? 'Loading data...' : 'No sales data available. Click GO to load data.'}
+                    </td>
                   </tr>
-                ))}
+                )}
                 {/* Padding with empty rows if less than 10 */}
-                {filteredCustomers.length < 10 && [...Array(10 - filteredCustomers.length)].map((_, i) => (
+                {filteredSalesData.length > 0 && filteredSalesData.length < 10 && [...Array(10 - filteredSalesData.length)].map((_, i) => (
                   <tr key={`empty-${i}`} className="h-[45px]">
                     <td className="px-4 py-2 border-r border-slate-50"></td>
                     <td className="px-4 py-2 border-r border-slate-50"></td>
@@ -182,11 +322,11 @@ const SmsView = ({ customers = [], onCancel, showNotify }) => {
           <div className="flex flex-col items-end gap-1.5">
             <div className="flex items-center gap-6">
               <span className="text-[10px] font-black text-slate-400 uppercase tracking-widest">Total Quantity</span>
-              <span className="text-sm font-black text-slate-700 w-24 text-right tabular-nums">0</span>
+              <span className="text-sm font-black text-slate-700 w-24 text-right tabular-nums">{calculatedTotals.qty.toFixed(2)}</span>
             </div>
             <div className="flex items-center gap-6">
               <span className="text-[10px] font-black text-slate-400 uppercase tracking-widest">Amount Total</span>
-              <span className="text-lg font-black text-emerald-600 w-24 text-right tabular-nums">0.00</span>
+              <span className="text-lg font-black text-emerald-600 w-24 text-right tabular-nums">₹{calculatedTotals.amount.toFixed(2)}</span>
             </div>
             
             <div className="flex gap-3 mt-3">
@@ -196,15 +336,20 @@ const SmsView = ({ customers = [], onCancel, showNotify }) => {
               
               <button 
                 onClick={handleSendSms}
-                disabled={sending || !selectedCustomer}
-                className="flex items-center gap-2 bg-indigo-600 hover:bg-indigo-700 text-white px-8 py-2 rounded-lg font-bold text-[11px] uppercase shadow-lg shadow-indigo-100 transition-all active:scale-95 disabled:opacity-50"
+                disabled={sending || !selectedCustomer || calculatedTotals.qty === 0 || !phoneNumber}
+                className="flex items-center gap-2 bg-indigo-600 hover:bg-indigo-700 text-white px-8 py-2 rounded-lg font-bold text-[11px] uppercase shadow-lg shadow-indigo-100 transition-all active:scale-95 disabled:opacity-50 disabled:cursor-not-allowed"
               >
                 {sending ? (
-                  <div className="w-3 h-3 border-2 border-white/30 border-t-white rounded-full animate-spin" />
+                  <>
+                    <Loader2 className="w-4 h-4 animate-spin" />
+                    Sending...
+                  </>
                 ) : (
-                  <Send size={14} />
+                  <>
+                    <Send size={14} />
+                    Send SMS
+                  </>
                 )}
-                {sending ? 'Wait...' : 'Send SMS'}
               </button>
 
               <button 
