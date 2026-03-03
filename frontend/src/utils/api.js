@@ -55,9 +55,15 @@ function normalizePath(path) {
   // strip leading slashes so axios baseURL `/api` is preserved
   while (p.startsWith('/')) p = p.slice(1);
   // ensure trailing slash to avoid FastAPI redirect on collection endpoints
-  // but exclude silk ledger, admin endpoints, and paths ending with a date (YYYY-MM-DD)
-  // admin endpoints expect no trailing slash to avoid 404 errors
-  if (p && !p.endsWith('/') && p !== 'silk/ledger' && !p.startsWith('admin/') && !p.match(/\/\d{4}-\d{2}-\d{2}$/)) p = `${p}/`;
+  // but exclude silk ledger, admin endpoints, report endpoints, and paths ending with a date (YYYY-MM-DD)
+  // admin and report endpoints expect no trailing slash to avoid 404 errors
+  if (p && !p.endsWith('/') && 
+      p !== 'silk/ledger' && 
+      !p.startsWith('admin/') && 
+      !p.startsWith('reports/') && 
+      !p.match(/\/\d{4}-\d{2}-\d{2}$/)) {
+    p = `${p}/`;
+  }
   return p || '/';
 }
 
