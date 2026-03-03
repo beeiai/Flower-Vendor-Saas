@@ -1,8 +1,3 @@
-/**
- * Centralized State Manager for consistent UI state management
- * Ensures clean slate behavior when switching between tabs/routes
- */
-
 // Default state constants for consistent UX patterns
 export const DEFAULT_STATES = {
   // Common filter state (applies to most reports/components)

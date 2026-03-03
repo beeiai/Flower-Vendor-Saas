@@ -57,27 +57,41 @@ const DailySaleReport = ({ onCancel }) => {
     setState(prev => ({ ...prev, error: value }));
   }, []);
 
-  // Fetch groups and customers on mount
+  // Fetch groups and customers on mount with better error handling
   useEffect(() => {
     const fetchMasterData = async () => {
       try {
+        setLoading(true);
+        setError(null);
+        
         const [groupsData, customersData] = await Promise.all([
           api.listGroups(),
           api.listCustomers()
         ]);
-        setGroups(groupsData || []);
-        setCustomers(customersData || []);
         
-        // Do NOT auto-select first group - maintain clean slate behavior
-        // if (groupsData && groupsData.length > 0) {
-        //   setSelectedGroup(groupsData[0].name);
-        // }
+        const safeGroups = groupsData || [];
+        const safeCustomers = customersData || [];
+        
+        setGroups(safeGroups);
+        setCustomers(safeCustomers);
+        
+        // Auto-select first group if only one exists for better UX
+        if (safeGroups.length === 1) {
+          setSelectedGroup(safeGroups[0].name);
+        }
+        
       } catch (err) {
         console.error('Failed to load master data:', err);
+        setError('Failed to load groups and customers. Please refresh the page.');
+        setGroups([]);
+        setCustomers([]);
+      } finally {
+        setLoading(false);
       }
     };
+    
     fetchMasterData();
-  }, []);
+  }, []); // eslint-disable-line react-hooks/exhaustive-deps
 
   // Auto-fetch when group changes or dates change
   useEffect(() => {
@@ -86,7 +100,7 @@ const DailySaleReport = ({ onCancel }) => {
     }
   }, [selectedGroup, fromDate, toDate]); // eslint-disable-line react-hooks/exhaustive-deps
 
-  const handleFilter = async () => {
+  const handleFilter = async (retryCount = 0) => {
     if (!selectedGroup) return;
     
     setLoading(true);
@@ -94,24 +108,35 @@ const DailySaleReport = ({ onCancel }) => {
     try {
       const data = await api.getDailySales(fromDate, toDate, null);
       
+      // Validate response data
+      if (!data || !Array.isArray(data)) {
+        throw new Error('Invalid data received from server');
+      }
+      
       // Filter customers by selected group
       const groupCustomers = customers.filter(c => c.group === selectedGroup);
       
       // Group sales data by customer (party)
       const customerSalesMap = {};
       data.forEach(sale => {
+        // Validate required fields
+        if (!sale.party || !sale.qty || !sale.total) {
+          console.warn('Skipping invalid sale record:', sale);
+          return;
+        }
+        
         if (!customerSalesMap[sale.party]) {
           customerSalesMap[sale.party] = {
             party: sale.party,
             items: [],
             totalQty: 0,
             totalAmount: 0,
-            smsStatus: sale.smsStatus || 'pending' // Will be enhanced when backend provides SMS status
+            smsStatus: sale.smsStatus || 'pending'
           };
         }
         customerSalesMap[sale.party].items.push(sale);
-        customerSalesMap[sale.party].totalQty += sale.qty;
-        customerSalesMap[sale.party].totalAmount += sale.total;
+        customerSalesMap[sale.party].totalQty += parseFloat(sale.qty) || 0;
+        customerSalesMap[sale.party].totalAmount += parseFloat(sale.total) || 0;
       });
       
       // Filter to only show customers in the selected group
@@ -120,9 +145,26 @@ const DailySaleReport = ({ onCancel }) => {
         .filter(cs => groupCustomerNames.includes(cs.party));
       
       setFilteredData(filteredSales);
+      
+      // Show success message
+      if (filteredSales.length === 0) {
+        setError('No sales data found for the selected period and group');
+      }
+      
     } catch (err) {
       console.error('Failed to fetch daily sales:', err);
-      setError(err?.message || 'Failed to load sales data');
+      
+      // Retry logic for network errors
+      if (retryCount < 2 && (err.code === 'NETWORK_ERROR' || err.message.includes('fetch'))) {
+        console.log(`Retrying... (${retryCount + 1}/2)`);
+        setTimeout(() => {
+          handleFilter(retryCount + 1);
+        }, 1000 * (retryCount + 1)); // Exponential backoff
+        return;
+      }
+      
+      const errorMessage = err?.message || 'Failed to load sales data';
+      setError(errorMessage);
       setFilteredData([]);
     } finally {
       setLoading(false);
@@ -137,12 +179,35 @@ const DailySaleReport = ({ onCancel }) => {
   }, [filteredData]);
 
   const handlePrint = async () => {
+    if (!selectedGroup) {
+      alert('Please select a group first');
+      return;
+    }
+    
+    if (filteredData.length === 0) {
+      alert('No data to print. Please load data first.');
+      return;
+    }
+    
     try {
+      // Show loading state
+      setLoading(true);
+      setError(null);
+      
       // Generate the print report from backend
       const response = await api.getDailySalesReport(fromDate, toDate);
       
+      // Handle different response types
+      let blob;
+      if (response?.data instanceof Blob) {
+        blob = response.data;
+      } else if (response instanceof Blob) {
+        blob = response;
+      } else {
+        throw new Error('Invalid response format from server');
+      }
+      
       // Handle PDF preview (open in new tab for print preview)
-      const blob = response.data;
       const url = window.URL.createObjectURL(blob);
       
       // Open in new tab for preview and print
@@ -151,7 +216,7 @@ const DailySaleReport = ({ onCancel }) => {
         // Fallback to download if popup blocked
         const a = document.createElement('a');
         a.href = url;
-        a.download = `daily_sales_report_${fromDate}_to_${toDate}_${new Date().toISOString().slice(0, 10)}.pdf`;
+        a.download = `daily_sales_report_${selectedGroup}_${fromDate}_to_${toDate}_${new Date().toISOString().slice(0, 10)}.pdf`;
         document.body.appendChild(a);
         a.click();
         document.body.removeChild(a);
@@ -162,7 +227,11 @@ const DailySaleReport = ({ onCancel }) => {
       
     } catch (error) {
       console.error('Print error:', error);
-      alert(`Print failed: ${error.message}`);
+      const errorMessage = error?.message || 'Print failed. Please try again.';
+      setError(errorMessage);
+      alert(`Print failed: ${errorMessage}`);
+    } finally {
+      setLoading(false);
     }
   };
 
@@ -256,7 +325,7 @@ const DailySaleReport = ({ onCancel }) => {
             </div>
 
             {/* Go Button */}
-            <div className="col-span-2 flex justify-end">
+            <div className="col-span-2 flex justify-end gap-2">
               <button 
                 onClick={handleFilter}
                 disabled={loading || !selectedGroup}
@@ -264,6 +333,20 @@ const DailySaleReport = ({ onCancel }) => {
                 data-enter-index="4"
               >
                 <Search size={16} /> {loading ? 'Loading...' : 'GO'}
+              </button>
+              <button 
+                onClick={() => {
+                  setState(DEFAULT_STATES.dailySaleReport);
+                  setSelectedGroup('');
+                }}
+                disabled={loading}
+                className="bg-gradient-to-r from-slate-500 to-slate-600 text-white px-4 py-2.5 font-black uppercase text-xs rounded-lg shadow-lg hover:from-slate-600 hover:to-slate-700 disabled:opacity-50 disabled:cursor-not-allowed transition-all duration-200 flex items-center gap-2 tracking-wider"
+                title="Reset all filters"
+              >
+                <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" />
+                </svg>
+                Reset
               </button>
             </div>
           </div>
