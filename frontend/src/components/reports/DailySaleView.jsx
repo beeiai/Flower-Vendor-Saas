@@ -95,27 +95,57 @@ const DailySaleReport = ({ onCancel }) => {
   // ✅ FIX: Fetch master data first, then trigger filter with fresh customers
   useEffect(() => {
     const fetchMasterData = async () => {
+      setLoading(true);
+      setError(null);
       try {
-        const [groupsData, customersData, itemsData] = await Promise.all([
+        console.log('[DailySale] Fetching groups and customers...');
+        const [groupsData, customersData] = await Promise.all([
           api.listGroups(),
-          api.listCustomers(),
-          api.getDailySalesItems()
+          api.listCustomers()
         ]);
-        const safeGroups = groupsData || [];
-        const safeCustomers = customersData || [];
-        const safeItems = itemsData || [];
+        console.log('[DailySale] Groups loaded:', groupsData?.length || 0);
+        console.log('[DailySale] Customers loaded:', customersData?.length || 0);
+        
+        const safeGroups = Array.isArray(groupsData) ? groupsData : [];
+        const safeCustomers = Array.isArray(customersData) ? customersData : [];
 
         setGroups(safeGroups);
         setCustomers(safeCustomers);
-        setItems(safeItems);
+        
+        // Extract unique items from collection items instead of separate endpoint
+        try {
+          console.log('[DailySale] Fetching collection items to extract item list...');
+          const allSales = await api.getDailySales(
+            new Date(new Date().setMonth(new Date().getMonth() - 1)).toISOString().split('T')[0],
+            new Date().toISOString().split('T')[0],
+            '' // No item filter
+          );
+          
+          // Extract unique item names from sales data
+          const uniqueItems = [...new Set(allSales.map(sale => sale.item).filter(Boolean))];
+          console.log('[DailySale] Extracted unique items:', uniqueItems.length);
+          setItems(uniqueItems);
+        } catch (itemsErr) {
+          console.warn('[DailySale] Could not fetch items, using empty array:', itemsErr?.message);
+          setItems([]);
+        }
+        
         customersRef.current = safeCustomers; // ✅ update ref immediately
 
         // If group already selected, re-run filter with fresh customers
         if (selectedGroupRef.current) {
+          console.log('[DailySale] Group already selected, running filter...');
           handleFilter(safeCustomers);
+        } else {
+          console.log('[DailySale] No group selected yet, waiting for user selection');
         }
       } catch (err) {
-        console.error('Failed to load master data:', err);
+        console.error('[DailySale] Failed to load master data:', err);
+        setError('Failed to load data. Please refresh the page.');
+        setGroups([]);
+        setCustomers([]);
+      } finally {
+        setLoading(false);
       }
     };
     fetchMasterData();
@@ -262,7 +292,8 @@ const DailySaleReport = ({ onCancel }) => {
               <button
                 onClick={() => handleFilter()}
                 disabled={loading || !selectedGroup}
-                className="bg-gradient-to-r from-rose-500 to-rose-600 text-white px-6 py-2.5 font-black uppercase text-xs rounded-lg shadow-lg hover:from-rose-600 hover:to-rose-700 disabled:opacity-50 disabled:cursor-not-allowed transition-all duration-200 flex items-center gap-2 tracking-wider"
+                className={`bg-gradient-to-r from-rose-500 to-rose-600 text-white px-6 py-2.5 font-black uppercase text-xs rounded-lg shadow-lg hover:from-rose-600 hover:to-rose-700 disabled:opacity-50 disabled:cursor-not-allowed transition-all duration-200 flex items-center gap-2 tracking-wider ${!selectedGroup ? 'opacity-50 cursor-not-allowed' : ''}`}
+                title={!selectedGroup ? 'Please select a group first' : 'Load sales data'}
               >
                 <Search size={16} /> {loading ? 'Loading...' : 'GO'}
               </button>
