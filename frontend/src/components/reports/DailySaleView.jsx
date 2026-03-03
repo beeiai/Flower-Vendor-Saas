@@ -1,8 +1,7 @@
-<<<<<<< HEAD
 import React, { useState, useMemo, useEffect, useCallback } from 'react';
-import { Search, Printer, X, Send, Package, ChevronDown, AlertTriangle, CheckCircle, Clock } from 'lucide-react';
+import { Search, Printer, X, Send, Package, ChevronDown, AlertTriangle, CheckCircle, Clock, RefreshCw } from 'lucide-react';
 import { api } from '../../utils/api';
-import { DEFAULT_STATES, resetComponentState } from '../../utils/stateManager';
+import { DEFAULT_STATES } from '../../utils/stateManager';
 
 /**
  * COMPONENT: DailySaleReport
@@ -59,78 +58,6 @@ const DailySaleReport = ({ onCancel }) => {
   }, []);
 
   // Fetch groups and customers on mount with better error handling
-=======
-import React, { useState, useMemo, useCallback, useEffect, useRef } from 'react';
-import { X, Send, Filter, Calendar, Users, Printer, Search, ChevronDown } from 'lucide-react';
-import { api } from '../../utils/api';
-import { DEFAULT_STATES } from '../../utils/stateManager';
-
-const DailySaleView = ({ onCancel }) => {
-  const [state, setState] = useState(DEFAULT_STATES.dailySaleReport);
-  const [filteredData, setFilteredData] = useState([]);
-  const [loading, setLoading] = useState(false);
-  const [groups, setGroups] = useState([]);
-  const [customers, setCustomers] = useState([]);
-  const [items, setItems] = useState([]);
-  
-  const customersRef = useRef([]);
-  const selectedGroupRef = useRef('');
-
-  const { selectedGroup, selectedCustomer, fromDate, toDate, sending, selectedItem } = state;
-
-  const setFromDate = useCallback((value) => setState(prev => ({ ...prev, fromDate: value })), []);
-  const setToDate = useCallback((value) => setState(prev => ({ ...prev, toDate: value })), []);
-  const setSelectedItem = useCallback((value) => setState(prev => ({ ...prev, selectedItem: value })), []);
-
-  const filteredCustomers = useMemo(() => {
-    if (!customers || !Array.isArray(customers)) return [];
-    if (!selectedGroup) return customers;
-    return customers.filter(c => c.group === selectedGroup);
-  }, [customers, selectedGroup]);
-
-  const handleFilter = useCallback(async (customerData = null) => {
-    const dataToUse = customerData || customers;
-    if (!dataToUse || dataToUse.length === 0) return;
-
-    setLoading(true);
-    try {
-      const response = await api.getDailySales({
-        fromDate,
-        toDate,
-        group: selectedGroup
-      });
-      setFilteredData(response.data || []);
-    } catch (error) {
-      console.error('Filter error:', error);
-      setFilteredData([]);
-    } finally {
-      setLoading(false);
-    }
-  }, [fromDate, toDate, selectedGroup, customers]);
-
-  const handleCustomerChange = (name) => {
-    const customer = customers.find(c => c.name === name);
-    setState(prev => ({ 
-      ...prev, 
-      selectedCustomer: name,
-      phoneNumber: customer?.contact || ''
-    }));
-  };
-
-  const handleSendSms = async () => {
-    if (!selectedCustomer) return;
-    setState(prev => ({ ...prev, sending: true }));
-    try {
-      await api.sendSms();
-      // showNotify?.('SMS Task triggered successfully', 'success');
-    } catch (e) {
-      // showNotify?.('Operation failed', 'error');
-    } finally {
-      setState(prev => ({ ...prev, sending: false }));
-    }
-  };
-
->>>>>>> b3f7a25483bc73acf052a4a96638557ba90dabab
   useEffect(() => {
     const fetchMasterData = async () => {
       try {
@@ -147,18 +74,10 @@ const DailySaleView = ({ onCancel }) => {
         
         setGroups(safeGroups);
         setCustomers(safeCustomers);
-<<<<<<< HEAD
         
         // Auto-select first group if only one exists for better UX
         if (safeGroups.length === 1) {
           setSelectedGroup(safeGroups[0].name);
-=======
-        setItems(safeItems);
-        customersRef.current = safeCustomers;
-
-        if (selectedGroupRef.current) {
-          handleFilter(safeCustomers);
->>>>>>> b3f7a25483bc73acf052a4a96638557ba90dabab
         }
         
       } catch (err) {
@@ -174,15 +93,12 @@ const DailySaleView = ({ onCancel }) => {
     fetchMasterData();
   }, []); // eslint-disable-line react-hooks/exhaustive-deps
 
-<<<<<<< HEAD
   // Auto-fetch when group changes or dates change
-=======
->>>>>>> b3f7a25483bc73acf052a4a96638557ba90dabab
   useEffect(() => {
     if (selectedGroup) {
       handleFilter();
     }
-  }, [selectedGroup, fromDate, toDate, handleFilter]);
+  }, [selectedGroup, fromDate, toDate]); // eslint-disable-line react-hooks/exhaustive-deps
 
   const handleFilter = async (retryCount = 0) => {
     if (!selectedGroup) return;
@@ -257,8 +173,8 @@ const DailySaleView = ({ onCancel }) => {
 
   const totals = useMemo(() => {
     return filteredData.reduce((acc, curr) => ({
-      qty: acc.qty + (curr.totalQty || 0),
-      amount: acc.amount + (curr.totalAmount || 0)
+      qty: acc.qty + curr.totalQty,
+      amount: acc.amount + curr.totalAmount
     }), { qty: 0, amount: 0 });
   }, [filteredData]);
 
@@ -319,7 +235,6 @@ const DailySaleView = ({ onCancel }) => {
     }
   };
 
-<<<<<<< HEAD
   const handleSendSMS = () => {
     alert('SMS feature coming soon!');
   };
@@ -336,8 +251,6 @@ const DailySaleView = ({ onCancel }) => {
   };
 
   // Reset state when component unmounts or is cancelled
-=======
->>>>>>> b3f7a25483bc73acf052a4a96638557ba90dabab
   useEffect(() => {
     return () => {
       // Reset to default state when component unmounts
@@ -349,6 +262,11 @@ const DailySaleView = ({ onCancel }) => {
     // Reset state before cancelling
     setState(DEFAULT_STATES.dailySaleReport);
     onCancel && onCancel();
+  };
+
+  const handleReset = () => {
+    setState(DEFAULT_STATES.dailySaleReport);
+    setSelectedGroup('');
   };
 
   return (
@@ -368,7 +286,6 @@ const DailySaleView = ({ onCancel }) => {
 
       <div className="p-5 flex-1 flex flex-col gap-4 overflow-hidden">
         
-<<<<<<< HEAD
         {/* Controls Section */}
         <div className="bg-white rounded-xl border border-slate-200 p-4 shadow-lg shrink-0 backdrop-blur-sm">
           <div className="grid grid-cols-12 gap-4 items-end">
@@ -382,63 +299,6 @@ const DailySaleView = ({ onCancel }) => {
                   onChange={(e) => setSelectedGroup(e.target.value)}
                   className="w-full bg-rose-50 border-2 border-rose-200 rounded-lg p-2.5 text-sm font-bold text-slate-800 outline-none transition-all duration-200 hover:border-rose-300 focus:border-rose-400 focus:ring-2 focus:ring-rose-100 appearance-none"
                   data-enter-index="1"
-=======
-        {/* Single Row Filter Bar */}
-        <div className="bg-white p-3 rounded-xl border border-slate-200 shadow-sm flex items-center gap-4 flex-wrap">
-          
-          <div className="flex items-center gap-2 border-r border-slate-100 pr-4">
-            <div className="relative">
-              <select 
-                className="pl-8 pr-4 py-2 bg-slate-50 border border-slate-200 rounded-lg text-xs font-semibold focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 outline-none appearance-none cursor-pointer"
-                value={selectedGroup}
-                onChange={(e) => setState(prev => ({ ...prev, selectedGroup: e.target.value }))}
-              >
-                <option value="">All Groups</option>
-                {groups.map(g => <option key={g} value={g}>{g}</option>)}
-              </select>
-              <Filter className="w-3.5 h-3.5 absolute left-2.5 top-1/2 -translate-y-1/2 text-slate-400" />
-            </div>
-
-            <div className="relative">
-              <select 
-                className="pl-8 pr-10 py-2 bg-slate-50 border border-slate-200 rounded-lg text-xs font-semibold focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 outline-none appearance-none cursor-pointer w-48"
-                value={selectedCustomer}
-                onChange={(e) => handleCustomerChange(e.target.value)}
-              >
-                <option value="">Select Customer</option>
-                {filteredCustomers.map(c => <option key={c.id} value={c.name}>{c.name}</option>)}
-              </select>
-              <Users className="w-3.5 h-3.5 absolute left-2.5 top-1/2 -translate-y-1/2 text-slate-400" />
-            </div>
-          </div>
-
-          <div className="flex items-center gap-2 flex-wrap">
-            <div className="flex items-center gap-1.5 bg-slate-50 border border-slate-200 rounded-lg px-2">
-              <Calendar className="w-3.5 h-3.5 text-slate-400" />
-              <input 
-                type="date" 
-                className="bg-transparent py-1.5 text-xs font-semibold outline-none w-28" 
-                value={fromDate}
-                onChange={(e) => setFromDate(e.target.value)}
-              />
-              <span className="text-[10px] font-bold text-slate-400">TO</span>
-              <input 
-                type="date" 
-                className="bg-transparent py-1.5 text-xs font-semibold outline-none w-28" 
-                value={toDate}
-                onChange={(e) => setToDate(e.target.value)}
-              />
-            </div>
-
-            {/* Item Filter */}
-            <div className="">
-              <label className="text-[10px] font-black uppercase text-slate-600 mb-1.5 block tracking-wider">Item Filter</label>
-              <div className="relative">
-                <select
-                  value={selectedItem}
-                  onChange={(e) => setSelectedItem(e.target.value)}
-                  className="w-full bg-amber-50 border-2 border-amber-200 rounded-lg p-2.5 text-sm font-bold text-slate-800 outline-none transition-all duration-200 hover:border-amber-300 focus:border-amber-400 focus:ring-2 focus:ring-amber-100 appearance-none min-w-[200px]"
->>>>>>> b3f7a25483bc73acf052a4a96638557ba90dabab
                 >
                   <option value="">-- Select Group --</option>
                   {groups.map(group => <option key={group.id} value={group.name}>{group.name}</option>)}
@@ -469,36 +329,23 @@ const DailySaleView = ({ onCancel }) => {
               />
             </div>
 
-            {/* Go Button */}
-<<<<<<< HEAD
+            {/* Action Buttons */}
             <div className="col-span-2 flex justify-end gap-2">
               <button 
                 onClick={handleFilter}
                 disabled={loading || !selectedGroup}
                 className="bg-gradient-to-r from-rose-500 to-rose-600 text-white px-6 py-2.5 font-black uppercase text-xs rounded-lg shadow-lg hover:from-rose-600 hover:to-rose-700 disabled:opacity-50 disabled:cursor-not-allowed transition-all duration-200 flex items-center gap-2 tracking-wider"
                 data-enter-index="4"
-=======
-            <div className="flex items-end">
-              <button
-                onClick={() => handleFilter()}
-                disabled={loading || !selectedGroup}
-                className="bg-gradient-to-r from-rose-500 to-rose-600 text-white px-6 py-2.5 font-black uppercase text-xs rounded-lg shadow-lg hover:from-rose-600 hover:to-rose-700 disabled:opacity-50 disabled:cursor-not-allowed transition-all duration-200 flex items-center gap-2 tracking-wider h-[42px]"
->>>>>>> b3f7a25483bc73acf052a4a96638557ba90dabab
               >
                 <Search size={16} /> {loading ? 'Loading...' : 'GO'}
               </button>
               <button 
-                onClick={() => {
-                  setState(DEFAULT_STATES.dailySaleReport);
-                  setSelectedGroup('');
-                }}
+                onClick={handleReset}
                 disabled={loading}
                 className="bg-gradient-to-r from-slate-500 to-slate-600 text-white px-4 py-2.5 font-black uppercase text-xs rounded-lg shadow-lg hover:from-slate-600 hover:to-slate-700 disabled:opacity-50 disabled:cursor-not-allowed transition-all duration-200 flex items-center gap-2 tracking-wider"
                 title="Reset all filters"
               >
-                <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" />
-                </svg>
+                <RefreshCw size={16} />
                 Reset
               </button>
             </div>
@@ -535,7 +382,6 @@ const DailySaleView = ({ onCancel }) => {
                     </div>
                   </td>
                 </tr>
-<<<<<<< HEAD
               ) : filteredData.length === 0 ? (
                 <tr>
                   <td colSpan="5" className="p-16 text-center text-slate-500 text-sm font-bold">
@@ -573,66 +419,6 @@ const DailySaleView = ({ onCancel }) => {
           <div className="grid grid-cols-12 gap-4 items-center">
             
             <div className="col-span-6 flex gap-3">
-=======
-              </thead>
-              <tbody className="divide-y divide-slate-100">
-                {filteredData.length === 0 ? (
-                  <tr>
-                    <td colSpan="7" className="px-4 py-8 text-center text-sm text-slate-500">
-                      {loading ? 'Loading...' : 'No data available. Please select a group and click GO.'}
-                    </td>
-                  </tr>
-                ) : (
-                  filteredData.map((row, i) => (
-                    <tr key={row.id || i} className="hover:bg-indigo-50/50 transition-colors group h-[45px]">
-                      <td className="px-4 py-2 text-xs font-bold text-slate-400 text-center">{i + 1}</td>
-                      <td className="px-4 py-2 text-xs font-medium text-slate-500">{row.date}</td>
-                      <td className="px-4 py-2 text-xs font-bold text-slate-800 uppercase tracking-tight truncate">{row.partyName}</td>
-                      <td className="px-4 py-2 text-xs text-slate-400 italic truncate">{row.itemDetails}</td>
-                      <td className="px-4 py-2 text-xs text-right font-medium text-slate-600">{row.qty}</td>
-                      <td className="px-4 py-2 text-xs text-right font-medium text-slate-600">{row.rate?.toFixed(2)}</td>
-                      <td className="px-4 py-2 text-xs text-right font-black text-indigo-700">{row.totalAmount?.toFixed(2)}</td>
-                    </tr>
-                  ))
-                )}
-                {/* Padding with empty rows if less than 10 */}
-                {filteredData.length > 0 && filteredData.length < 10 && [...Array(10 - filteredData.length)].map((_, i) => (
-                  <tr key={`empty-${i}`} className="h-[45px]">
-                    <td className="px-4 py-2 border-r border-slate-50"></td>
-                    <td className="px-4 py-2 border-r border-slate-50"></td>
-                    <td className="px-4 py-2 border-r border-slate-50"></td>
-                    <td className="px-4 py-2 border-r border-slate-50"></td>
-                    <td className="px-4 py-2 border-r border-slate-50"></td>
-                    <td className="px-4 py-2 border-r border-slate-50"></td>
-                    <td className="px-4 py-2"></td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
-          </div>
-        </div>
-
-        {/* Action Footer Area */}
-        <div className="flex justify-end items-end shrink-0 pt-2">
-          <div className="flex flex-col items-end gap-1.5">
-            <div className="flex items-center gap-6">
-              <span className="text-[10px] font-black text-slate-400 uppercase tracking-widest">Total Quantity</span>
-              <span className="text-sm font-black text-slate-700 w-24 text-right tabular-nums">{totals.qty}</span>
-            </div>
-            <div className="flex items-center gap-6">
-              <span className="text-[10px] font-black text-slate-400 uppercase tracking-widest">Amount Total</span>
-              <span className="text-lg font-black text-emerald-600 w-24 text-right tabular-nums">{totals.amount.toFixed(2)}</span>
-            </div>
-            
-            <div className="flex gap-3 mt-3">
-              <button 
-                onClick={handlePrint}
-                className="flex items-center gap-2 bg-white border border-slate-200 hover:border-indigo-400 hover:text-indigo-600 px-6 py-2 rounded-lg font-bold text-[11px] uppercase transition-all shadow-sm"
-              >
-                <Printer size={14} /> Print Report
-              </button>
-              
->>>>>>> b3f7a25483bc73acf052a4a96638557ba90dabab
               <button 
                 onClick={handleSendSMS}
                 className="bg-gradient-to-r from-emerald-500 to-emerald-600 text-white px-5 py-2.5 font-black uppercase text-xs rounded-lg shadow-lg hover:from-emerald-600 hover:to-emerald-700 transition-all duration-200 flex items-center gap-2 tracking-wider"
@@ -658,7 +444,6 @@ const DailySaleView = ({ onCancel }) => {
               )}
             </div>
 
-<<<<<<< HEAD
             {/* Totals Section */}
             <div className="col-span-6 grid grid-cols-2 gap-4">
               <div className="bg-gradient-to-br from-slate-50 to-slate-100 rounded-lg p-3 border border-slate-200 shadow-sm">
@@ -679,14 +464,6 @@ const DailySaleView = ({ onCancel }) => {
                   value={`₹ ${totals.amount.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`}
                 />
               </div>
-=======
-              <button 
-                onClick={handleCancel}
-                className="bg-slate-800 text-white hover:bg-slate-900 px-8 py-2 rounded-lg font-bold text-[11px] uppercase transition-all shadow-lg active:scale-95"
-              >
-                Cancel
-              </button>
->>>>>>> b3f7a25483bc73acf052a4a96638557ba90dabab
             </div>
           </div>
         </div>
@@ -695,7 +472,4 @@ const DailySaleView = ({ onCancel }) => {
   );
 };
 
-/**
- * APP ENTRY POINT
- */
 export default DailySaleReport;
