@@ -18,6 +18,8 @@ import { SilkSummaryView } from './components/utility/SilkSummaryView';
 import SaalaView from './components/saala/SaalaView';
 import { GroupPattiView } from './components/utility/GroupPattiView';
 import { GroupTotalView } from './components/utility/GroupTotalView';
+import SmsView from './components/utility/SmsView';
+import SmsSingle from './components/utility/smssingle';
 import { DEFAULT_STATES, resetComponentState } from './utils/stateManager';
 
 // --- SHARED UI COMPONENTS ---
@@ -1433,9 +1435,8 @@ export default function App() {
           />
         )}
         {activeSection === 'sms-single' && customers !== undefined && (
-          <SmsView 
+          <SmsSingle 
             customers={customers} 
-            ledgerStore={ledgerStore} 
             onCancel={() => setActiveSection('daily')} 
             showNotify={showNotify} 
           />
