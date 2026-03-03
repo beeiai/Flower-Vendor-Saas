@@ -13,6 +13,7 @@ from app.routes import items as catalog_items
 from app.routes import advances
 from app.routes import silk
 from app.routes import reports
+from app.routes import sms_single_customer
 from app.routes import sms
 from app.routes import saala
 from app.routes import print_templates
@@ -116,6 +117,7 @@ app.include_router(farmers.customers, prefix="/api")
 app.include_router(advances.router, prefix="/api")
 app.include_router(silk.router, prefix="/api")
 app.include_router(reports.router, prefix="/api")
+app.include_router(sms_single_customer.router, prefix="/api")
 app.include_router(sms.router, prefix="/api")
 app.include_router(saala.router, prefix="/api")
 app.include_router(print_templates.router, prefix="/api")
