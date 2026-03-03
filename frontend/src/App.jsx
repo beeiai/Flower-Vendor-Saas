@@ -1424,7 +1424,7 @@ export default function App() {
         )}
         {activeSection === 'group-adv' && groups !== undefined && customers !== undefined && <GroupAdvanceView groups={groups} customers={customers} advanceStore={advanceStore} onCancel={() => setActiveSection('daily')} />}
         {activeSection === 'group-pay' && groups !== undefined && customers !== undefined && ledgerStore !== undefined && <GroupPaymentView groups={groups} customers={customers} ledgerStore={ledgerStore} onCancel={() => setActiveSection('daily')} />}
-        {activeSection === 'sms' && customers && Array.isArray(customers) && (
+        {activeSection === 'sms' && customers !== undefined && (
           <SmsView 
             customers={customers} 
             ledgerStore={ledgerStore} 
@@ -1432,7 +1432,7 @@ export default function App() {
             showNotify={showNotify} 
           />
         )}
-        {activeSection === 'sms-single' && customers && Array.isArray(customers) && (
+        {activeSection === 'sms-single' && customers !== undefined && (
           <SmsView 
             customers={customers} 
             ledgerStore={ledgerStore} 
