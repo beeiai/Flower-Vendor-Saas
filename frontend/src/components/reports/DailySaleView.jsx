@@ -106,11 +106,23 @@ const DailySaleReport = ({ onCancel }) => {
     setLoading(true);
     setError(null);
     try {
-      const data = await api.getDailySales(fromDate, toDate, null);
+      console.log('[DailySaleView] Fetching daily sales:', { fromDate, toDate, selectedGroup });
+      const response = await api.getDailySales(fromDate, toDate, null);
+      console.log('[DailySaleView] Response received:', response);
       
       // Validate response data
-      if (!data || !Array.isArray(data)) {
-        throw new Error('Invalid data received from server');
+      if (!response) {
+        throw new Error('No response received from server');
+      }
+      
+      // Ensure response is an array
+      const dataArray = Array.isArray(response) ? response : [];
+      
+      if (dataArray.length === 0) {
+        setError('No sales data found for the selected period');
+        setFilteredData([]);
+        setLoading(false);
+        return;
       }
       
       // Filter customers by selected group
@@ -118,7 +130,7 @@ const DailySaleReport = ({ onCancel }) => {
       
       // Group sales data by customer (party)
       const customerSalesMap = {};
-      data.forEach(sale => {
+      dataArray.forEach(sale => {
         // Validate required fields
         if (!sale.party || !sale.qty || !sale.total) {
           console.warn('Skipping invalid sale record:', sale);
@@ -144,15 +156,16 @@ const DailySaleReport = ({ onCancel }) => {
       const filteredSales = Object.values(customerSalesMap)
         .filter(cs => groupCustomerNames.includes(cs.party));
       
+      console.log('[DailySaleView] Filtered sales:', filteredSales);
       setFilteredData(filteredSales);
       
       // Show success message
       if (filteredSales.length === 0) {
-        setError('No sales data found for the selected period and group');
+        setError('No sales data found for the selected group');
       }
       
     } catch (err) {
-      console.error('Failed to fetch daily sales:', err);
+      console.error('[DailySaleView] Failed to fetch daily sales:', err);
       
       // Retry logic for network errors
       if (retryCount < 2 && (err.code === 'NETWORK_ERROR' || err.message.includes('fetch'))) {
@@ -472,4 +485,4 @@ const DailySaleReport = ({ onCancel }) => {
   );
 };
 
-export default DailySaleReport;
+export default DailySaleView;

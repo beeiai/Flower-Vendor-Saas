@@ -318,21 +318,27 @@ export const api = {
       format: 'json'  // Request JSON format instead of HTML
     };
     if (itemName) params.item_name = itemName;
+    
+    console.log('[API] Calling /reports/daily-sales with params:', params);
     const response = await request('/reports/daily-sales', { params });
+    console.log('[API] Response received:', response);
     
     // Handle various possible response structures
     if (response && Array.isArray(response.data)) {
       // New format: { data: [...], metadata: {...} }
+      console.log('[API] Returning response.data array with length:', response.data.length);
       return response.data;  
     }
     
     // Fallback for direct array response
     if (Array.isArray(response)) {
+      console.log('[API] Returning direct array response with length:', response.length);
       return response;
     }
     
     // Legacy format: { entries: [...] }
     if (response && Array.isArray(response.entries)) {
+      console.log('[API] Returning response.entries array with length:', response.entries.length);
       return response.entries;
     }
     
@@ -345,6 +351,7 @@ export const api = {
         const dataScript = doc.querySelector('#daily-sales-data, [data-daily-sales-data], script[data-type="daily-sales"]');
         if (dataScript && dataScript.textContent) {
           const extractedData = JSON.parse(dataScript.textContent);
+          console.log('[API] Extracted data from HTML with length:', extractedData.length);
           return Array.isArray(extractedData) ? extractedData : [];
         }
       } catch (parseErr) {
@@ -352,7 +359,7 @@ export const api = {
       }
     }
     
-    console.error('Unexpected response format from daily-sales endpoint:', response);
+    console.error('[API] Unexpected response format from daily-sales endpoint:', response);
     return [];
   },
   getDailySalesItems: async () => {
