@@ -25,8 +25,8 @@ const SmsSingle = ({ customers = [], onCancel, showNotify }) => {
     customMessage: '',
     sending: false,
     loading: false,
-    fromDate: '2026-03-03',
-    toDate: '2026-03-03',
+    fromDate: new Date().toISOString().split('T')[0], // Today's date
+    toDate: new Date().toISOString().split('T')[0],   // Today's date
     salesData: [],
     totalQty: 0,
     totalAmount: 0,
@@ -115,18 +115,19 @@ const SmsSingle = ({ customers = [], onCancel, showNotify }) => {
       const data = await api.getDailySales(fromDate, toDate);
       
       // Filter data for the selected customer
-      // First try to match by party name, then by farmer_name
+      // The API returns data with party_name field (from Farmer.name)
       let customerData = [];
       if (Array.isArray(data)) {
         customerData = data.filter(item => 
-          (item.party && item.party.toLowerCase().includes(selectedCustomer.toLowerCase())) || 
+          (item.party_name && item.party_name.toLowerCase().includes(selectedCustomer.toLowerCase())) || 
+          (item.party && item.party.toLowerCase().includes(selectedCustomer.toLowerCase())) ||
           (item.farmer_name && item.farmer_name.toLowerCase().includes(selectedCustomer.toLowerCase()))
         );
       }
 
       const totals = customerData.reduce((acc, item) => {
-        const qty = parseFloat(item.qty) || 0;
-        const rate = parseFloat(item.rate) || 0;
+        const qty = parseFloat(item.qty_kg || item.qty || 0) || 0;
+        const rate = parseFloat(item.rate_per_kg || item.rate || 0) || 0;
         return {
           qty: acc.qty + qty,
           amount: acc.amount + (qty * rate)
@@ -289,11 +290,11 @@ const SmsSingle = ({ customers = [], onCancel, showNotify }) => {
                     salesData.map((item, idx) => (
                       <tr key={idx} className="hover:bg-slate-50 transition-colors">
                         <td className="px-4 py-3 text-slate-600 font-medium">{idx + 1}</td>
-                        <td className="px-4 py-3 text-slate-700">{item.date}</td>
-                        <td className="px-4 py-3 text-slate-900 font-semibold">{item.item_name}</td>
-                        <td className="px-4 py-3 text-right text-slate-700">{parseFloat(item.qty).toFixed(2)}</td>
-                        <td className="px-4 py-3 text-right text-slate-700">{parseFloat(item.rate).toFixed(2)}</td>
-                        <td className="px-4 py-3 text-right font-bold text-indigo-600">{(item.qty * item.rate).toFixed(2)}</td>
+                        <td className="px-4 py-3 text-slate-700">{item.date || item.created_at || ''}</td>
+                        <td className="px-4 py-3 text-slate-900 font-semibold">{item.item_name || item.itemCode || item.itemName || ''}</td>
+                        <td className="px-4 py-3 text-right text-slate-700">{(parseFloat(item.qty_kg || item.qty || 0)).toFixed(2)}</td>
+                        <td className="px-4 py-3 text-right text-slate-700">{(parseFloat(item.rate_per_kg || item.rate || 0)).toFixed(2)}</td>
+                        <td className="px-4 py-3 text-right font-bold text-indigo-600">{((item.qty_kg || item.qty || 0) * (item.rate_per_kg || item.rate || 0)).toFixed(2)}</td>
                       </tr>
                     ))
                   ) : (
