@@ -92,7 +92,7 @@ const DailySaleReport = ({ onCancel }) => {
     }
   }, [fromDate, toDate, setLoading, setError, setFilteredData]);
 
-  //✅ FIX: Fetch master data first, then trigger filter with fresh customers
+  // ✅ FIX: Fetch master data first, then trigger filter with fresh customers
   useEffect(() => {
     const fetchMasterData = async () => {
       try {
@@ -121,7 +121,7 @@ const DailySaleReport = ({ onCancel }) => {
     fetchMasterData();
   }, []); // eslint-disable-line react-hooks/exhaustive-deps
 
-  //✅ Re-fetch when group or dates change (customers already loaded by now)
+  // ✅ Re-fetch when group or dates change (customers already loaded by now)
   useEffect(() => {
     if (selectedGroup) {
       handleFilter();
