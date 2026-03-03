@@ -55,7 +55,6 @@ export default function ReportsView({ groups, customers, vehicles, advanceStore 
 		return filteredCustomers.findIndex(c => c.name === customerName);
 	}, [filteredCustomers, customerName]);
 
-	// ✅ FIXED: filteredRows defined BEFORE formNav and tableNav hooks
 	const filteredRows = useMemo(() => {
 		const f = String(fromDate || '').trim();
 		const t = String(toDate || '').trim();
@@ -95,7 +94,6 @@ export default function ReportsView({ groups, customers, vehicles, advanceStore 
 		listRef: containerRef
 	});
 
-	// ✅ FIXED: tableNav can now safely reference filteredRows.length
 	const tableNav = useKeyboardListNavigation({
 		itemCount: filteredRows.length,
 		onEnter: (index) => {
@@ -162,6 +160,9 @@ export default function ReportsView({ groups, customers, vehicles, advanceStore 
 			console.error('Error fetching transactions:', error);
 			setRows([]);
 			setFilterError("Failed to load report data. Please try again.");
+		} finally {
+			// ✅ After submit always return focus to Group Name
+			setTimeout(() => groupRef.current?.querySelector('input')?.focus(), 150);
 		}
 	};
 
@@ -284,6 +285,7 @@ export default function ReportsView({ groups, customers, vehicles, advanceStore 
 										/>
 									</div>
 									<div className="col-span-4">
+										{/* ✅ Group → on selection complete, jump directly to Customer */}
 										<EnhancedSearchableSelect
 											label="Group Name"
 											options={groups.map(g => g.name)}
@@ -291,7 +293,7 @@ export default function ReportsView({ groups, customers, vehicles, advanceStore 
 											onChange={setGroupName}
 											placeholder="Select group"
 											inputRef={groupRef}
-											onSelectionComplete={() => setTimeout(() => vehicleRef.current?.focus(), 100)}
+											onSelectionComplete={() => setTimeout(() => customerRef.current?.querySelector('input')?.focus(), 100)}
 											className={`focus:border-rose-500 focus:ring-rose-500/20 rounded-lg shadow-sm hover:shadow-md transition-all border-rose-200 w-full ${filterError && !groupName ? 'border-red-500 ring-2 ring-red-100' : ''}`}
 											error={filterError && !groupName}
 										/>
@@ -304,7 +306,7 @@ export default function ReportsView({ groups, customers, vehicles, advanceStore 
 											onChange={setVehicle}
 											placeholder="(Opt)"
 											inputRef={vehicleRef}
-											onSelectionComplete={() => setTimeout(() => customerRef.current?.focus(), 100)}
+											onSelectionComplete={() => setTimeout(() => customerRef.current?.querySelector('input')?.focus(), 100)}
 											className="focus:border-rose-500 focus:ring-rose-500/20 rounded-lg shadow-sm hover:shadow-md transition-all border-rose-200 w-full"
 										/>
 									</div>
@@ -315,6 +317,7 @@ export default function ReportsView({ groups, customers, vehicles, advanceStore 
 										<label className="text-xs font-medium text-slate-600 block mb-1">Customer Name</label>
 										<div className="flex items-end gap-1.5">
 											<div className="flex-1 relative">
+												{/* ✅ Customer → on selection complete, jump to GO button */}
 												<EnhancedSearchableSelect
 													label={null}
 													options={filteredCustomers.map(c => c.name)}
@@ -345,7 +348,22 @@ export default function ReportsView({ groups, customers, vehicles, advanceStore 
 										<input className="w-full border border-primary-200 bg-primary-50 px-3 text-sm font-semibold text-primary-600 text-right rounded-sm" style={{ height: '36px' }} readOnly value={`₹ ${remAdvance.toFixed(2)}`} />
 									</div>
 									<div className="col-span-1 flex items-end">
-										<button ref={submitRef} type="button" className="w-full bg-gradient-to-r from-rose-500 to-rose-600 text-white text-sm font-bold rounded-lg hover:from-rose-600 hover:to-rose-700 transition-all shadow-md hover:shadow-lg focus:outline-none focus:ring-2 focus:ring-rose-500 focus:ring-offset-2" style={{ height: '36px' }} onClick={handleFilterSubmit}>Go</button>
+										{/* ✅ GO button — Enter key triggers submit, after submit focus returns to Group */}
+										<button
+											ref={submitRef}
+											type="button"
+											className="w-full bg-gradient-to-r from-rose-500 to-rose-600 text-white text-sm font-bold rounded-lg hover:from-rose-600 hover:to-rose-700 transition-all shadow-md hover:shadow-lg focus:outline-none focus:ring-2 focus:ring-rose-500 focus:ring-offset-2"
+											style={{ height: '36px' }}
+											onClick={handleFilterSubmit}
+											onKeyDown={(e) => {
+												if (e.key === 'Enter') {
+													e.preventDefault();
+													handleFilterSubmit();
+												}
+											}}
+										>
+											Go
+										</button>
 									</div>
 								</div>
 							</div>
