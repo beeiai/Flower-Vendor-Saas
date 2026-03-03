@@ -109,10 +109,49 @@ const SmsSingle = ({ customers = [], onCancel, showNotify }) => {
       return;
     }
 
+    // Check authentication first
+    const token = localStorage.getItem('skfs_auth_token');
+    if (!token) {
+      showNotify?.('Please login to access sales data', 'error');
+      return;
+    }
+
+    // Check API configuration
+    const apiUrl = import.meta.env.VITE_API_BASE_URL;
+    if (!apiUrl) {
+      showNotify?.('API configuration error - please contact administrator', 'error');
+      return;
+    }
+
     setState(prev => ({ ...prev, loading: true, error: null }));
     try {
       // Get all daily sales data for the date range
-      const data = await api.getDailySales(fromDate, toDate);
+      const response = await api.getDailySales(fromDate, toDate);
+      
+      // Check if response indicates authentication failure
+      if (response && response.status === 401) {
+        showNotify?.('Authentication failed - please login again', 'error');
+        setState(prev => ({ ...prev, loading: false }));
+        return;
+      }
+      
+      // Check if response indicates endpoint not found
+      if (response && response.status === 404) {
+        showNotify?.('Sales data endpoint not available', 'error');
+        setState(prev => ({ ...prev, loading: false }));
+        return;
+      }
+      
+      // Extract the actual data array from the response
+      // The API returns { entries: [...] } or direct array
+      let data = [];
+      if (Array.isArray(response)) {
+        data = response;
+      } else if (response && Array.isArray(response.entries)) {
+        data = response.entries;
+      } else if (response && Array.isArray(response.data)) {
+        data = response.data;
+      }
       
       // Filter data for the selected customer
       // The API returns data with party_name field (from Farmer.name)
@@ -143,6 +182,7 @@ const SmsSingle = ({ customers = [], onCancel, showNotify }) => {
       }));
       showNotify?.(`Loaded ${customerData.length} records`, 'success');
     } catch (err) {
+      console.error('[SMS Single] Error fetching data:', err);
       setState(prev => ({ ...prev, error: err.message || 'Failed to load data', loading: false }));
       showNotify?.('Failed to load sales data', 'error');
     }
@@ -290,7 +330,7 @@ const SmsSingle = ({ customers = [], onCancel, showNotify }) => {
                     salesData.map((item, idx) => (
                       <tr key={idx} className="hover:bg-slate-50 transition-colors">
                         <td className="px-4 py-3 text-slate-600 font-medium">{idx + 1}</td>
-                        <td className="px-4 py-3 text-slate-700">{item.date || item.created_at || ''}</td>
+                        <td className="px-4 py-3 text-slate-700">{item.date || ''}</td>
                         <td className="px-4 py-3 text-slate-900 font-semibold">{item.item_name || item.itemCode || item.itemName || ''}</td>
                         <td className="px-4 py-3 text-right text-slate-700">{(parseFloat(item.qty_kg || item.qty || 0)).toFixed(2)}</td>
                         <td className="px-4 py-3 text-right text-slate-700">{(parseFloat(item.rate_per_kg || item.rate || 0)).toFixed(2)}</td>
