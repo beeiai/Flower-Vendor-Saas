@@ -25,6 +25,7 @@ export default function TopNavbar({ activeSection, setActiveSection, setShowTMen
 						{[ 
 							{ id: 'daily-sale', l: 'Daily Sale', i: Monitor }, 
 							{ id: 'sms', l: 'Daily SMS', i: Send },
+							{ id: 'sms-single', l: 'SMS Single', i: Send },
 							{ id: 'group-print', l: 'Group Printing', i: Printer }, 
 							{ id: 'group-total', l: 'Group Total Report', i: Layers },
 							{ id: 'group-adv', l: 'Group Wise Advance', i: WalletCards },
