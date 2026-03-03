@@ -560,12 +560,16 @@ def get_daily_sales_data(
     entries_list = []
     grand_total_qty = Decimal("0")
     grand_total_amount = Decimal("0")
+    grand_total_luggage = Decimal("0")
+    grand_total_coolie = Decimal("0")
     
     for row in results:
         qty = Decimal(str(row.qty_kg or 0))
         rate = Decimal(str(row.rate_per_kg or 0))
         amount = qty * rate
         paid = Decimal(str(row.paid_amount or 0))
+        luggage = Decimal(str(row.luggage or 0))
+        coolie = Decimal(str(row.coolie or 0))
         
         # Format date as DD-MM-YYYY
         date_str = row.date.strftime("%d-%m-%Y") if row.date else "N/A"
@@ -575,6 +579,8 @@ def get_daily_sales_data(
         
         grand_total_qty += qty
         grand_total_amount += amount
+        grand_total_luggage += luggage
+        grand_total_coolie += coolie
         
         entries_list.append({
             "date": date_str,
