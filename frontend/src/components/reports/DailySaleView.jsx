@@ -119,8 +119,8 @@ const DailySaleReport = ({ onCancel }) => {
       // Group sales data by customer (party)
       const customerSalesMap = {};
       data.forEach(sale => {
-        // Validate required fields
-        if (!sale.party || !sale.qty || !sale.total) {
+        // Validate required fields - accept both 'amount' and 'total' field names
+        if (!sale.party || !sale.qty || (!sale.total && !sale.amount)) {
           console.warn('Skipping invalid sale record:', sale);
           return;
         }
@@ -136,7 +136,8 @@ const DailySaleReport = ({ onCancel }) => {
         }
         customerSalesMap[sale.party].items.push(sale);
         customerSalesMap[sale.party].totalQty += parseFloat(sale.qty) || 0;
-        customerSalesMap[sale.party].totalAmount += parseFloat(sale.total) || 0;
+        // Use 'amount' field from backend, fallback to 'total' for compatibility
+        customerSalesMap[sale.party].totalAmount += parseFloat(sale.amount || sale.total) || 0;
       });
       
       // Filter to only show customers in the selected group
