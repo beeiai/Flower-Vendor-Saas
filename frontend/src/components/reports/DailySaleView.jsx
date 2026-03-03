@@ -57,7 +57,7 @@ const DailySaleReport = ({ onCancel }) => {
     setState(prev => ({ ...prev, error: value }));
   }, []);
 
-  // Fetch groups and customers on mount with better error handling
+  // Fetch groups and customers on mount
   useEffect(() => {
     const fetchMasterData = async () => {
       try {
