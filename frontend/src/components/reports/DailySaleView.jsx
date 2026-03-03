@@ -339,4 +339,4 @@ const DailySaleView = ({ onCancel }) => {
   );
 };
 
-export default SmsView;
+export default DailySaleView;
