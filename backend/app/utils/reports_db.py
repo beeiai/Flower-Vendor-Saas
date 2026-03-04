@@ -532,6 +532,26 @@ def get_daily_sales_data(
     logger.info(f"Querying daily sales - vendor_id: {vendor_id}, from: {from_date}, to: {to_date}, item: {item_name}")
     
     try:
+        # First, let's debug: Check if there are ANY collection items for this vendor
+        total_items_count = db.query(CollectionItem).filter(
+            CollectionItem.vendor_id == vendor_id
+        ).count()
+        logger.info(f"DEBUG: Total CollectionItems in DB for vendor {vendor_id}: {total_items_count}")
+        
+        # Check date range of available data
+        min_max_dates = db.query(
+            func.min(CollectionItem.date).label('min_date'),
+            func.max(CollectionItem.date).label('max_date')
+        ).filter(
+            CollectionItem.vendor_id == vendor_id
+        ).first()
+        
+        if min_max_dates and min_max_dates.min_date:
+            logger.info(f"DEBUG: Available date range in DB: {min_max_dates.min_date} to {min_max_dates.max_date}")
+            logger.info(f"DEBUG: Requested date range: {from_date} to {to_date}")
+        else:
+            logger.warning(f"DEBUG: No CollectionItems found for vendor {vendor_id}")
+        
         # Query collection items with vehicle information and all required fields
         # IMPORTANT: Use outerjoin but apply filters correctly to avoid excluding NULL farmer records
         query = db.query(
@@ -564,6 +584,15 @@ def get_daily_sales_data(
             query = query.where(CollectionItem.item_name == item_name)
         
         logger.info(f"Executing query...")
+        
+        # Log the SQL query for debugging
+        try:
+            compiled_query = str(query)
+            logger.info(f"SQL Query: {compiled_query}")
+            logger.info(f"SQL Parameters: vendor_id={vendor_id}, from_date={from_date}, to_date={to_date}")
+        except Exception as compile_error:
+            logger.warning(f"Could not compile query for logging: {compile_error}")
+        
         results = query.order_by(
             CollectionItem.date.asc(),
             Farmer.name.asc()
@@ -571,8 +600,24 @@ def get_daily_sales_data(
         
         logger.info(f"Query returned {len(results)} results")
         
-        # Debug: Log raw query SQL for troubleshooting
-        logger.debug(f"Raw SQL query: {str(query)}")
+        # If no results, log more details
+        if len(results) == 0:
+            logger.warning(f"No results found! Checking if data exists outside date range...")
+            # Check if there are items just outside our range
+            nearby_items = db.query(CollectionItem).filter(
+                CollectionItem.vendor_id == vendor_id,
+                or_(
+                    CollectionItem.date < from_date,
+                    CollectionItem.date > to_date
+                )
+            ).limit(5).all()
+            
+            if nearby_items:
+                logger.warning(f"Found {len(nearby_items)} items OUTSIDE the requested date range:")
+                for idx, item in enumerate(nearby_items):
+                    logger.warning(f"  Item {idx+1}: date={item.date}, farmer_id={item.farmer_id}, qty={item.qty_kg}")
+            else:
+                logger.warning(f"No CollectionItems found at all for vendor {vendor_id}")
         
         entries_list = []
         grand_total_qty = Decimal("0")

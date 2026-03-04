@@ -988,6 +988,8 @@ def get_daily_sales_report(
             logger.info(f"Using default date range: {from_date} to {to_date}")
         
         # Get data with error handling
+        logger.info(f"DAILY SALES REQUEST - vendor_id: {user.vendor_id}, from_date: {from_date}, to_date: {to_date}")
+        
         try:
             sales_data = get_daily_sales_data(
                 vendor_id=user.vendor_id,
@@ -997,6 +999,11 @@ def get_daily_sales_report(
                 db=db
             )
             logger.info(f"Daily sales data retrieved - record_count: {sales_data.get('record_count', 0)}")
+            
+            # Debug: Log if empty data is returned
+            if sales_data.get('record_count', 0) == 0:
+                logger.warning(f"DAILY SALES RETURNED EMPTY - Request details: vendor_id={user.vendor_id}, from={from_date}, to={to_date}")
+                logger.warning(f"Check backend logs above for DEBUG messages about available data")
         except Exception as db_error:
             logger.error(f"Database error fetching daily sales: {db_error}")
             return JSONResponse(
