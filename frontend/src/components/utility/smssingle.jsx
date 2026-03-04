@@ -152,15 +152,16 @@ const SmsSingle = ({ customers = [], onCancel, showNotify }) => {
       }
       
       // Filter data for the selected customer
-      // The API returns data with party_name field (from Farmer.name)
+      // The API returns data with 'party' field (farmer name)
       let customerData = [];
       if (Array.isArray(data)) {
-        customerData = data.filter(item => 
-          (item.party_name && item.party_name.toLowerCase().includes(selectedCustomer.toLowerCase())) || 
-          (item.party && item.party.toLowerCase().includes(selectedCustomer.toLowerCase())) ||
-          (item.farmer_name && item.farmer_name.toLowerCase().includes(selectedCustomer.toLowerCase()))
-        );
+        customerData = data.filter(item => {
+          // Match against party field (which contains farmer/customer name)
+          const partyName = item.party || '';
+          return partyName.toLowerCase().includes(selectedCustomer.toLowerCase());
+        });
         console.log('[SMS Single] Filtered customer data count:', customerData.length);
+        console.log('[SMS Single] Sample filtered item:', customerData[0]);
       }
 
       // Calculate totals safely
@@ -340,16 +341,23 @@ const SmsSingle = ({ customers = [], onCancel, showNotify }) => {
                 </thead>
                 <tbody className="divide-y divide-slate-100">
                   {salesData.length > 0 ? (
-                    salesData.map((item, idx) => (
-                      <tr key={idx} className="hover:bg-slate-50 transition-colors">
-                        <td className="px-4 py-3 text-slate-600 font-medium">{idx + 1}</td>
-                        <td className="px-4 py-3 text-slate-700">{item.date}</td>
-                        <td className="px-4 py-3 text-slate-900 font-semibold">{item.item_name}</td>
-                        <td className="px-4 py-3 text-right text-slate-700">{parseFloat(item.qty).toFixed(2)}</td>
-                        <td className="px-4 py-3 text-right text-slate-700">{parseFloat(item.rate).toFixed(2)}</td>
-                        <td className="px-4 py-3 text-right font-bold text-indigo-600">{(item.qty * item.rate).toFixed(2)}</td>
-                      </tr>
-                    ))
+                    salesData.map((item, idx) => {
+                      // Parse numeric values from strings
+                      const qty = parseFloat(item.qty) || 0;
+                      const rate = parseFloat(item.rate) || 0;
+                      const total = qty * rate;
+                      
+                      return (
+                        <tr key={idx} className="hover:bg-slate-50 transition-colors">
+                          <td className="px-4 py-3 text-slate-600 font-medium">{idx + 1}</td>
+                          <td className="px-4 py-3 text-slate-700">{item.date}</td>
+                          <td className="px-4 py-3 text-slate-900 font-semibold">{item.product_name || item.item_name || 'N/A'}</td>
+                          <td className="px-4 py-3 text-right text-slate-700">{qty.toFixed(2)}</td>
+                          <td className="px-4 py-3 text-right text-slate-700">{rate.toFixed(2)}</td>
+                          <td className="px-4 py-3 text-right font-bold text-indigo-600">{total.toFixed(2)}</td>
+                        </tr>
+                      );
+                    })
                   ) : (
                     <tr>
                       <td colSpan="6" className="px-4 py-20 text-center text-slate-400 font-medium italic">
