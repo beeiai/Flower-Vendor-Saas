@@ -119,10 +119,23 @@ const DailySaleReport = ({ onCancel }) => {
       // Group sales data by customer (party)
       const customerSalesMap = {};
       data.forEach(sale => {
-        // Validate required fields - accept both 'amount' and 'total' field names
-        if (!sale.party || !sale.qty || (!sale.total && !sale.amount)) {
-          console.warn('Skipping invalid sale record:', sale);
+        // Validate required fields - accept multiple field name formats
+        // Backend returns: qty, rate, total (calculated)
+        // We need to calculate total if not present
+        if (!sale.party || !sale.qty) {
+          console.warn('Skipping invalid sale record - missing party or qty:', sale);
           return;
+        }
+        
+        // Calculate total amount - try multiple field names
+        let totalAmount = 0;
+        if (sale.total !== undefined && sale.total !== null) {
+          totalAmount = parseFloat(sale.total) || 0;
+        } else if (sale.amount !== undefined && sale.amount !== null) {
+          totalAmount = parseFloat(sale.amount) || 0;
+        } else if (sale.qty && sale.rate) {
+          // Calculate from qty and rate if total/amount not provided
+          totalAmount = (parseFloat(sale.qty) || 0) * (parseFloat(sale.rate) || 0);
         }
         
         if (!customerSalesMap[sale.party]) {
@@ -136,8 +149,7 @@ const DailySaleReport = ({ onCancel }) => {
         }
         customerSalesMap[sale.party].items.push(sale);
         customerSalesMap[sale.party].totalQty += parseFloat(sale.qty) || 0;
-        // Use 'amount' field from backend, fallback to 'total' for compatibility
-        customerSalesMap[sale.party].totalAmount += parseFloat(sale.amount || sale.total) || 0;
+        customerSalesMap[sale.party].totalAmount += totalAmount;
       });
       
       // Filter to only show customers in the selected group

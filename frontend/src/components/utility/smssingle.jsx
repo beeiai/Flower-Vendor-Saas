@@ -128,21 +128,71 @@ const SmsSingle = ({ customers = [], onCancel, showNotify }) => {
 
     setState(prev => ({ ...prev, loading: true, error: null }));
     try {
+<<<<<<< HEAD
       const data = await api.getDailySales(fromDate, toDate);
       const customerData = data.filter(item => 
         item.party === selectedCustomer || 
         item.farmer_name === selectedCustomer
       );
+=======
+      console.log('[SMS Single] Fetching daily sales for:', { selectedCustomer, fromDate, toDate });
+      
+      // Get all daily sales data for the date range
+      const response = await api.getDailySales(fromDate, toDate);
+      console.log('[SMS Single] Response received:', response);
+      
+      // Extract the actual data array from the response
+      // The API returns { data: [...], metadata: {...} } or other formats
+      let data = [];
+      if (Array.isArray(response)) {
+        data = response;
+        console.log('[SMS Single] Direct array response, length:', data.length);
+      } else if (response && Array.isArray(response.data)) {
+        data = response.data;
+        console.log('[SMS Single] response.data array, length:', data.length);
+      } else if (response && Array.isArray(response.entries)) {
+        data = response.entries;
+        console.log('[SMS Single] response.entries array, length:', data.length);
+      } else {
+        console.warn('[SMS Single] Unexpected response format:', response);
+        data = [];
+      }
+      
+      // Filter data for the selected customer
+      // The API returns data with party_name field (from Farmer.name)
+      let customerData = [];
+      if (Array.isArray(data)) {
+        customerData = data.filter(item => 
+          (item.party_name && item.party_name.toLowerCase().includes(selectedCustomer.toLowerCase())) || 
+          (item.party && item.party.toLowerCase().includes(selectedCustomer.toLowerCase())) ||
+          (item.farmer_name && item.farmer_name.toLowerCase().includes(selectedCustomer.toLowerCase()))
+        );
+        console.log('[SMS Single] Filtered customer data count:', customerData.length);
+      }
+>>>>>>> 14a5e590fee9895a9b2f44cb9838684ce98c7ac4
 
+      // Calculate totals safely
       const totals = customerData.reduce((acc, item) => {
+<<<<<<< HEAD
         const qty = parseFloat(item.qty) || 0;
         const rate = parseFloat(item.rate) || 0;
+=======
+        // Try multiple field names for qty and rate
+        const qty = parseFloat(item.qty_kg || item.qty || 0) || 0;
+        const rate = parseFloat(item.rate_per_kg || item.rate || 0) || 0;
+        
+        // Calculate line total
+        const lineTotal = qty * rate;
+        
+>>>>>>> 14a5e590fee9895a9b2f44cb9838684ce98c7ac4
         return {
           qty: acc.qty + qty,
-          amount: acc.amount + (qty * rate)
+          amount: acc.amount + lineTotal
         };
       }, { qty: 0, amount: 0 });
 
+      console.log('[SMS Single] Calculated totals:', totals);
+      
       setState(prev => ({
         ...prev,
         salesData: customerData,
@@ -150,10 +200,22 @@ const SmsSingle = ({ customers = [], onCancel, showNotify }) => {
         totalAmount: totals.amount,
         loading: false
       }));
-      showNotify?.(`Loaded ${customerData.length} records`, 'success');
+      
+      if (customerData.length > 0) {
+        showNotify?.(`Loaded ${customerData.length} records`, 'success');
+      } else {
+        showNotify?.('No sales data found for this customer', 'info');
+      }
     } catch (err) {
+<<<<<<< HEAD
       setState(prev => ({ ...prev, error: err.message || 'Failed to load data', loading: false }));
       showNotify?.('Failed to load sales data', 'error');
+=======
+      console.error('[SMS Single] Error fetching data:', err);
+      const errorMessage = err?.message || err?.details || 'Failed to load data';
+      setState(prev => ({ ...prev, error: errorMessage, loading: false }));
+      showNotify?.(errorMessage || 'Failed to load sales data', 'error');
+>>>>>>> 14a5e590fee9895a9b2f44cb9838684ce98c7ac4
     }
   }, [selectedCustomer, fromDate, toDate, showNotify]);
 

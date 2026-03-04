@@ -326,47 +326,48 @@ export const api = {
     if (itemName) params.item_name = itemName;
     
     console.log('[API] Calling /reports/daily-sales with params:', params);
-    const response = await request('/reports/daily-sales', { params });
-    console.log('[API] Response received:', response);
     
-    // Handle various possible response structures
-    if (response && Array.isArray(response.data)) {
-      // New format: { data: [...], metadata: {...} }
-      console.log('[API] Returning response.data array with length:', response.data.length);
-      return response.data;  
-    }
-    
-    // Fallback for direct array response
-    if (Array.isArray(response)) {
-      console.log('[API] Returning direct array response with length:', response.length);
-      return response;
-    }
-    
-    // Legacy format: { entries: [...] }
-    if (response && Array.isArray(response.entries)) {
-      console.log('[API] Returning response.entries array with length:', response.entries.length);
-      return response.entries;
-    }
-    
-    // Another possible format: { html: "...", metadata: {...} } - parse if needed
-    if (response && typeof response.html === 'string') {
-      try {
-        // Attempt to extract data from HTML if it contains JSON data
-        const parser = new DOMParser();
-        const doc = parser.parseFromString(response.html, 'text/html');
-        const dataScript = doc.querySelector('#daily-sales-data, [data-daily-sales-data], script[data-type="daily-sales"]');
-        if (dataScript && dataScript.textContent) {
-          const extractedData = JSON.parse(dataScript.textContent);
-          console.log('[API] Extracted data from HTML with length:', extractedData.length);
-          return Array.isArray(extractedData) ? extractedData : [];
-        }
-      } catch (parseErr) {
-        console.warn('Could not parse HTML response for daily sales data:', parseErr);
+    try {
+      const response = await request('/reports/daily-sales', { params });
+      console.log('[API] Response received:', response);
+      
+      // Handle various possible response structures
+      
+      // Priority 1: New format with data array in response.data
+      if (response && response.data && Array.isArray(response.data)) {
+        console.log('[API] Returning response.data array with length:', response.data.length);
+        return response.data;
       }
+      
+      // Priority 2: Direct array response
+      if (Array.isArray(response)) {
+        console.log('[API] Returning direct array response with length:', response.length);
+        return response;
+      }
+      
+      // Priority 3: Legacy format with entries array
+      if (response && Array.isArray(response.entries)) {
+        console.log('[API] Returning response.entries array with length:', response.entries.length);
+        return response.entries;
+      }
+      
+      // Priority 4: Check if response is an object with a data property that's an array
+      if (response && typeof response === 'object' && Array.isArray(response.data)) {
+        console.log('[API] Returning nested response.data array with length:', response.data.length);
+        return response.data;
+      }
+      
+      // Fallback: If we get here, the response structure is unexpected
+      console.warn('[API] Unexpected response format from daily-sales endpoint:', response);
+      
+      // Return empty array as fallback instead of throwing error
+      return [];
+      
+    } catch (error) {
+      console.error('[API] Error fetching daily sales:', error);
+      // Re-throw the error so the caller can handle it
+      throw error;
     }
-    
-    console.error('[API] Unexpected response format from daily-sales endpoint:', response);
-    return [];
   },
   getDailySalesItems: async () => {
     const items = await request('/reports/daily-sales/items', {});

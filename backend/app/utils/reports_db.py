@@ -124,7 +124,7 @@ def get_ledger_data(
         CollectionItem.qty_kg,
         CollectionItem.rate_per_kg,
         CollectionItem.transport_cost.label("luggage"),
-        CollectionItem.coolie,
+        CollectionItem.coolie_cost.label("coolie"),
         CollectionItem.paid_amount,
         CollectionItem.remarks
     ).filter(
@@ -232,7 +232,7 @@ def get_group_total_data(
         CollectionItem.qty_kg,
         CollectionItem.rate_per_kg,
         CollectionItem.transport_cost.label("luggage"),
-        CollectionItem.coolie,
+        CollectionItem.coolie_cost.label("coolie"),
         CollectionItem.paid_amount,
         CollectionItem.remarks
     ).join(
@@ -414,7 +414,7 @@ def get_group_patti_data(
             CollectionItem.qty_kg,
             CollectionItem.rate_per_kg,
             CollectionItem.transport_cost.label("luggage"),
-            CollectionItem.coolie,
+            CollectionItem.coolie_cost.label("coolie"),
             CollectionItem.paid_amount,
             CollectionItem.remarks
         ).filter(
@@ -518,95 +518,206 @@ def get_daily_sales_data(
     
     Returns data with date, vehicle, party, item, qty, rate, and amount.
     """
+    import logging
+    logger = logging.getLogger(__name__)
+    
     if not db:
+        logger.error("Database session is None")
         return {"entries": [], "grand_total_qty": "0", "grand_total_amount": "0"}
     
     if from_date is None or to_date is None:
         from_date, to_date = get_default_date_range()
+        logger.info(f"Using default date range: {from_date} to {to_date}")
     
-    # Query collection items with vehicle information and all required fields
-    query = db.query(
-        CollectionItem.date,
-        CollectionItem.vehicle_name,
-        CollectionItem.vehicle_number,
-        Farmer.name.label("party_name"),
-        Farmer.address.label("party_address"),
-        
-        CollectionItem.item_code,
-        CollectionItem.item_name,
-        CollectionItem.qty_kg,
-        CollectionItem.rate_per_kg,
-        CollectionItem.transport_cost.label("luggage"),
-        CollectionItem.coolie,
-        CollectionItem.paid_amount,
-        CollectionItem.remarks
-    ).outerjoin(
-        Farmer, CollectionItem.farmer_id == Farmer.id
-    ).filter(
-        CollectionItem.vendor_id == vendor_id,
-        CollectionItem.date >= from_date,
-        CollectionItem.date <= to_date
-    )
+    logger.info(f"Querying daily sales - vendor_id: {vendor_id}, from: {from_date}, to: {to_date}, item: {item_name}")
     
-    # Optional: filter by item name
-    if item_name:
-        query = query.filter(CollectionItem.item_name == item_name)
-    
-    results = query.order_by(
-        CollectionItem.date.asc(),
-        Farmer.name.asc()
-    ).all()
-    
-    entries_list = []
-    grand_total_qty = Decimal("0")
-    grand_total_amount = Decimal("0")
-    grand_total_luggage = Decimal("0")
-    grand_total_coolie = Decimal("0")
-    
-    for row in results:
-        qty = Decimal(str(row.qty_kg or 0))
-        rate = Decimal(str(row.rate_per_kg or 0))
-        amount = qty * rate
-        paid = Decimal(str(row.paid_amount or 0))
-        luggage = Decimal(str(row.luggage or 0))
-        coolie = Decimal(str(row.coolie or 0))
+    try:
+        # First, let's debug: Check if there are ANY collection items for this vendor
+        total_items_count = db.query(CollectionItem).filter(
+            CollectionItem.vendor_id == vendor_id
+        ).count()
+        logger.info(f"DEBUG: Total CollectionItems in DB for vendor {vendor_id}: {total_items_count}")
         
-        # Format date as DD-MM-YYYY
-        date_str = row.date.strftime("%d-%m-%Y") if row.date else "N/A"
+        # Check date range of available data
+        min_max_dates = db.query(
+            func.min(CollectionItem.date).label('min_date'),
+            func.max(CollectionItem.date).label('max_date')
+        ).filter(
+            CollectionItem.vendor_id == vendor_id
+        ).first()
         
-        # Get vehicle info
-        vehicle_info = row.vehicle_name or row.vehicle_number or "N/A"
+        if min_max_dates and min_max_dates.min_date:
+            logger.info(f"DEBUG: Available date range in DB: {min_max_dates.min_date} to {min_max_dates.max_date}")
+            logger.info(f"DEBUG: Requested date range: {from_date} to {to_date}")
+        else:
+            logger.warning(f"DEBUG: No CollectionItems found for vendor {vendor_id}")
         
-        grand_total_qty += qty
-        grand_total_amount += amount
-        grand_total_luggage += luggage
-        grand_total_coolie += coolie
-        
-        entries_list.append({
-            "date": date_str,
-            "vehicle": vehicle_info,
-            "vehicle_name": vehicle_info,  # For backward compatibility
-            "party": row.party_name or "Unknown",
-            "party_address": row.party_address or "N/A",
+        # Query collection items with vehicle information and all required fields
+        # IMPORTANT: Use outerjoin but apply filters correctly to avoid excluding NULL farmer records
+        query = db.query(
+            CollectionItem.date,
+            CollectionItem.vehicle_name,
+            CollectionItem.vehicle_number,
+            Farmer.name.label("party_name"),
+            Farmer.address.label("party_address"),
             
-            "item_code": row.item_code or "N/A",
-            "item": row.item_name or "Unspecified",
-            "qty": str(qty),
-            "rate": str(rate),
-            "luggage": str(luggage),
-            "coolie": str(coolie),
-            "amount": str(amount),
-            "paid": str(paid),
-            "remarks": row.remarks or "N/A"
-        })
-    
-    return {
-        "entries": entries_list,
-        "grand_total_qty": str(grand_total_qty),
-        "grand_total_amount": str(grand_total_amount),
-        "grand_total_luggage": str(grand_total_luggage),
-        "grand_total_coolie": str(grand_total_coolie),
-        "record_count": len(entries_list),
-        "from_date": from_date.isoformat(),
-        "to_date": to_date.isoformat()
-    }
+            CollectionItem.item_code,
+            CollectionItem.item_name,
+            CollectionItem.qty_kg,
+            CollectionItem.rate_per_kg,
+            CollectionItem.transport_cost.label("luggage"),
+            CollectionItem.coolie_cost.label("coolie"),
+            CollectionItem.paid_amount,
+            CollectionItem.remarks
+        ).outerjoin(
+            Farmer, CollectionItem.farmer_id == Farmer.id
+        ).where(
+            # Use .where() instead of .filter() for clarity - same behavior but clearer intent
+            CollectionItem.vendor_id == vendor_id,
+            CollectionItem.date >= from_date,
+            CollectionItem.date <= to_date
+        )
+        
+        # Optional: filter by item name
+        if item_name:
+            logger.info(f"Filtering by item_name: {item_name}")
+            query = query.where(CollectionItem.item_name == item_name)
+        
+        logger.info(f"Executing query...")
+        
+        # Log the SQL query for debugging
+        try:
+            compiled_query = str(query)
+            logger.info(f"SQL Query: {compiled_query}")
+            logger.info(f"SQL Parameters: vendor_id={vendor_id}, from_date={from_date}, to_date={to_date}")
+        except Exception as compile_error:
+            logger.warning(f"Could not compile query for logging: {compile_error}")
+        
+        results = query.order_by(
+            CollectionItem.date.asc(),
+            Farmer.name.asc()
+        ).all()
+        
+        logger.info(f"Query returned {len(results)} results")
+        
+        # If no results, log more details
+        if len(results) == 0:
+            logger.warning(f"No results found! Checking if data exists outside date range...")
+            # Check if there are items just outside our range
+            nearby_items = db.query(CollectionItem).filter(
+                CollectionItem.vendor_id == vendor_id,
+                or_(
+                    CollectionItem.date < from_date,
+                    CollectionItem.date > to_date
+                )
+            ).limit(5).all()
+            
+            if nearby_items:
+                logger.warning(f"Found {len(nearby_items)} items OUTSIDE the requested date range:")
+                for idx, item in enumerate(nearby_items):
+                    logger.warning(f"  Item {idx+1}: date={item.date}, farmer_id={item.farmer_id}, qty={item.qty_kg}")
+            else:
+                logger.warning(f"No CollectionItems found at all for vendor {vendor_id}")
+        
+        entries_list = []
+        grand_total_qty = Decimal("0")
+        grand_total_amount = Decimal("0")
+        grand_total_luggage = Decimal("0")
+        grand_total_coolie = Decimal("0")
+        
+        for idx, row in enumerate(results):
+            try:
+                # Safely convert numeric values
+                try:
+                    qty = Decimal(str(row.qty_kg)) if row.qty_kg is not None else Decimal("0")
+                except (ValueError, TypeError, Exception) as e:
+                    logger.warning(f"Invalid qty_kg at index {idx}: {row.qty_kg}, error: {e}")
+                    qty = Decimal("0")
+                
+                try:
+                    rate = Decimal(str(row.rate_per_kg)) if row.rate_per_kg is not None else Decimal("0")
+                except (ValueError, TypeError, Exception) as e:
+                    logger.warning(f"Invalid rate_per_kg at index {idx}: {row.rate_per_kg}, error: {e}")
+                    rate = Decimal("0")
+                
+                amount = qty * rate
+                
+                try:
+                    paid = Decimal(str(row.paid_amount)) if row.paid_amount is not None else Decimal("0")
+                except (ValueError, TypeError, Exception) as e:
+                    logger.warning(f"Invalid paid_amount at index {idx}: {row.paid_amount}, error: {e}")
+                    paid = Decimal("0")
+                
+                try:
+                    luggage = Decimal(str(row.luggage)) if row.luggage is not None else Decimal("0")
+                except (ValueError, TypeError, Exception) as e:
+                    logger.warning(f"Invalid luggage at index {idx}: {row.luggage}, error: {e}")
+                    luggage = Decimal("0")
+                
+                try:
+                    coolie = Decimal(str(row.coolie)) if row.coolie is not None else Decimal("0")
+                except (ValueError, TypeError, Exception) as e:
+                    logger.warning(f"Invalid coolie at index {idx}: {row.coolie}, error: {e}")
+                    coolie = Decimal("0")
+                
+                # Format date as DD-MM-YYYY
+                try:
+                    date_str = row.date.strftime("%d-%m-%Y") if row.date else "N/A"
+                except Exception as e:
+                    logger.warning(f"Invalid date at index {idx}: {row.date}, error: {e}")
+                    date_str = "N/A"
+                
+                # Get vehicle info
+                vehicle_info = row.vehicle_name or row.vehicle_number or "N/A"
+                
+                grand_total_qty += qty
+                grand_total_amount += amount
+                grand_total_luggage += luggage
+                grand_total_coolie += coolie
+                
+                entries_list.append({
+                    "date": date_str,
+                    "vehicle": vehicle_info,
+                    "vehicle_name": vehicle_info,  # For backward compatibility
+                    "party": row.party_name or "Unknown",
+                    "party_address": row.party_address or "N/A",
+                    
+                    "item_code": row.item_code or "N/A",
+                    "item": row.item_name or "Unspecified",
+                    "qty": str(qty),
+                    "rate": str(rate),
+                    "luggage": str(luggage),
+                    "coolie": str(coolie),
+                    "amount": str(amount),
+                    "paid": str(paid),
+                    "remarks": row.remarks or "N/A"
+                })
+            except Exception as row_error:
+                logger.warning(f"Error processing row {idx}: {row_error}")
+                # Skip this row and continue
+                continue
+        
+        logger.info(f"Successfully processed {len(entries_list)} entries")
+        
+        return {
+            "entries": entries_list,
+            "grand_total_qty": str(grand_total_qty),
+            "grand_total_amount": str(grand_total_amount),
+            "grand_total_luggage": str(grand_total_luggage),
+            "grand_total_coolie": str(grand_total_coolie),
+            "record_count": len(entries_list),
+            "from_date": from_date.isoformat(),
+            "to_date": to_date.isoformat()
+        }
+        
+    except Exception as e:
+        logger.error(f"Database query failed: {e}")
+        import traceback
+        logger.error(traceback.format_exc())
+        # Return empty data instead of crashing
+        return {
+            "entries": [],
+            "grand_total_qty": "0",
+            "grand_total_amount": "0",
+            "error": str(e)
+        }

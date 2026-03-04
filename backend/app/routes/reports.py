@@ -35,7 +35,7 @@ router = APIRouter(
 
 def render_template(template_name: str, data: dict, template_dir: str = "templates") -> str:
     """
-    Render Jinja2 template with provided data and add print button.
+    Render Jinja2 template with provided data.
     
     Args:
         template_name: Name of template file (e.g., 'ledger_report.html')
@@ -43,7 +43,7 @@ def render_template(template_name: str, data: dict, template_dir: str = "templat
         template_dir: Directory containing templates
     
     Returns:
-        Rendered HTML string with corrected asset paths and print button
+        Rendered HTML string with corrected asset paths
     """
     template_path = os.path.join(template_dir, template_name)
     
@@ -59,33 +59,6 @@ def render_template(template_name: str, data: dict, template_dir: str = "templat
     except Exception as e:
         print(f"Template rendering error: {e}")
         return f"<h1>Template rendering error: {str(e)}</h1>"
-    
-    # Add print button with JavaScript
-    print_button_html = '''
-    <div style="position: fixed; top: 10px; right: 10px; z-index: 1000; background: white; padding: 10px; border-radius: 5px; box-shadow: 0 2px 10px rgba(0,0,0,0.2);">
-        <button onclick="window.print()" style="padding: 10px 20px; background-color: #007bff; color: white; border: none; border-radius: 4px; cursor: pointer; font-size: 14px; font-weight: bold;">🖨️ Print</button>
-    </div>
-    '''
-    
-    # Add script to automatically trigger print when page loads
-    auto_print_script = '''
-    <script>
-        // Auto-print when page loads
-        window.onload = function() {
-            // Small delay to ensure page is fully loaded
-            setTimeout(function() {
-                window.print();
-            }, 500);
-        };
-    </script>
-    '''
-    
-    # Insert print button before </body> tag if it exists
-    if '</body>' in html:
-        html = html.replace('</body>', print_button_html + auto_print_script + '</body>')
-    else:
-        # If no </body> tag, append the scripts at the end
-        html += print_button_html + auto_print_script
     
     # Convert logo to data URI for reliable printing in production
     logo_path = os.path.join("static", "images", "SKFS_logo.png")
@@ -197,7 +170,7 @@ def get_ledger_report(
             "date": date_val,
             "vehicle": vehicle_val,
             "item_code": entry.get("item_code", "N/A"),
-            "item_name": entry.get("item_name", "N/A"),
+            "product_name": entry.get("item_name", "N/A"),
             "customer": ledger_data.get("customer", {}).get("name", "N/A"),
             "address": ledger_data.get("customer", {}).get("address", "N/A"),
             "qty": entry.get("qty", "0"),
@@ -821,7 +794,7 @@ def get_group_patti_report(
                 "date": date_val,
                 "vehicle": vehicle,
                 "item_code": entry.get("item_code", "N/A"),
-                "item_name": entry.get("item_name", "N/A"),
+                "product_name": entry.get("item_name", "N/A"),
                 "qty": f"{qty:.2f}",
                 "rate": f"{rate:.2f}",
                 "luggage": f"{luggage:.2f}",
@@ -977,100 +950,203 @@ def get_daily_sales_report(
     
     Returns:
     - If format=html: Rendered HTML template
-    - If format=json: {html, metadata} with page and record counts
+    - If format=json: {data, metadata} with page and record counts
     """
-    if from_date is None or to_date is None:
-        from_date, to_date = get_default_date_range()
-    
-    # Get data
-    sales_data = get_daily_sales_data(
-        vendor_id=user.vendor_id,
-        from_date=from_date,
-        to_date=to_date,
-        item_name=item_name,
-        db=db
-    )
-    
-    # Calculate metadata
-    record_count = sales_data.get("record_count", 0)
-    page_count = estimate_pdf_page_count("daily_sales", record_count=record_count)
-    generated_at = datetime.now().isoformat()
-    current_date = datetime.now().strftime("%d-%m-%Y")
-    
-    # Transform entries to match template expectations
-    rows = []
-    total_qty = 0
-    total_amount = 0
-    
-    for entry in sales_data.get("entries", []):
-        qty = float(entry.get("qty", 0))
-        rate = float(entry.get("rate", 0))
-        total = qty * rate
-        
-        # Format date properly
-        entry_date = entry.get("date", "")
-        if isinstance(entry_date, str):
-            # If ISO format (YYYY-MM-DD), keep it; if has T (ISO datetime), extract date part
-            entry_date = entry_date.split("T")[0] if "T" in entry_date else entry_date
-        
-        rows.append({
-            "date": entry_date,
-            "vehicle": entry.get("vehicle", "N/A") if entry.get("vehicle") else (entry.get("vehicle_number", "N/A") if entry.get("vehicle_number") else "N/A"),
-            "party": entry.get("party", "N/A"),
-            "group": entry.get("group", "Unknown"),
-            "itemName": entry.get("item", "N/A"),
-            "qty": f"{qty:.2f}",
-            "rate": f"{rate:.2f}",
-            "total": f"{total:.2f}"
-        })
-        
-        total_qty += qty
-        total_amount += total
-    
-    # Prepare template data
-    template_data = {
-        "rows": rows,
-        "total_qty": f"{total_qty:.2f}",
-        "total_amount": f"{total_amount:.2f}",
-        "from_date": from_date.strftime("%d-%m-%Y"),
-        "to_date": to_date.strftime("%d-%m-%Y"),
-        "current_date": current_date,
-        "generated_at": generated_at,
-        "item_filter": item_name or "All Items",
-        "totals": {
-            "record_count": len(rows),
-            "total_qty": f"{total_qty:.2f}",
-            "total_amount": f"{total_amount:.2f}"
-        }
-    }
-    
-    # Render HTML
     try:
-        html_content = render_template("daily_sales_report.html", template_data)
-    except Exception as e:
-        print(f"Error rendering daily sales report template: {e}")
-        return JSONResponse(
-            status_code=500,
-            content={"detail": f"Template rendering error: {str(e)}"}
-        )
-    
-    if format.lower() == "json":
-        return JSONResponse({
-            "data": rows,  # Return the actual data array
-            "metadata": {
-                "page_count": page_count,
-                "record_count": record_count,
-                "report_type": "daily_sales",
-                "paper_size": "A4",
-                "generated_at": generated_at,
-                "date_range": {
-                    "from": from_date.isoformat(),
-                    "to": to_date.isoformat()
+        logger.info(f"Daily Sales report requested - format: {format}, item_name: {item_name}")
+        logger.info(f"Date range: {from_date} to {to_date}")
+        
+        if from_date is None or to_date is None:
+            from_date, to_date = get_default_date_range()
+            logger.info(f"Using default date range: {from_date} to {to_date}")
+        
+        # Get data with error handling
+        logger.info(f"DAILY SALES REQUEST - vendor_id: {user.vendor_id}, from_date: {from_date}, to_date: {to_date}")
+        
+        try:
+            sales_data = get_daily_sales_data(
+                vendor_id=user.vendor_id,
+                from_date=from_date,
+                to_date=to_date,
+                item_name=item_name,
+                db=db
+            )
+            logger.info(f"Daily sales data retrieved - record_count: {sales_data.get('record_count', 0)}")
+            
+            # Debug: Log if empty data is returned
+            if sales_data.get('record_count', 0) == 0:
+                logger.warning(f"DAILY SALES RETURNED EMPTY - Request details: vendor_id={user.vendor_id}, from={from_date}, to={to_date}")
+                logger.warning(f"Check backend logs above for DEBUG messages about available data")
+        except Exception as db_error:
+            logger.error(f"Database error fetching daily sales: {db_error}")
+            return JSONResponse(
+                status_code=500,
+                content={"detail": f"Database error: {str(db_error)}"}
+            )
+        
+        # Calculate metadata
+        record_count = sales_data.get("record_count", 0)
+        page_count = estimate_pdf_page_count("daily_sales", record_count=record_count)
+        generated_at = datetime.now().isoformat()
+        current_date = datetime.now().strftime("%d-%m-%Y")
+        
+        # Transform entries to match template expectations
+        rows = []
+        total_qty = 0
+        total_amount = 0
+        total_luggage = 0
+        total_coolie = 0
+        total_paid = 0
+        
+        logger.info(f"Processing {len(sales_data.get('entries', []))} entries")
+        
+        # Log first few entries for debugging
+        if sales_data.get('entries'):
+            sample_entry = sales_data['entries'][0] if sales_data['entries'] else {}
+            logger.info(f"Sample entry keys: {list(sample_entry.keys()) if isinstance(sample_entry, dict) else 'Not a dict'}")
+            logger.debug(f"Sample entry data: {sample_entry}")
+        
+        for idx, entry in enumerate(sales_data.get("entries", [])):
+            try:
+                # Log first 3 entries for debugging
+                if idx < 3:
+                    logger.debug(f"Processing entry {idx}: party_name={entry.get('party_name')}, party={entry.get('party')}, item_name={entry.get('item_name')}, item={entry.get('item')}")
+                
+                # Safely extract and convert numeric values
+                qty_val = entry.get("qty", "0")
+                rate_val = entry.get("rate", "0")
+                
+                # Convert to float safely
+                try:
+                    qty = float(qty_val) if qty_val is not None else 0.0
+                except (ValueError, TypeError):
+                    qty = 0.0
+                
+                try:
+                    rate = float(rate_val) if rate_val is not None else 0.0
+                except (ValueError, TypeError):
+                    rate = 0.0
+                
+                # Calculate total safely
+                total = qty * rate
+                
+                # Format date properly
+                entry_date = entry.get("date", "")
+                if isinstance(entry_date, str):
+                    # If ISO format (YYYY-MM-DD), keep it; if has T (ISO datetime), extract date part
+                    entry_date = entry_date.split("T")[0] if "T" in entry_date else entry_date
+                
+                # Get vehicle info safely
+                vehicle_val = entry.get("vehicle")
+                if not vehicle_val:
+                    vehicle_val = entry.get("vehicle_name")
+                if not vehicle_val:
+                    vehicle_val = "N/A"
+                
+                # Extract luggage, coolie, paid safely
+                luggage_val = float(entry.get('luggage', 0)) if entry.get('luggage') is not None else 0.0
+                coolie_val = float(entry.get('coolie', 0)) if entry.get('coolie') is not None else 0.0
+                paid_val = float(entry.get('paid', 0)) if entry.get('paid') is not None else 0.0
+                
+                luggage_str = f"{luggage_val:.2f}"
+                coolie_str = f"{coolie_val:.2f}"
+                paid_str = f"{paid_val:.2f}"
+                
+                # Get all required fields safely - ensure ALL fields are populated
+                row_data = {
+                    "date": entry_date or "",
+                    "vehicle": vehicle_val,
+                    # Backend returns party_name, frontend expects party - map correctly
+                    "party": entry.get("party_name") or entry.get("party") or "N/A",
+                    "address": entry.get("party_address") or "N/A",
+                    "item_code": entry.get("item_code") or "N/A",
+                    "product_name": entry.get("item_name") or entry.get("item") or "N/A",
+                    "qty": f"{qty:.2f}",
+                    "rate": f"{rate:.2f}",
+                    "luggage": luggage_str,
+                    "coolie": coolie_str,
+                    "paid": paid_str,
+                    "total": f"{total:.2f}"
+                }
+                
+                rows.append(row_data)
+                total_qty += qty
+                total_amount += total
+                # Parse back to float for totals
+                try:
+                    total_luggage += float(luggage_str)
+                    total_coolie += float(coolie_str)
+                    total_paid += float(paid_str)
+                except (ValueError, TypeError):
+                    pass
+                
+            except Exception as entry_error:
+                logger.warning(f"Error processing entry: {entry_error}, entry: {entry}")
+                # Skip this entry and continue
+                continue
+        
+        logger.info(f"Processed {len(rows)} rows successfully")
+        
+        # Prepare template data
+        template_data = {
+            "rows": rows,
+            "total_qty": f"{total_qty:.2f}",
+            "total_amount": f"{total_amount:.2f}",
+            "from_date": from_date.strftime("%d-%m-%Y"),
+            "to_date": to_date.strftime("%d-%m-%Y"),
+            "current_date": current_date,
+            "generated_at": generated_at,
+            "item_filter": item_name or "All Items",
+            "totals": {
+                "record_count": len(rows),
+                "total_qty": f"{total_qty:.2f}",
+                "total_amount": f"{total_amount:.2f}",
+                "total_luggage": f"{total_luggage:.2f}",
+                "total_coolie": f"{total_coolie:.2f}",
+                "total_paid": f"{total_paid:.2f}"
+            }
+        }
+        
+        # Render HTML
+        try:
+            html_content = render_template("daily_sales_report.html", template_data)
+            logger.info("Template rendering successful")
+        except Exception as render_error:
+            logger.error(f"Error rendering daily sales report template: {render_error}")
+            return JSONResponse(
+                status_code=500,
+                content={"detail": f"Template rendering error: {str(render_error)}"}
+            )
+        
+        if format.lower() == "json":
+            response_data = {
+                "data": rows,  # Return the actual data array
+                "metadata": {
+                    "page_count": page_count,
+                    "record_count": record_count,
+                    "report_type": "daily_sales",
+                    "paper_size": "A4",
+                    "generated_at": generated_at,
+                    "date_range": {
+                        "from": from_date.isoformat(),
+                        "to": to_date.isoformat()
+                    }
                 }
             }
-        })
-    else:
-        return HTMLResponse(content=html_content)
+            logger.info(f"Returning JSON response - {len(rows)} rows")
+            return JSONResponse(response_data)
+        else:
+            logger.info("Returning HTML response")
+            return HTMLResponse(content=html_content)
+            
+    except Exception as e:
+        logger.error(f"Unexpected error in daily-sales endpoint: {e}")
+        import traceback
+        logger.error(traceback.format_exc())
+        return JSONResponse(
+            status_code=500,
+            content={"detail": f"Internal server error: {str(e)}"}
+        )
 
 
 # ================================================

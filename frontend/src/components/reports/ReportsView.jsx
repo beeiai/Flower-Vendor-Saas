@@ -2,7 +2,6 @@ import React, { useEffect, useMemo, useState, useCallback, useRef } from 'react'
 import { EnhancedSearchableSelect } from '../shared/EnhancedSearchableSelect';
 import { api } from '../../utils/api';
 import { DEFAULT_STATES } from '../../utils/stateManager';
-import { useKeyboardListNavigation } from '../../hooks/useKeyboardListNavigation';
 
 function toNum(value) {
 	const n = Number(value);
@@ -78,32 +77,40 @@ export default function ReportsView({ groups, customers, vehicles, advanceStore 
 			}));
 	}, [rows, fromDate, toDate, vehicle]);
 
-	const formNav = useKeyboardListNavigation({
-		itemCount: 6,
-		onEnter: (index) => {
-			const actions = [
-				() => toDateRef.current?.focus(),
-				() => groupRef.current?.focus(),
-				() => vehicleRef.current?.focus(),
-				() => customerRef.current?.focus(),
-				() => submitRef.current?.focus(),
-				() => handleFilterSubmit()
-			];
-			actions[index]?.();
-		},
-		listRef: containerRef
-	});
+	// Track which field should receive focus next
+	const [currentFocusIndex, setCurrentFocusIndex] = useState(0);
+	
+	// Focus order: 0=fromDate, 1=toDate, 2=group, 3=vehicle, 4=customer, 5=go button
+	const focusOrder = ['fromDate', 'toDate', 'group', 'vehicle', 'customer', 'go'];
+	
+	// Handle keyboard navigation for the form container
+	const handleFormKeyDown = useCallback((e) => {
+		// Only handle Tab key for moving between fields
+		if (e.key === 'Tab') {
+			setCurrentFocusIndex(prev => {
+				const next = e.shiftKey ? Math.max(0, prev - 1) : Math.min(focusOrder.length - 1, prev + 1);
+				return next;
+			});
+		}
+	}, []);
 
-	const tableNav = useKeyboardListNavigation({
-		itemCount: filteredRows.length,
-		onEnter: (index) => {
-			const row = filteredRows[index];
-			if (row) {
-				console.log('Row selected:', row);
+	// Table keyboard navigation
+	const [tableFocusedIndex, setTableFocusedIndex] = useState(-1);
+	
+	const handleTableKeyDown = useCallback((e) => {
+		if (e.key === 'ArrowDown') {
+			e.preventDefault();
+			setTableFocusedIndex(prev => Math.min(prev + 1, filteredRows.length - 1));
+		} else if (e.key === 'ArrowUp') {
+			e.preventDefault();
+			setTableFocusedIndex(prev => Math.max(prev - 1, 0));
+		} else if (e.key === 'Enter') {
+			e.preventDefault();
+			if (tableFocusedIndex >= 0 && filteredRows[tableFocusedIndex]) {
+				console.log('Row selected:', filteredRows[tableFocusedIndex]);
 			}
-		},
-		listRef: tableRef
-	});
+		}
+	}, [filteredRows.length, tableFocusedIndex]);
 
 	useEffect(() => {
 		if (filteredCustomers.length === 0) {
@@ -161,8 +168,16 @@ export default function ReportsView({ groups, customers, vehicles, advanceStore 
 			setRows([]);
 			setFilterError("Failed to load report data. Please try again.");
 		} finally {
-			// ✅ After submit always return focus to Group Name
-			setTimeout(() => groupRef.current?.querySelector('input')?.focus(), 150);
+			// ✅ After submit always return focus to Group Name with dropdown closed
+			setTimeout(() => {
+				const groupInput = groupRef.current?.querySelector('input');
+				if (groupInput) {
+					groupInput.focus();
+					// Dispatch blur to ensure dropdown closes
+					groupInput.blur();
+					setTimeout(() => groupInput.focus(), 50);
+				}
+			}, 150);
 		}
 	};
 
@@ -228,8 +243,12 @@ export default function ReportsView({ groups, customers, vehicles, advanceStore 
 				document.body.appendChild(a);
 				a.click();
 				document.body.removeChild(a);
+				// Revoke URL after download starts
+				setTimeout(() => window.URL.revokeObjectURL(url), 100);
+			} else {
+				// Revoke URL after print window loads (delayed to allow page to load)
+				setTimeout(() => window.URL.revokeObjectURL(url), 5000);
 			}
-			window.URL.revokeObjectURL(url);
 			setTimeout(() => groupRef.current?.querySelector('input')?.focus(), 100);
 		} catch (error) {
 			console.error('Print error:', error);
@@ -242,7 +261,7 @@ export default function ReportsView({ groups, customers, vehicles, advanceStore 
 		<div
 			className="flex-1 flex flex-col h-full overflow-hidden bg-white"
 			ref={containerRef}
-			onKeyDown={formNav.handleKeyDown}
+			onKeyDown={handleFormKeyDown}
 			tabIndex={0}
 			data-testid="reports-view"
 		>
@@ -285,7 +304,7 @@ export default function ReportsView({ groups, customers, vehicles, advanceStore 
 										/>
 									</div>
 									<div className="col-span-4">
-										{/* ✅ Group → on selection complete, jump directly to Customer */}
+										{/* ✅ Group → on selection complete, jump directly to Customer and open dropdown */}
 										<EnhancedSearchableSelect
 											label="Group Name"
 											options={groups.map(g => g.name)}
@@ -293,7 +312,15 @@ export default function ReportsView({ groups, customers, vehicles, advanceStore 
 											onChange={setGroupName}
 											placeholder="Select group"
 											inputRef={groupRef}
-											onSelectionComplete={() => setTimeout(() => customerRef.current?.querySelector('input')?.focus(), 100)}
+											onSelectionComplete={() => {
+												setTimeout(() => {
+													const customerInput = customerRef.current?.querySelector('input');
+													if (customerInput) {
+														// Focus will trigger onFocus which opens dropdown
+														customerInput.focus();
+													}
+												}, 50);
+											}}
 											className={`focus:border-rose-500 focus:ring-rose-500/20 rounded-lg shadow-sm hover:shadow-md transition-all border-rose-200 w-full ${filterError && !groupName ? 'border-red-500 ring-2 ring-red-100' : ''}`}
 											error={filterError && !groupName}
 										/>
@@ -306,7 +333,15 @@ export default function ReportsView({ groups, customers, vehicles, advanceStore 
 											onChange={setVehicle}
 											placeholder="(Opt)"
 											inputRef={vehicleRef}
-											onSelectionComplete={() => setTimeout(() => customerRef.current?.querySelector('input')?.focus(), 100)}
+											onSelectionComplete={() => {
+												setTimeout(() => {
+													const customerInput = customerRef.current?.querySelector('input');
+													if (customerInput) {
+														// Focus will trigger onFocus which opens dropdown
+														customerInput.focus();
+													}
+												}, 50);
+											}}
 											className="focus:border-rose-500 focus:ring-rose-500/20 rounded-lg shadow-sm hover:shadow-md transition-all border-rose-200 w-full"
 										/>
 									</div>
@@ -325,7 +360,11 @@ export default function ReportsView({ groups, customers, vehicles, advanceStore 
 													onChange={setCustomerName}
 													placeholder="Select customer"
 													inputRef={customerRef}
-													onSelectionComplete={() => setTimeout(() => submitRef.current?.focus(), 100)}
+													onSelectionComplete={() => {
+														setTimeout(() => {
+															submitRef.current?.focus();
+														}, 100);
+													}}
 													className={`focus:border-rose-500 focus:ring-rose-500/20 rounded-lg shadow-sm hover:shadow-md transition-all border-rose-200 w-full ${filterError && !customerName ? 'border-red-500 ring-2 ring-red-100' : ''}`}
 													error={filterError && !customerName}
 												/>
@@ -372,7 +411,12 @@ export default function ReportsView({ groups, customers, vehicles, advanceStore 
 
 					<div className="flex-1 overflow-hidden p-3">
 						<div className="h-full bg-white border border-slate-200 shadow-card rounded-sm overflow-hidden flex flex-col">
-							<div className="flex-1 overflow-auto bg-white custom-table-scroll" ref={tableRef} onKeyDown={tableNav.handleKeyDown} tabIndex={0}>
+							<div 
+								className="flex-1 overflow-auto bg-white custom-table-scroll" 
+								ref={tableRef} 
+								onKeyDown={handleTableKeyDown} 
+								tabIndex={0}
+							>
 								<table className="w-full text-sm border-collapse relative">
 									<thead className="sticky top-0 bg-gradient-to-r from-[#5B55E6] to-[#4A44D0] text-white z-20 border-b-2 font-semibold uppercase text-xs shadow-lg rounded-t-lg">
 										<tr>
@@ -396,7 +440,14 @@ export default function ReportsView({ groups, customers, vehicles, advanceStore 
 											const total = r.qty * r.rate;
 											const lagAmt = r.qty * r.laguage;
 											return (
-												<tr key={r.id ?? `${r.date}-${idx}`} className="hover:bg-gradient-to-r hover:from-[#5B55E6]/5 hover:to-[#4A44D0]/5 border-b border-slate-200 group transition-all duration-200" tabIndex={tableNav.focusedIndex === idx ? 0 : -1} onFocus={() => tableNav.setFocusedIndex(idx)}>
+												<tr 
+													key={r.id ?? `${r.date}-${idx}`} 
+													className={`hover:bg-gradient-to-r hover:from-[#5B55E6]/5 hover:to-[#4A44D0]/5 border-b border-slate-200 group transition-all duration-200 ${
+														tableFocusedIndex === idx ? 'bg-primary-50 ring-2 ring-primary-500/20' : ''
+													}`}
+													tabIndex={tableFocusedIndex === idx ? 0 : -1}
+													onFocus={() => setTableFocusedIndex(idx)}
+												>
 													<td className="px-3 py-3 border-r border-slate-200 text-center text-slate-500 font-semibold">{idx + 1}</td>
 													<td className="px-3 py-3 border-r border-slate-200 text-center text-slate-700 font-medium">{String(r.date || '')}</td>
 													<td className="px-3 py-3 border-r border-slate-200 font-semibold text-slate-800">{String(r.vehicle || '--')}</td>

@@ -4,15 +4,15 @@ from sqlalchemy.orm import Session, joinedload
 from sqlalchemy import func
 from datetime import date
 from typing import Optional
-from jinja2 import Template
-import os
 from pathlib import Path
+import os
 
 from app.core.db import get_db
 from app.dependencies import get_current_user
 from app.models.collection_item import CollectionItem
 from app.models.farmer import Farmer
 from app.models.farmer_group import FarmerGroup
+from app.routes.reports import render_template  # Use shared render_template function
 
 
 router = APIRouter(
@@ -102,13 +102,14 @@ def get_ledger_report_pdf(
             qty = float(item.qty_kg or 0)
             rate = float(item.rate_per_kg or 0)
             luggage = float(item.transport_cost or 0)
+            coolie = float(item.coolie_cost or 0)  # Add coolie from item
             paid = float(item.paid_amount or 0)
             total = qty * rate
             
             # Commission calculation per row
             row_commission = total * commission_rate
             row_net = total - row_commission
-            row_balance = row_net + luggage - paid
+            row_balance = row_net - paid - luggage - coolie
             
             # Get vehicle information
             vehicle_info = "N/A"
@@ -122,72 +123,43 @@ def get_ledger_report_pdf(
             transformed_rows.append({
                 "date": item.date.strftime("%d-%m-%Y") if item.date else "N/A",
                 "vehicle": vehicle_info,
+                "item_code": item.item_code or "N/A",
+                "product_name": item.item_name or "N/A",
                 "customer": farmer.name,
                 "address": farmer.address or "N/A",
+                "qty": f"{qty:.2f}",
+                "rate": f"{rate:.2f}",
+                "luggage": f"{luggage:.2f}",
+                "coolie": f"{coolie:.2f}",
+                "paid": f"{paid:.2f}",
                 "gross": f"{total:.2f}",
                 "commission": f"{row_commission:.2f}",
                 "net": f"{row_net:.2f}",
-                "paid": f"{paid:.2f}",
                 "balance": f"{row_balance:.2f}"
             })
         
-        # Load and render HTML template
-        template_path = os.path.join("templates", "ledger_report.html")
-        
-        if not os.path.exists(template_path):
-            raise HTTPException(status_code=500, detail=f"Template not found: {template_path}")
-        
-        with open(template_path, 'r', encoding='utf-8') as f:
-            template_content = f.read()
-        
-        # Add print button with JavaScript
-        print_button_html = '''
-        <div style="position: fixed; top: 10px; right: 10px; z-index: 1000; background: white; padding: 10px; border-radius: 5px; box-shadow: 0 2px 10px rgba(0,0,0,0.2);">
-            <button onclick="window.print()" style="padding: 10px 20px; background-color: #007bff; color: white; border: none; border-radius: 4px; cursor: pointer; font-size: 14px; font-weight: bold;">🖨️ Print</button>
-        </div>
-        '''
-        
-        # Add script to automatically trigger print when page loads
-        auto_print_script = '''
-        <script>
-            // Auto-print when page loads
-            window.onload = function() {
-                // Small delay to ensure page is fully loaded
-                setTimeout(function() {
-                    window.print();
-                }, 500);
-            };
-        </script>
-        '''
-        
-        template = Template(template_content)
-        html_content = template.render(
-            group_name=group_name,
-            commission_pct=commission_pct,
-            from_date=from_date.strftime("%d-%m-%Y"),
-            to_date=to_date.strftime("%d-%m-%Y"),
-            current_date=__import__('datetime').datetime.now().strftime("%d-%m-%Y"),
-            rows=transformed_rows,
-            totals={
+        # Prepare template data
+        template_data = {
+            "rows": transformed_rows,
+            "totals": {
                 "gross_total": f"{total_amount:.2f}",
                 "commission_total": f"{commission:.2f}",
                 "net_total": f"{net_amount:.2f}",
                 "paid_total": f"{total_paid:.2f}",
-                "balance_total": f"{final_total:.2f}"
+                "balance_total": f"{final_total:.2f}",
+                "luggage_total": f"{total_luggage:.2f}",
+                "coolie_total": "0.00"  # Would need to be calculated if needed
             },
-            generated_at=__import__('datetime').datetime.now().isoformat()
-        )
+            "group_name": group_name,
+            "commission_pct": commission_pct,
+            "from_date": from_date.strftime("%d-%m-%Y"),
+            "to_date": to_date.strftime("%d-%m-%Y"),
+            "current_date": __import__('datetime').datetime.now().strftime("%d-%m-%Y"),
+            "generated_at": __import__('datetime').datetime.now().isoformat()
+        }
         
-        # Insert print button before </body> tag
-        html_content = html_content.replace('</body>', print_button_html + auto_print_script + '</body>')
-        
-        # Fix logo path - use absolute path from templates directory
-        BASE_DIR = Path(__file__).resolve().parent.parent
-        logo_path = BASE_DIR / "templates" / "SKFS_logo.png"
-        if logo_path.exists():
-            html_content = html_content.replace('src="SKFS_logo.png"', f'src="file:///{logo_path.as_posix()}"')
-        else:
-            html_content = html_content.replace('src="SKFS_logo.png"', 'src="/templates/SKFS_logo.png"')
+        # Use shared render_template function (handles logo and no print button)
+        html_content = render_template("ledger_report.html", template_data)
         
         return HTMLResponse(content=html_content)
         
