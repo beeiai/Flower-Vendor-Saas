@@ -65,49 +65,49 @@ function CustomerAdditionTab({ customers, setCustomers, showNotify }) {
         <div className="space-y-4">
           <div>
             <label className="text-[10px] font-black uppercase text-slate-600 mb-1.5 block tracking-wider">Customer Name *</label>
-            <input 
-              type="text" 
-              className="w-full bg-rose-50 border-2 border-rose-200 rounded-lg p-2.5 text-sm font-bold text-slate-800 outline-none transition-all duration-200 hover:border-rose-300 focus:border-rose-400 focus:ring-2 focus:ring-rose-100" 
-              value={form.name} 
-              onChange={e => setForm({ ...form, name: e.target.value })} 
+            <input
+              type="text"
+              className="w-full bg-rose-50 border-2 border-rose-200 rounded-lg p-2.5 text-sm font-bold text-slate-800 outline-none transition-all duration-200 hover:border-rose-300 focus:border-rose-400 focus:ring-2 focus:ring-rose-100"
+              value={form.name}
+              onChange={e => setForm({ ...form, name: e.target.value })}
               placeholder="Enter name"
               data-enter-index="1"
             />
           </div>
           <div>
             <label className="text-[10px] font-black uppercase text-slate-600 mb-1.5 block tracking-wider">Contact Number</label>
-            <input 
-              type="text" 
-              className="w-full bg-rose-50 border-2 border-rose-200 rounded-lg p-2.5 text-sm font-bold text-slate-800 outline-none transition-all duration-200 hover:border-rose-300 focus:border-rose-400 focus:ring-2 focus:ring-rose-100" 
-              value={form.contact} 
-              onChange={e => setForm({ ...form, contact: e.target.value })} 
+            <input
+              type="text"
+              className="w-full bg-rose-50 border-2 border-rose-200 rounded-lg p-2.5 text-sm font-bold text-slate-800 outline-none transition-all duration-200 hover:border-rose-300 focus:border-rose-400 focus:ring-2 focus:ring-rose-100"
+              value={form.contact}
+              onChange={e => setForm({ ...form, contact: e.target.value })}
               placeholder="Phone number"
               data-enter-index="2"
             />
           </div>
           <div>
             <label className="text-[10px] font-black uppercase text-slate-600 mb-1.5 block tracking-wider">Address</label>
-            <input 
-              type="text" 
-              className="w-full bg-rose-50 border-2 border-rose-200 rounded-lg p-2.5 text-sm font-bold text-slate-800 outline-none transition-all duration-200 hover:border-rose-300 focus:border-rose-400 focus:ring-2 focus:ring-rose-100" 
-              value={form.address} 
-              onChange={e => setForm({ ...form, address: e.target.value })} 
+            <input
+              type="text"
+              className="w-full bg-rose-50 border-2 border-rose-200 rounded-lg p-2.5 text-sm font-bold text-slate-800 outline-none transition-all duration-200 hover:border-rose-300 focus:border-rose-400 focus:ring-2 focus:ring-rose-100"
+              value={form.address}
+              onChange={e => setForm({ ...form, address: e.target.value })}
               placeholder="Address"
               data-enter-index="3"
             />
           </div>
           <div className="flex gap-3 pt-2">
-            <button 
+            <button
               data-action="primary"
-              onClick={handleSave} 
+              onClick={handleSave}
               className="flex-1 bg-gradient-to-r from-[#5B55E6] to-[#4A44D0] text-white py-2.5 font-black uppercase text-xs rounded-lg shadow-lg hover:from-[#4A44D0] hover:to-[#3A34C0] transition-all duration-200 tracking-wider"
               data-enter-index="4"
             >
               {editingId ? 'UPDATE' : 'ADD CUSTOMER'}
             </button>
             {editingId && (
-              <button 
-                onClick={handleCancel} 
+              <button
+                onClick={handleCancel}
                 className="px-4 bg-gradient-to-r from-slate-200 to-slate-300 text-slate-700 py-2.5 font-black uppercase text-xs rounded-lg shadow-lg hover:from-slate-300 hover:to-slate-400 transition-all duration-200 border border-slate-300 tracking-wider"
                 data-enter-index="5"
               >
@@ -169,21 +169,16 @@ function CustomerAdditionTab({ customers, setCustomers, showNotify }) {
 // TAB 4: DATE RANGE REPORT
 // ============================================================================
 function DateRangeReportTab({ customers, showNotify }) {
-  const [dateRange, setDateRange] = useState({
-    fromDate: '',
-    toDate: ''
-  });
+  const [dateRange, setDateRange] = useState({ fromDate: '', toDate: '' });
   const [reportData, setReportData] = useState([]);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
 
   const handleGenerateReport = async () => {
-    // Validation
     if (!dateRange.fromDate || !dateRange.toDate) {
       showNotify?.('Please select both from and to dates', 'error');
       return;
     }
-
     if (new Date(dateRange.fromDate) > new Date(dateRange.toDate)) {
       showNotify?.('From date cannot be later than to date', 'error');
       return;
@@ -195,8 +190,6 @@ function DateRangeReportTab({ customers, showNotify }) {
 
     try {
       const token = localStorage.getItem('skfs_auth_token');
-      const vendorId = localStorage.getItem('skfs_vendor_id');
-
       const response = await fetch(
         `${import.meta.env.VITE_API_BASE_URL}/api/silk/saala-transactions-by-date-range?from_date=${dateRange.fromDate}&to_date=${dateRange.toDate}`,
         {
@@ -215,7 +208,7 @@ function DateRangeReportTab({ customers, showNotify }) {
 
       const result = await response.json();
       setReportData(result.customers || []);
-      
+
       if (result.customers && result.customers.length === 0) {
         showNotify?.('No transactions found for the selected date range', 'info');
       } else {
@@ -234,9 +227,7 @@ function DateRangeReportTab({ customers, showNotify }) {
     return new Date(dateString).toLocaleDateString('en-GB');
   };
 
-  const formatCurrency = (amount) => {
-    return `₹${Number(amount || 0).toLocaleString()}`;
-  };
+  const formatCurrency = (amount) => `₹${Number(amount || 0).toLocaleString()}`;
 
   return (
     <div className="flex-1 flex flex-col gap-4 p-4 overflow-hidden">
@@ -248,26 +239,26 @@ function DateRangeReportTab({ customers, showNotify }) {
         <div className="grid grid-cols-1 md:grid-cols-4 gap-4 max-w-2xl">
           <div>
             <label className="text-xs font-medium text-slate-600 block mb-1">From Date *</label>
-            <input 
-              type="date" 
-              className="w-full border border-slate-300 px-3 rounded-sm outline-none focus:border-primary-500 focus:ring-2 focus:ring-primary-50 transition-all" 
+            <input
+              type="date"
+              className="w-full border border-slate-300 px-3 rounded-sm outline-none focus:border-primary-500 focus:ring-2 focus:ring-primary-50 transition-all"
               style={{ height: '36px' }}
-              value={dateRange.fromDate} 
-              onChange={e => setDateRange({...dateRange, fromDate: e.target.value})} 
+              value={dateRange.fromDate}
+              onChange={e => setDateRange({ ...dateRange, fromDate: e.target.value })}
             />
           </div>
           <div>
             <label className="text-xs font-medium text-slate-600 block mb-1">To Date *</label>
-            <input 
-              type="date" 
-              className="w-full border border-slate-300 px-3 rounded-sm outline-none focus:border-primary-500 focus:ring-2 focus:ring-primary-50 transition-all" 
+            <input
+              type="date"
+              className="w-full border border-slate-300 px-3 rounded-sm outline-none focus:border-primary-500 focus:ring-2 focus:ring-primary-50 transition-all"
               style={{ height: '36px' }}
-              value={dateRange.toDate} 
-              onChange={e => setDateRange({...dateRange, toDate: e.target.value})} 
+              value={dateRange.toDate}
+              onChange={e => setDateRange({ ...dateRange, toDate: e.target.value })}
             />
           </div>
           <div className="md:col-span-2 flex items-end">
-            <button 
+            <button
               onClick={handleGenerateReport}
               disabled={loading || !dateRange.fromDate || !dateRange.toDate}
               className="w-full bg-primary-600 text-white py-2 px-4 text-sm font-semibold rounded-sm hover:bg-primary-700 shadow-md transition-all active:translate-y-px disabled:opacity-40 flex items-center justify-center gap-2"
@@ -289,12 +280,10 @@ function DateRangeReportTab({ customers, showNotify }) {
         </div>
       </section>
 
-      {/* Error Message */}
       {error && (
         <div className="bg-red-50 border border-red-200 rounded-sm p-3 text-red-800 text-sm">
           <div className="flex items-center gap-2">
-            <span className="font-semibold">Error:</span>
-            {error}
+            <span className="font-semibold">Error:</span> {error}
           </div>
         </div>
       )}
@@ -316,7 +305,7 @@ function DateRangeReportTab({ customers, showNotify }) {
             )}
           </div>
         </div>
-        
+
         <div className="flex-1 overflow-auto custom-table-scroll">
           {reportData.length === 0 ? (
             <div className="p-16 text-center text-slate-500 text-sm font-bold">
@@ -324,42 +313,29 @@ function DateRangeReportTab({ customers, showNotify }) {
             </div>
           ) : (
             <div className="divide-y divide-slate-100">
-              {reportData.map((customerData, customerIndex) => (
+              {reportData.map((customerData) => (
                 <div key={customerData.customer_id} className="border-b border-slate-200 last:border-b-0">
-                  {/* Customer Header */}
                   <div className="bg-slate-50 px-4 py-3 border-l-4 border-primary-500">
                     <div className="flex items-center justify-between">
                       <div>
-                        <h3 className="font-semibold text-slate-800 text-sm">
-                          {customerData.customer_name}
-                        </h3>
+                        <h3 className="font-semibold text-slate-800 text-sm">{customerData.customer_name}</h3>
                         <div className="flex items-center gap-4 mt-1 text-xs text-slate-600">
-                          {customerData.customer_contact && (
-                            <span>📞 {customerData.customer_contact}</span>
-                          )}
-                          {customerData.customer_address && (
-                            <span>📍 {customerData.customer_address}</span>
-                          )}
+                          {customerData.customer_contact && <span>📞 {customerData.customer_contact}</span>}
+                          {customerData.customer_address && <span>📍 {customerData.customer_address}</span>}
                           <span>{customerData.transaction_count} transaction{customerData.transaction_count !== 1 ? 's' : ''}</span>
                         </div>
                       </div>
                       <div className="text-right">
                         <div className="text-xs text-slate-500">Total Amount</div>
                         <div className="font-semibold text-slate-800">
-                          {formatCurrency(
-                            customerData.transactions.reduce((sum, txn) => sum + (txn.total_amount || 0), 0)
-                          )}
+                          {formatCurrency(customerData.transactions.reduce((sum, txn) => sum + (txn.total_amount || 0), 0))}
                         </div>
-                        <div className="text-xs text-emerald-600">Paid: {
-                          formatCurrency(
-                            customerData.transactions.reduce((sum, txn) => sum + (txn.paid_amount || 0), 0)
-                          )
-                        }</div>
+                        <div className="text-xs text-emerald-600">
+                          Paid: {formatCurrency(customerData.transactions.reduce((sum, txn) => sum + (txn.paid_amount || 0), 0))}
+                        </div>
                       </div>
                     </div>
                   </div>
-                  
-                  {/* Customer Transactions */}
                   <div className="overflow-x-auto">
                     <table className="w-full text-left text-xs">
                       <thead className="bg-slate-100 sticky top-0">
@@ -376,22 +352,16 @@ function DateRangeReportTab({ customers, showNotify }) {
                         </tr>
                       </thead>
                       <tbody>
-                        {customerData.transactions.map((txn, txnIndex) => (
+                        {customerData.transactions.map((txn) => (
                           <tr key={txn.id} className="border-b border-slate-100 hover:bg-slate-50">
                             <td className="px-3 py-2 font-mono text-slate-600">{formatDate(txn.date)}</td>
                             <td className="px-3 py-2 font-mono text-slate-600">{txn.item_code || '--'}</td>
                             <td className="px-3 py-2 text-slate-800">{txn.item_name || '--'}</td>
                             <td className="px-3 py-2 text-right font-medium">{txn.qty || '0'}</td>
                             <td className="px-3 py-2 text-right font-mono">₹{txn.rate || '0'}</td>
-                            <td className="px-3 py-2 text-right font-semibold text-slate-700">
-                              {formatCurrency(txn.total_amount)}
-                            </td>
-                            <td className="px-3 py-2 text-right font-semibold text-emerald-600">
-                              {formatCurrency(txn.paid_amount)}
-                            </td>
-                            <td className="px-3 py-2 text-right font-bold text-primary-600">
-                              {formatCurrency(txn.balance)}
-                            </td>
+                            <td className="px-3 py-2 text-right font-semibold text-slate-700">{formatCurrency(txn.total_amount)}</td>
+                            <td className="px-3 py-2 text-right font-semibold text-emerald-600">{formatCurrency(txn.paid_amount)}</td>
+                            <td className="px-3 py-2 text-right font-bold text-primary-600">{formatCurrency(txn.balance)}</td>
                             <td className="px-3 py-2 text-slate-600 truncate max-w-[100px]">{txn.description || '--'}</td>
                           </tr>
                         ))}
@@ -422,19 +392,16 @@ function SaalaPaymentTab({ customers, showNotify, setDropdownOpen }) {
 
   const selectedCustomer = customers.find(c => c.id === selectedCustomerId);
 
-  // Load customer summary when customer changes
   useEffect(() => {
     if (!selectedCustomerId) {
       setSummary({ totalCredit: 0, totalPaid: 0, balance: 0 });
       return;
     }
-
     let cancelled = false;
     (async () => {
       try {
         const summ = await api.getSaalaCustomerSummary(selectedCustomerId);
         if (cancelled) return;
-        // Map API response to expected frontend format
         setSummary({
           totalCredit: summ.total_amount,
           totalPaid: summ.total_paid,
@@ -450,46 +417,30 @@ function SaalaPaymentTab({ customers, showNotify, setDropdownOpen }) {
   const handleCustomerSelect = (name) => {
     const customer = customers.find(c => c.name === name);
     setSelectedCustomerId(customer?.id || null);
-    // Reset payment form
-    setPaymentForm({
-      amount: '',
-      description: '',
-      date: new Date().toISOString().split('T')[0]
-    });
+    setPaymentForm({ amount: '', description: '', date: new Date().toISOString().split('T')[0] });
   };
 
   const handlePaymentSubmit = async () => {
-    // Validation
     if (!selectedCustomerId) return showNotify?.('Select a customer first', 'error');
-    
     const amount = Number(paymentForm.amount);
     if (isNaN(amount) || amount <= 0) return showNotify?.('Enter valid payment amount (> 0)', 'error');
 
     const payload = {
-      amount: amount,
+      amount,
       description: paymentForm.description.trim() || `Payment of ₹${amount}`,
       date: paymentForm.date
     };
 
     try {
-      const result = await api.addSaalaPayment(selectedCustomerId, payload);
+      await api.addSaalaPayment(selectedCustomerId, payload);
       showNotify?.('Payment recorded successfully', 'success');
-
-      // Refresh summary
       const summ = await api.getSaalaCustomerSummary(selectedCustomerId);
-      // Map API response to expected frontend format
       setSummary({
         totalCredit: summ.total_amount,
         totalPaid: summ.total_paid,
         balance: summ.current_balance
       });
-
-      // Reset form
-      setPaymentForm({
-        amount: '',
-        description: '',
-        date: new Date().toISOString().split('T')[0]
-      });
+      setPaymentForm({ amount: '', description: '', date: new Date().toISOString().split('T')[0] });
     } catch (e) {
       showNotify?.(`Failed to record payment: ${e.message}`, 'error');
     }
@@ -497,54 +448,37 @@ function SaalaPaymentTab({ customers, showNotify, setDropdownOpen }) {
 
   return (
     <div className="flex-1 flex flex-col gap-3 p-3 overflow-hidden">
-      {/* Customer Selection & Summary */}
       <section className="bg-white rounded-xl border-2 border-slate-200 p-5 shadow-lg shrink-0 backdrop-blur-sm">
         <div className="bg-gradient-to-r from-slate-100 to-slate-200 px-5 py-3 border-b-2 font-bold text-sm text-slate-700 flex items-center gap-2.5 mb-4 uppercase tracking-wider">
           <Users className="w-5 h-5 text-rose-500" /> SAALA CUSTOMER SELECTION
         </div>
         <div className="grid grid-cols-5 gap-4">
           <div className="col-span-2">
-            <SearchableSelect 
-              label="SELECT SAALA CUSTOMER" 
-              options={customers.map(c => c.name)} 
-              value={selectedCustomer?.name || ''} 
-              onChange={handleCustomerSelect} 
-              placeholder="Search Customer" 
+            <SearchableSelect
+              label="SELECT SAALA CUSTOMER"
+              options={customers.map(c => c.name)}
+              value={selectedCustomer?.name || ''}
+              onChange={handleCustomerSelect}
+              placeholder="Search Customer"
               data-enter-index="18"
               onDropdownStateChange={setDropdownOpen}
             />
           </div>
           <div>
             <label className="text-[10px] font-black uppercase text-slate-600 mb-1.5 block tracking-wider">Contact</label>
-            <input 
-              type="text" 
-              readOnly 
-              className="w-full bg-slate-50 border-2 border-slate-200 rounded-lg p-2.5 text-sm font-bold text-slate-600 cursor-not-allowed" 
-              value={String(selectedCustomer?.contact || '--')} 
-            />
+            <input type="text" readOnly className="w-full bg-slate-50 border-2 border-slate-200 rounded-lg p-2.5 text-sm font-bold text-slate-600 cursor-not-allowed" value={String(selectedCustomer?.contact || '--')} />
           </div>
           <div>
             <label className="text-[10px] font-black uppercase text-slate-600 mb-1.5 block tracking-wider">Address</label>
-            <input 
-              type="text" 
-              readOnly 
-              className="w-full bg-slate-50 border-2 border-slate-200 rounded-lg p-2.5 text-sm font-bold text-slate-600 cursor-not-allowed" 
-              value={String(selectedCustomer?.address || '--')} 
-            />
+            <input type="text" readOnly className="w-full bg-slate-50 border-2 border-slate-200 rounded-lg p-2.5 text-sm font-bold text-slate-600 cursor-not-allowed" value={String(selectedCustomer?.address || '--')} />
           </div>
           <div>
             <label className="text-[10px] font-black uppercase text-rose-600 mb-1.5 block tracking-wider">Remaining Balance</label>
-            <input 
-              type="text" 
-              readOnly 
-              className="w-full bg-gradient-to-r from-rose-50 to-rose-100 border-2 border-rose-200 text-rose-700 rounded-lg p-2.5 text-sm font-black cursor-not-allowed" 
-              value={`₹ ${Number(summary.balance || 0).toLocaleString()}`} 
-            />
+            <input type="text" readOnly className="w-full bg-gradient-to-r from-rose-50 to-rose-100 border-2 border-rose-200 text-rose-700 rounded-lg p-2.5 text-sm font-black cursor-not-allowed" value={`₹ ${Number(summary.balance || 0).toLocaleString()}`} />
           </div>
         </div>
       </section>
 
-      {/* Payment Entry Form */}
       <section className="bg-white rounded-xl border-2 border-slate-200 shadow-lg flex flex-col relative z-30 shrink-0 backdrop-blur-sm">
         <div className="bg-gradient-to-r from-slate-100 to-slate-200 px-5 py-3 border-b-2 font-bold text-sm text-slate-700 flex items-center gap-2.5 uppercase tracking-wider">
           <PackagePlus className="w-5 h-5 text-rose-500" /> RECORD CUSTOMER PAYMENT
@@ -553,21 +487,21 @@ function SaalaPaymentTab({ customers, showNotify, setDropdownOpen }) {
           <div className="grid grid-cols-4 gap-4 max-w-2xl">
             <div>
               <label className="text-[10px] font-black uppercase text-slate-600 mb-1.5 block tracking-wider">Payment Date</label>
-              <input 
-                type="date" 
-                className="w-full bg-rose-50 border-2 border-rose-200 rounded-lg p-2.5 text-sm font-bold text-slate-800 outline-none transition-all duration-200 hover:border-rose-300 focus:border-rose-400 focus:ring-2 focus:ring-rose-100" 
-                value={paymentForm.date} 
-                onChange={e => setPaymentForm({...paymentForm, date: e.target.value})} 
+              <input
+                type="date"
+                className="w-full bg-rose-50 border-2 border-rose-200 rounded-lg p-2.5 text-sm font-bold text-slate-800 outline-none transition-all duration-200 hover:border-rose-300 focus:border-rose-400 focus:ring-2 focus:ring-rose-100"
+                value={paymentForm.date}
+                onChange={e => setPaymentForm({ ...paymentForm, date: e.target.value })}
                 data-enter-index="19"
               />
             </div>
             <div>
               <label className="text-[10px] font-black uppercase text-emerald-600 mb-1.5 block tracking-wider">Payment Amount *</label>
-              <input 
-                type="number" 
-                className="w-full bg-gradient-to-r from-emerald-50 to-emerald-100 border-2 border-emerald-200 rounded-lg p-2.5 text-sm font-black text-emerald-700 outline-none transition-all duration-200 hover:border-emerald-300 focus:border-emerald-400 focus:ring-2 focus:ring-emerald-100 text-right" 
-                value={paymentForm.amount} 
-                onChange={e => setPaymentForm({...paymentForm, amount: e.target.value})} 
+              <input
+                type="number"
+                className="w-full bg-gradient-to-r from-emerald-50 to-emerald-100 border-2 border-emerald-200 rounded-lg p-2.5 text-sm font-black text-emerald-700 outline-none transition-all duration-200 hover:border-emerald-300 focus:border-emerald-400 focus:ring-2 focus:ring-emerald-100 text-right"
+                value={paymentForm.amount}
+                onChange={e => setPaymentForm({ ...paymentForm, amount: e.target.value })}
                 placeholder="0.00"
                 min="0"
                 step="any"
@@ -576,19 +510,19 @@ function SaalaPaymentTab({ customers, showNotify, setDropdownOpen }) {
             </div>
             <div className="col-span-2">
               <label className="text-[10px] font-black uppercase text-slate-600 mb-1.5 block tracking-wider">Description</label>
-              <input 
-                type="text" 
-                className="w-full bg-rose-50 border-2 border-rose-200 rounded-lg p-2.5 text-sm font-bold text-slate-800 outline-none transition-all duration-200 hover:border-rose-300 focus:border-rose-400 focus:ring-2 focus:ring-rose-100" 
-                value={paymentForm.description} 
-                onChange={e => setPaymentForm({...paymentForm, description: e.target.value})} 
+              <input
+                type="text"
+                className="w-full bg-rose-50 border-2 border-rose-200 rounded-lg p-2.5 text-sm font-bold text-slate-800 outline-none transition-all duration-200 hover:border-rose-300 focus:border-rose-400 focus:ring-2 focus:ring-rose-100"
+                value={paymentForm.description}
+                onChange={e => setPaymentForm({ ...paymentForm, description: e.target.value })}
                 placeholder="Payment description (optional)"
                 data-enter-index="21"
               />
             </div>
           </div>
           <div className="flex justify-end mt-5">
-            <button 
-              onClick={handlePaymentSubmit} 
+            <button
+              onClick={handlePaymentSubmit}
               disabled={!selectedCustomerId || !paymentForm.amount}
               className="bg-gradient-to-r from-emerald-500 to-emerald-600 text-white px-6 py-2.5 font-black uppercase text-xs rounded-lg shadow-lg hover:from-emerald-600 hover:to-emerald-700 transition-all duration-200 tracking-wider flex items-center gap-2 disabled:opacity-40"
               data-enter-index="22"
@@ -608,7 +542,14 @@ function SaalaPaymentTab({ customers, showNotify, setDropdownOpen }) {
 }
 
 // ============================================================================
-// TAB 2: SAALA TRANSACTION (CONTINUED)
+// TAB 2: SAALA TRANSACTION
+// FIXES APPLIED:
+//   1. Duplicate rows → functional state updates (prev => ...) everywhere
+//   2. Enter flow: Customer → Item Name → Item Code → Rate → Paid Amount → Add → Customer
+//   3. Item Name is now SearchableSelect (first in flow), auto-fills code + rate
+//   4. Item Code also auto-fills name + rate (both directions work)
+//   5. computedRemaining shows real value (with red highlight if overpaid)
+//   6. refreshSummary extracted as stable callback, always awaited after mutations
 // ============================================================================
 function SaalaTransactionTab({ customers, catalog, showNotify, setDropdownOpen }) {
   const [selectedCustomerId, setSelectedCustomerId] = useState(null);
@@ -621,26 +562,31 @@ function SaalaTransactionTab({ customers, catalog, showNotify, setDropdownOpen }
     itemName: '',
     qty: '',
     rate: '',
-    totalAmount: '',
     paidAmount: '',
     remarks: 'regular'
   });
 
-  const qtyRef = useRef(null);
   const rateRef = useRef(null);
   const paidRef = useRef(null);
   const remarksRef = useRef(null);
 
   const selectedCustomer = customers.find(c => c.id === selectedCustomerId);
 
-  // Load transactions when customer changes
+  // ── Focus helper ──────────────────────────────────────────────────
+  const focusByIndex = useCallback((index, delay = 80) => {
+    setTimeout(() => {
+      const el = document.querySelector(`[data-enter-index="${index}"]`);
+      if (el) el.focus();
+    }, delay);
+  }, []);
+
+  // ── Load transactions when customer changes ───────────────────────
   useEffect(() => {
     if (!selectedCustomerId) {
       setTransactions([]);
       setSummary({ totalCredit: 0, totalPaid: 0, balance: 0 });
       return;
     }
-
     let cancelled = false;
     (async () => {
       try {
@@ -649,9 +595,8 @@ function SaalaTransactionTab({ customers, catalog, showNotify, setDropdownOpen }
           api.getSaalaCustomerSummary(selectedCustomerId)
         ]);
         if (cancelled) return;
-        console.log('Fetched transactions:', txns);
+        // Always replace with fresh server data — never merge with stale local state
         setTransactions(txns);
-        // Map API response to expected frontend format
         setSummary({
           totalCredit: summ.total_amount,
           totalPaid: summ.total_paid,
@@ -664,10 +609,18 @@ function SaalaTransactionTab({ customers, catalog, showNotify, setDropdownOpen }
     return () => { cancelled = true; };
   }, [selectedCustomerId]);
 
-  const handleCustomerSelect = (name) => {
-    const customer = customers.find(c => c.name === name);
-    setSelectedCustomerId(customer?.id || null);
-    // Reset entry form
+  // ── Refresh summary (stable, always fresh from server) ────────────
+  const refreshSummary = useCallback(async (customerId) => {
+    const summ = await api.getSaalaCustomerSummary(customerId);
+    setSummary({
+      totalCredit: summ.total_amount,
+      totalPaid: summ.total_paid,
+      balance: summ.current_balance
+    });
+  }, []);
+
+  // ── Reset form ────────────────────────────────────────────────────
+  const resetForm = useCallback(() => {
     setCurrentEntry({
       id: null,
       date: new Date().toISOString().split('T')[0],
@@ -675,352 +628,336 @@ function SaalaTransactionTab({ customers, catalog, showNotify, setDropdownOpen }
       itemName: '',
       qty: '',
       rate: '',
-      totalAmount: '',
       paidAmount: '',
       remarks: 'regular'
     });
-    
-    // Focus on the item code field after customer selection
-    setTimeout(() => {
-      const itemCodeField = document.querySelector('[data-enter-index="12"]');
-      if (itemCodeField) {
-        itemCodeField.focus();
-      }
-    }, 100);
-  };
+  }, []);
 
-  const handleItemCodeSelect = (itemCode) => {
+  // ── Step 1: Customer selected → focus Item Name ───────────────────
+  const handleCustomerSelect = useCallback((name) => {
+    const customer = customers.find(c => c.name === name);
+    setSelectedCustomerId(customer?.id || null);
+    resetForm();
+    focusByIndex('saala-itemname'); // → step 2
+  }, [customers, resetForm, focusByIndex]);
+
+  // ── Step 2: Item Name selected → auto-fill code+rate → focus Item Code ──
+  const handleItemNameSelect = useCallback((itemName) => {
+    const item = catalog.find(i => i.itemName === itemName);
+    setCurrentEntry(prev => ({
+      ...prev,
+      itemName: item ? (item.itemName || '') : itemName,
+      itemCode: item ? (item.itemCode || '') : prev.itemCode,
+      rate: item ? String(item.rate || '') : prev.rate
+    }));
+    focusByIndex('saala-itemcode'); // → step 3
+  }, [catalog, focusByIndex]);
+
+  // ── Step 3: Item Code selected → auto-fill name+rate → focus Rate ──
+  const handleItemCodeSelect = useCallback((itemCode) => {
     const item = catalog.find(i => i.itemCode === itemCode);
-    if (item) {
-      setCurrentEntry({
-        ...currentEntry,
-        itemCode: itemCode,
-        itemName: item.itemName || '',
-        rate: String(item.rate || '')
-      });
-    }
-  };
+    setCurrentEntry(prev => ({
+      ...prev,
+      itemCode: item ? (item.itemCode || '') : itemCode,
+      itemName: item ? (item.itemName || '') : prev.itemName,
+      rate: item ? String(item.rate || '') : prev.rate
+    }));
+    setTimeout(() => rateRef.current?.focus(), 80); // → step 4
+  }, [catalog]);
 
-  // Calculate total amount
+  // ── Computed values ───────────────────────────────────────────────
   const computedTotal = useMemo(() => {
-    const qty = currentEntry.qty ? Number(currentEntry.qty) : 0;
-    const rate = currentEntry.rate ? Number(currentEntry.rate) : 0;
-    const total = qty * rate;
-    return isNaN(total) ? 0 : total;
+    const qty  = Number(currentEntry.qty)  || 0;
+    const rate = Number(currentEntry.rate) || 0;
+    return qty * rate;
   }, [currentEntry.qty, currentEntry.rate]);
 
-  // Calculate remaining balance
+  // Real remaining — can be negative (shown in red as validation signal)
   const computedRemaining = useMemo(() => {
-    const total = computedTotal;
-    const paid = currentEntry.paidAmount ? Number(currentEntry.paidAmount) : 0;
-    const remaining = total - paid;
-    return isNaN(remaining) || remaining < 0 ? 0 : remaining;
+    const paid = Number(currentEntry.paidAmount) || 0;
+    return computedTotal - paid;
   }, [computedTotal, currentEntry.paidAmount]);
 
-  const handleAddOrUpdate = async () => {
-    // Validation
+  // ── Enter key helper ──────────────────────────────────────────────
+  const onKeyEnter = (nextAction) => (e) => {
+    if (e.key === 'Enter') { e.preventDefault(); nextAction(); }
+  };
+
+  // ── Add / Update ──────────────────────────────────────────────────
+  const handleAddOrUpdate = useCallback(async () => {
     if (!selectedCustomerId) return showNotify?.('Select a customer first', 'error');
     if (!currentEntry.itemName?.trim()) return showNotify?.('Enter item name', 'error');
-    
-    const qty = currentEntry.qty ? Number(currentEntry.qty) : 0;
-    const rate = currentEntry.rate ? Number(currentEntry.rate) : 0;
-    const paid = currentEntry.paidAmount ? Number(currentEntry.paidAmount) : 0;
-    
-    if (isNaN(qty) || qty <= 0) return showNotify?.('Enter valid quantity (> 0)', 'error');
-    if (isNaN(rate) || rate <= 0) return showNotify?.('Enter valid rate (> 0)', 'error');
-    if (isNaN(paid) || paid < 0) return showNotify?.('Enter valid paid amount (>= 0)', 'error');
+
+    const qty  = Number(currentEntry.qty)        || 0;
+    const rate = Number(currentEntry.rate)       || 0;
+    const paid = Number(currentEntry.paidAmount) || 0;
+
+    if (qty  <= 0) return showNotify?.('Enter valid quantity (> 0)', 'error');
+    if (rate <= 0) return showNotify?.('Enter valid rate (> 0)', 'error');
+    if (paid <  0) return showNotify?.('Paid amount cannot be negative', 'error');
     if (paid > computedTotal) return showNotify?.('Paid amount cannot exceed total amount', 'error');
 
-    // Build payload with snake_case field names to match backend expectations
     const payload = {
-      date: currentEntry.date,
-      description: currentEntry.remarks?.trim() || 'regular',
-      item_code: currentEntry.itemCode?.trim() || '',
-      item_name: currentEntry.itemName?.trim() || '',
-      qty: qty,
-      rate: rate,
+      date:         currentEntry.date,
+      description:  currentEntry.remarks?.trim() || 'regular',
+      item_code:    currentEntry.itemCode?.trim() || '',
+      item_name:    currentEntry.itemName?.trim() || '',
+      qty,
+      rate,
       total_amount: computedTotal,
-      paid_amount: paid
+      paid_amount:  paid
     };
-
-    // Debug logging
-    console.log('SAALA API Payload:', payload);
-    console.log('Current entry state:', currentEntry);
-    console.log('Computed values - qty:', qty, 'rate:', rate, 'total:', computedTotal, 'paid:', paid);
-    console.log('Form values - itemCode:', currentEntry.itemCode, 'itemName:', currentEntry.itemName, 'paidAmount:', currentEntry.paidAmount);
 
     try {
       if (currentEntry.id) {
+        // UPDATE — functional state update avoids stale closure
         const updated = await api.updateSaalaTransaction(currentEntry.id, payload);
-        console.log('Updated transaction response:', updated);
-        // Merge API response with the original payload to ensure all fields are correctly updated
-        const mergedData = { ...payload, ...updated };
-        setTransactions(transactions.map(t => t.id === currentEntry.id ? { ...t, ...mergedData } : t));
+        setTransactions(prev =>
+          prev.map(t => t.id === currentEntry.id ? { ...t, ...payload, ...updated } : t)
+        );
         showNotify?.('Transaction updated', 'success');
       } else {
+        // CREATE — functional state update avoids duplicate-row stale-closure bug
         const created = await api.createSaalaTransaction(selectedCustomerId, payload);
-        console.log('Created transaction response:', created);
-        setTransactions([created, ...transactions]);
+        setTransactions(prev => [created, ...prev]);
         showNotify?.('Transaction added', 'success');
       }
 
-      // Refresh summary
-      const summ = await api.getSaalaCustomerSummary(selectedCustomerId);
-      // Map API response to expected frontend format
-      setSummary({
-        totalCredit: summ.total_amount,
-        totalPaid: summ.total_paid,
-        balance: summ.current_balance
-      });
+      // Always refresh summary from server after any mutation
+      await refreshSummary(selectedCustomerId);
 
-      // Reset form
-      setCurrentEntry({
-        id: null,
-        date: new Date().toISOString().split('T')[0],
-        itemCode: '',
-        itemName: '',
-        qty: '',
-        rate: '',
-        totalAmount: '',
-        paidAmount: '',
-        remarks: 'regular'
-      });
-      
-      // Focus back to customer selection for next entry
-      setTimeout(() => {
-        const customerSelect = document.querySelector('[data-enter-index="10"]');
-        if (customerSelect) {
-          customerSelect.focus();
-        }
-      }, 100);
+      resetForm();
+
+      // Step 6 → back to Customer (step 1)
+      focusByIndex('saala-customer');
     } catch (e) {
       showNotify?.(`Failed: ${e.message}`, 'error');
     }
-  };
+  }, [selectedCustomerId, currentEntry, computedTotal, refreshSummary, resetForm, focusByIndex, showNotify]);
 
-  const handleEdit = (txn) => {
-    console.log('Editing transaction:', txn);
-    const updatedEntry = {
-      id: txn.id,
-      date: txn.date,
-      itemCode: txn.item_code || txn.itemCode || '',
-      itemName: txn.item_name || txn.itemName || '',
-      qty: txn.qty !== null && txn.qty !== undefined ? String(txn.qty) : '',
-      rate: txn.rate !== null && txn.rate !== undefined ? String(txn.rate) : '',
-      totalAmount: txn.total_amount !== null && txn.total_amount !== undefined ? String(txn.total_amount) : '',
-      paidAmount: txn.paid_amount !== null && txn.paid_amount !== undefined ? String(txn.paid_amount) : '',
-      remarks: txn.description || 'regular'
-    };
-    setCurrentEntry(updatedEntry);
-    console.log('Set current entry to:', updatedEntry);
-  };
+  // ── Edit ──────────────────────────────────────────────────────────
+  const handleEdit = useCallback((txn) => {
+    setCurrentEntry({
+      id:          txn.id,
+      date:        txn.date,
+      itemCode:    txn.item_code  || txn.itemCode  || '',
+      itemName:    txn.item_name  || txn.itemName  || '',
+      qty:         txn.qty  != null ? String(txn.qty)  : '',
+      rate:        txn.rate != null ? String(txn.rate) : '',
+      paidAmount:  txn.paid_amount != null ? String(txn.paid_amount) : '',
+      remarks:     txn.description || 'regular'
+    });
+  }, []);
 
-  const handleDelete = async (id) => {
+  // ── Delete ────────────────────────────────────────────────────────
+  const handleDelete = useCallback(async (id) => {
     if (!confirm('Delete this transaction?')) return;
     try {
       await api.deleteSaalaTransaction(id);
-      setTransactions(transactions.filter(t => t.id !== id));
-      const summ = await api.getSaalaCustomerSummary(selectedCustomerId);
-      // Map API response to expected frontend format
-      setSummary({
-        totalCredit: summ.total_amount,
-        totalPaid: summ.total_paid,
-        balance: summ.current_balance
-      });
+      // Functional update avoids stale closure
+      setTransactions(prev => prev.filter(t => t.id !== id));
+      await refreshSummary(selectedCustomerId);
       showNotify?.('Transaction deleted', 'success');
     } catch (e) {
       showNotify?.(`Delete failed: ${e.message}`, 'error');
     }
-  };
-
-
+  }, [selectedCustomerId, refreshSummary, showNotify]);
 
   return (
     <div className="flex-1 flex flex-col gap-3 p-3 overflow-auto">
-      {/* Customer Selection & Summary */}
+
+      {/* ── Customer Selection & Summary ── */}
       <section className="bg-white border border-slate-200 p-4 shadow-card rounded-sm shrink-0">
         <div className="flex items-center gap-2 mb-3 text-primary-600 font-semibold text-xs border-b pb-2">
           <Users className="w-4 h-4" /> SAALA Customer Selection
         </div>
         <div className="grid grid-cols-5 gap-4">
           <div className="col-span-2">
-            <SearchableSelect 
-              label="Select SAALA Customer" 
-              options={customers.map(c => c.name)} 
-              value={selectedCustomer?.name || ''} 
-              onChange={handleCustomerSelect} 
-              placeholder="Search Customer" 
-              data-enter-index="10"
+            {/* STEP 1 */}
+            <SearchableSelect
+              label="Select SAALA Customer"
+              options={customers.map(c => c.name)}
+              value={selectedCustomer?.name || ''}
+              onChange={handleCustomerSelect}
+              placeholder="Search Customer"
+              data-enter-index="saala-customer"
               onDropdownStateChange={setDropdownOpen}
-              onSelectionComplete={() => {
-                // Focus on item code field after customer selection is complete
-                setTimeout(() => {
-                  const itemCodeField = document.querySelector('[data-enter-index="12"]');
-                  if (itemCodeField) {
-                    itemCodeField.focus();
-                  }
-                }, 100);
-              }}
+              onSelectionComplete={() => focusByIndex('saala-itemname')}
             />
           </div>
           <div>
             <label className="text-xs font-medium text-slate-600 block mb-1">Contact</label>
-            <input 
-              type="text" 
-              readOnly 
-              className="w-full bg-slate-50 border border-slate-200 px-3 text-sm text-slate-600 rounded-sm cursor-not-allowed" 
+            <input
+              type="text" readOnly
+              className="w-full bg-slate-50 border border-slate-200 px-3 text-sm text-slate-600 rounded-sm cursor-not-allowed"
               style={{ height: '36px' }}
-              value={String(selectedCustomer?.contact || '--')} 
+              value={String(selectedCustomer?.contact || '--')}
             />
           </div>
           <div>
             <label className="text-xs font-medium text-slate-600 block mb-1">Address</label>
-            <input 
-              type="text" 
-              readOnly 
-              className="w-full bg-slate-50 border border-slate-200 px-3 text-sm text-slate-600 rounded-sm cursor-not-allowed" 
+            <input
+              type="text" readOnly
+              className="w-full bg-slate-50 border border-slate-200 px-3 text-sm text-slate-600 rounded-sm cursor-not-allowed"
               style={{ height: '36px' }}
-              value={String(selectedCustomer?.address || '--')} 
+              value={String(selectedCustomer?.address || '--')}
             />
           </div>
           <div>
             <label className="text-xs font-medium text-primary-600 block mb-1">Remaining Balance</label>
-            <input 
-              type="text" 
-              readOnly 
-              className="w-full bg-primary-50 border border-primary-200 text-primary-600 px-3 text-sm font-semibold rounded-sm cursor-not-allowed" 
+            <input
+              type="text" readOnly
+              className="w-full bg-primary-50 border border-primary-200 text-primary-600 px-3 text-sm font-semibold rounded-sm cursor-not-allowed"
               style={{ height: '36px' }}
-              value={`₹ ${Number(summary.balance || 0).toLocaleString()}`} 
+              value={`₹ ${Number(summary.balance || 0).toLocaleString()}`}
             />
           </div>
         </div>
       </section>
 
-      {/* Data Entry Row */}
+      {/* ── Entry Row ── */}
       <section className="bg-white border border-slate-200 shadow-card rounded-sm flex flex-col relative z-30 shrink-0 overflow-visible">
         <div className="bg-slate-100 px-4 py-2 border-b text-slate-600 font-semibold text-xs flex items-center gap-2">
           <Database className="w-4 h-4" /> SAALA Entry Row
         </div>
         <div className="p-3 border-b bg-slate-50 overflow-x-auto">
-          <div className="flex items-end gap-2 min-w-[1000px]">
+          <div className="flex items-end gap-2 min-w-[1100px]">
+
+            {/* Date */}
             <div className="w-[120px]">
               <label className="text-xs font-medium text-slate-600 block text-center mb-1">Date</label>
-              <input 
-                type="date" 
-                className="w-full border border-slate-300 px-2 text-sm rounded-sm outline-none focus:border-primary-500 focus:ring-2 focus:ring-primary-50 transition-all" 
+              <input
+                type="date"
+                className="w-full border border-slate-300 px-2 text-sm rounded-sm outline-none focus:border-primary-500 focus:ring-2 focus:ring-primary-50 transition-all"
                 style={{ height: '36px' }}
-                value={currentEntry.date} 
-                onChange={e => setCurrentEntry({ ...currentEntry, date: e.target.value })} 
-                data-enter-index="10"
+                value={currentEntry.date}
+                onChange={e => setCurrentEntry(p => ({ ...p, date: e.target.value }))}
               />
             </div>
-            <div className="w-[90px]">
-              <SearchableSelect 
-                label="Item Code" 
-                options={catalog.map(i => i.itemCode)} 
-                value={currentEntry.itemCode} 
-                onChange={handleItemCodeSelect} 
-                placeholder="Select Code" 
-                data-enter-index="11"
+
+            {/* STEP 2 — Item Name (SearchableSelect, first in flow) */}
+            <div className="w-[160px]">
+              <SearchableSelect
+                label="Item Name"
+                options={catalog.map(i => i.itemName)}
+                value={currentEntry.itemName}
+                onChange={handleItemNameSelect}
+                placeholder="Select / Type"
+                data-enter-index="saala-itemname"
                 onDropdownStateChange={setDropdownOpen}
-                onSelectionComplete={() => {
-                  // Focus on qty field after item code selection
-                  setTimeout(() => {
-                    const qtyField = document.querySelector('[data-enter-index="12"]');
-                    if (qtyField) {
-                      qtyField.focus();
-                    }
-                  }, 100);
-                }}
+                onSelectionComplete={() => focusByIndex('saala-itemcode')}
               />
             </div>
-            <div className="w-[140px]">
-              <label className="text-xs font-medium text-slate-600 block text-center mb-1">Item Name</label>
-              <input 
-                type="text" 
-                className="w-full border border-slate-300 px-2 text-sm rounded-sm outline-none focus:border-primary-500 focus:ring-2 focus:ring-primary-50 transition-all" 
-                style={{ height: '36px' }}
-                value={currentEntry.itemName} 
-                readOnly
-                placeholder="Auto-filled"
+
+            {/* STEP 3 — Item Code */}
+            <div className="w-[100px]">
+              <SearchableSelect
+                label="Item Code"
+                options={catalog.map(i => i.itemCode)}
+                value={currentEntry.itemCode}
+                onChange={handleItemCodeSelect}
+                placeholder="Code"
+                data-enter-index="saala-itemcode"
+                onDropdownStateChange={setDropdownOpen}
+                onSelectionComplete={() => setTimeout(() => rateRef.current?.focus(), 80)}
               />
             </div>
+
+            {/* Qty (optional — not in main Enter flow but reachable) */}
             <div className="w-[70px]">
-              <label className="text-xs font-medium text-slate-600 block text-center mb-1">Qty (Given)</label>
-              <input 
-                ref={qtyRef}
-                type="number" 
-                className="w-full border border-slate-300 px-2 text-right text-sm rounded-sm outline-none focus:border-primary-500 focus:ring-2 focus:ring-primary-50 transition-all" 
+              <label className="text-xs font-medium text-slate-600 block text-center mb-1">Qty</label>
+              <input
+                type="number"
+                className="w-full border border-slate-300 px-2 text-right text-sm rounded-sm outline-none focus:border-primary-500 focus:ring-2 focus:ring-primary-50 transition-all"
                 style={{ height: '36px' }}
-                value={currentEntry.qty} 
-                onChange={e => setCurrentEntry({ ...currentEntry, qty: e.target.value })} 
-                data-enter-index="12"
+                value={currentEntry.qty}
+                onChange={e => setCurrentEntry(p => ({ ...p, qty: e.target.value }))}
+                onKeyDown={onKeyEnter(() => rateRef.current?.focus())}
               />
             </div>
-            <div className="w-[70px]">
+
+            {/* STEP 4 — Rate */}
+            <div className="w-[80px]">
               <label className="text-xs font-medium text-slate-600 block text-center mb-1">Rate</label>
-              <input 
+              <input
                 ref={rateRef}
-                type="number" 
-                className="w-full border border-slate-300 px-2 text-right text-sm rounded-sm outline-none focus:border-primary-500 focus:ring-2 focus:ring-primary-50 transition-all" 
+                type="number"
+                className="w-full border border-slate-300 px-2 text-right text-sm rounded-sm outline-none focus:border-primary-500 focus:ring-2 focus:ring-primary-50 transition-all"
                 style={{ height: '36px' }}
-                value={currentEntry.rate} 
-                onChange={e => setCurrentEntry({ ...currentEntry, rate: e.target.value })} 
-                data-enter-index="13"
+                value={currentEntry.rate}
+                onChange={e => setCurrentEntry(p => ({ ...p, rate: e.target.value }))}
+                onKeyDown={onKeyEnter(() => paidRef.current?.focus())} // → step 5
               />
             </div>
-            <div className="w-[100px]">
+
+            {/* Total Amount (read-only computed) */}
+            <div className="w-[110px]">
               <label className="text-xs font-medium text-slate-600 block text-center mb-1">Total Amount</label>
-              <input 
-                type="text" 
-                className="w-full border border-slate-200 px-2 text-right text-sm bg-slate-100 rounded-sm outline-none font-semibold" 
+              <input
+                type="text" readOnly
+                className="w-full border border-slate-200 px-2 text-right text-sm bg-slate-100 rounded-sm outline-none font-semibold"
                 style={{ height: '36px' }}
-                value={computedTotal ? `₹${computedTotal.toLocaleString()}` : ''} 
-                readOnly 
+                value={computedTotal ? `₹${computedTotal.toLocaleString()}` : ''}
               />
             </div>
-            <div className="w-[100px]">
+
+            {/* STEP 5 — Paid Amount */}
+            <div className="w-[110px]">
               <label className="text-xs font-medium text-emerald-600 block text-center mb-1">Paid Amount</label>
-              <input 
+              <input
                 ref={paidRef}
-                type="number" 
-                className="w-full border border-emerald-300 px-2 text-right text-sm rounded-sm outline-none focus:border-emerald-500 focus:ring-2 focus:ring-emerald-50 bg-emerald-50 transition-all" 
+                type="number"
+                className="w-full border border-emerald-300 px-2 text-right text-sm rounded-sm outline-none focus:border-emerald-500 focus:ring-2 focus:ring-emerald-50 bg-emerald-50 transition-all"
                 style={{ height: '36px' }}
-                value={currentEntry.paidAmount} 
-                onChange={e => setCurrentEntry({ ...currentEntry, paidAmount: e.target.value })} 
-                data-enter-index="14"
+                value={currentEntry.paidAmount}
+                onChange={e => setCurrentEntry(p => ({ ...p, paidAmount: e.target.value }))}
+                onKeyDown={onKeyEnter(handleAddOrUpdate)} // Enter → Add (step 6)
               />
             </div>
-            <div className="w-[100px]">
+
+            {/* Remaining (computed, red if overpaid) */}
+            <div className="w-[110px]">
               <label className="text-xs font-medium text-primary-600 block text-center mb-1">Remaining</label>
-              <input 
-                type="text" 
-                className="w-full border border-primary-200 px-2 text-right text-sm bg-primary-50 rounded-sm outline-none font-semibold text-primary-600" 
+              <input
+                type="text" readOnly
+                className={`w-full border px-2 text-right text-sm rounded-sm outline-none font-semibold ${
+                  computedRemaining < 0
+                    ? 'border-red-300 bg-red-50 text-red-600'
+                    : 'border-primary-200 bg-primary-50 text-primary-600'
+                }`}
                 style={{ height: '36px' }}
-                value={computedRemaining ? `₹${computedRemaining.toLocaleString()}` : ''} 
-                readOnly 
+                value={
+                  currentEntry.paidAmount !== ''
+                    ? `₹${computedRemaining.toLocaleString()}`
+                    : computedTotal
+                    ? `₹${computedTotal.toLocaleString()}`
+                    : ''
+                }
               />
             </div>
+
+            {/* Remarks */}
             <div className="w-[120px]">
               <label className="text-xs font-medium text-slate-600 block text-center mb-1">Remarks</label>
-              <input 
+              <input
                 ref={remarksRef}
-                type="text" 
-                className="w-full border border-slate-300 px-2 text-sm rounded-sm outline-none focus:border-primary-500 focus:ring-2 focus:ring-primary-50 transition-all" 
+                type="text"
+                className="w-full border border-slate-300 px-2 text-sm rounded-sm outline-none focus:border-primary-500 focus:ring-2 focus:ring-primary-50 transition-all"
                 style={{ height: '36px' }}
-                value={currentEntry.remarks} 
-                onChange={e => setCurrentEntry({ ...currentEntry, remarks: e.target.value })} 
-                data-enter-index="15"
+                value={currentEntry.remarks}
+                onChange={e => setCurrentEntry(p => ({ ...p, remarks: e.target.value }))}
+                onKeyDown={onKeyEnter(handleAddOrUpdate)}
               />
             </div>
+
+            {/* STEP 6 — Add / Update */}
             <div className="ml-auto pr-1">
-              <button 
+              <button
                 data-action="primary"
-                onClick={handleAddOrUpdate} 
+                onClick={handleAddOrUpdate}
                 disabled={!selectedCustomerId}
                 className="bg-primary-600 text-white px-8 text-sm font-semibold rounded-sm hover:bg-primary-700 shadow-md transition-all active:translate-y-px disabled:opacity-40"
                 style={{ height: '36px' }}
-                data-enter-index="16"
               >
                 {currentEntry.id ? 'Update' : 'Add'}
               </button>
@@ -1028,7 +965,7 @@ function SaalaTransactionTab({ customers, catalog, showNotify, setDropdownOpen }
           </div>
         </div>
 
-        {/* Transaction Table */}
+        {/* ── Transaction Table ── */}
         <div className="flex-1 overflow-auto bg-white custom-table-scroll" style={{ minHeight: '300px', maxHeight: '500px' }}>
           <table className="w-full text-left text-sm border-collapse relative min-w-full">
             <thead className="bg-gradient-to-r from-[#5B55E6] to-[#4A44D0] sticky top-0 text-white uppercase font-bold text-xs z-10 border-b-2 border-black/20 shadow-lg">
@@ -1061,26 +998,44 @@ function SaalaTransactionTab({ customers, catalog, showNotify, setDropdownOpen }
                 </tr>
               ) : (
                 transactions.map((txn, idx) => {
-                  const total = Number(txn.total_amount || txn.totalAmount || 0);
-                  const paid = Number(txn.paid_amount || txn.paidAmount || 0);
+                  const total     = Number(txn.total_amount || txn.totalAmount || 0);
+                  const paid      = Number(txn.paid_amount  || txn.paidAmount  || 0);
                   const remaining = total - paid;
                   return (
                     <tr key={txn.id} className="hover:bg-primary-50 border-b border-slate-100 group transition-colors">
-                      <td className="px-3 py-2.5 text-center text-slate-400 font-semibold">{String(idx + 1)}</td>
-                      <td className="px-3 py-2.5 font-mono text-slate-600">{txn.date ? new Date(txn.date).toLocaleDateString('en-GB') : '--'}</td>
-                      <td className="px-3 py-2.5 font-mono text-slate-600">{String(txn.item_code || txn.itemCode || '--')}</td>
-                      <td className="px-3 py-2.5 font-semibold text-slate-800">{String(txn.item_name || txn.itemName || '')}</td>
-                      <td className="px-3 py-2.5 text-right font-bold">{String(txn.qty)}</td>
-                      <td className="px-3 py-2.5 text-right font-mono">₹{String(txn.rate)}</td>
-                      <td className="px-3 py-2.5 text-right font-semibold text-slate-700">₹{total.toLocaleString()}</td>
-                      <td className="px-3 py-2.5 text-right font-semibold text-emerald-600">₹{paid.toLocaleString()}</td>
-                      <td className="px-3 py-2.5 text-right font-bold text-primary-600 bg-primary-50/30">₹{remaining.toLocaleString()}</td>
-                      <td className="px-3 py-2.5 text-slate-600">{String(txn.description || '')}</td>
+                      <td className="px-3 py-2.5 text-center text-slate-400 font-semibold">{idx + 1}</td>
+                      <td className="px-3 py-2.5 font-mono text-slate-600">
+                        {txn.date ? new Date(txn.date).toLocaleDateString('en-GB') : '--'}
+                      </td>
+                      <td className="px-3 py-2.5 font-mono text-slate-600">
+                        {txn.item_code || txn.itemCode || '--'}
+                      </td>
+                      <td className="px-3 py-2.5 font-semibold text-slate-800">
+                        {txn.item_name || txn.itemName || ''}
+                      </td>
+                      <td className="px-3 py-2.5 text-right font-bold">{txn.qty}</td>
+                      <td className="px-3 py-2.5 text-right font-mono">₹{txn.rate}</td>
+                      <td className="px-3 py-2.5 text-right font-semibold text-slate-700">
+                        ₹{total.toLocaleString()}
+                      </td>
+                      <td className="px-3 py-2.5 text-right font-semibold text-emerald-600">
+                        ₹{paid.toLocaleString()}
+                      </td>
+                      <td className="px-3 py-2.5 text-right font-bold text-primary-600 bg-primary-50/30">
+                        ₹{remaining.toLocaleString()}
+                      </td>
+                      <td className="px-3 py-2.5 text-slate-600">{txn.description || ''}</td>
                       <td className="px-3 py-2.5 text-center space-x-1">
-                        <button onClick={() => handleEdit(txn)} className="p-1.5 text-blue-600 opacity-0 group-hover:opacity-100 transition-all hover:bg-blue-50 rounded">
+                        <button
+                          onClick={() => handleEdit(txn)}
+                          className="p-1.5 text-blue-600 opacity-0 group-hover:opacity-100 transition-all hover:bg-blue-50 rounded"
+                        >
                           <Edit2 className="w-4 h-4" />
                         </button>
-                        <button onClick={() => handleDelete(txn.id)} className="p-1.5 text-red-600 opacity-0 group-hover:opacity-100 transition-all hover:bg-red-50 rounded">
+                        <button
+                          onClick={() => handleDelete(txn.id)}
+                          className="p-1.5 text-red-600 opacity-0 group-hover:opacity-100 transition-all hover:bg-red-50 rounded"
+                        >
                           <Trash2 className="w-4 h-4" />
                         </button>
                       </td>
@@ -1092,8 +1047,6 @@ function SaalaTransactionTab({ customers, catalog, showNotify, setDropdownOpen }
           </table>
         </div>
       </section>
-
-
     </div>
   );
 }
@@ -1107,38 +1060,19 @@ export default function SaalaView({ catalog, onCancel, showNotify }) {
     customers: [],
     isLoading: true
   });
-  
-  // Keyboard navigation hooks
+
   const { registerElement } = useKeyboardNavigation();
   const saalaContainerRef = useRef(null);
   const { setDropdownOpen } = useERPEnterNavigation(saalaContainerRef, {
     enabled: true,
     autoFocusFirst: false
   });
-  
-  const {
-    tab,
-    customers,
-    isLoading
-  } = state;
-  
-  const setTab = useCallback((value) => {
-    setState(prev => ({ ...prev, tab: value }));
-  }, []);
-  
-  const setCustomers = useCallback((value) => {
-    setState(prev => ({ ...prev, customers: value }));
-  }, []);
-  
-  const setIsLoading = useCallback((value) => {
-    setState(prev => ({ ...prev, isLoading: value }));
-  }, []);
 
-  // Calculate total credit amount for all customers
-  const totalCreditAmount = useMemo(() => {
-    // This will be calculated in the individual tabs
-    return 0;
-  }, [customers, tab]);
+  const { tab, customers, isLoading } = state;
+
+  const setTab       = useCallback((value) => setState(prev => ({ ...prev, tab: value })), []);
+  const setCustomers = useCallback((value) => setState(prev => ({ ...prev, customers: value })), []);
+  const setIsLoading = useCallback((value) => setState(prev => ({ ...prev, isLoading: value })), []);
 
   // Load SAALA customers on mount
   useEffect(() => {
@@ -1157,26 +1091,16 @@ export default function SaalaView({ catalog, onCancel, showNotify }) {
     return () => { cancelled = true; };
   }, []);
 
-  // Reset state when component unmounts or is cancelled
+  // Reset state on unmount
   useEffect(() => {
     return () => {
-      // Reset to initial state when component unmounts
-      setState({
-        tab: 'customers',
-        customers: [],
-        isLoading: true
-      });
+      setState({ tab: 'customers', customers: [], isLoading: true });
     };
   }, []);
 
   const handleCancel = () => {
-    // Reset state before cancelling
-    setState({
-      tab: 'customers',
-      customers: [],
-      isLoading: true
-    });
-    onCancel && onCancel();
+    setState({ tab: 'customers', customers: [], isLoading: true });
+    onCancel?.();
   };
 
   return (
@@ -1193,38 +1117,26 @@ export default function SaalaView({ catalog, onCancel, showNotify }) {
 
       {/* Tabs */}
       <div className="bg-white border-b-2 border-slate-200 px-5 py-3 flex gap-3 shrink-0 shadow-sm">
-        <button 
-          type="button" 
-          onClick={() => setTab('customers')} 
-          className={`px-5 py-2 text-sm font-black uppercase rounded-lg border-2 transition-all duration-200 tracking-wider ${tab === 'customers' ? 'bg-gradient-to-r from-[#5B55E6] to-[#4A44D0] text-white border-[#4A44D0] shadow-md' : 'bg-white text-slate-600 border-slate-200 hover:border-rose-300 hover:bg-rose-50 hover:text-rose-700 shadow-sm'}`}
-          data-enter-index="7"
-        >
-          Customer Addition
-        </button>
-        <button 
-          type="button" 
-          onClick={() => setTab('transactions')} 
-          className={`px-5 py-2 text-sm font-black uppercase rounded-lg border-2 transition-all duration-200 tracking-wider ${tab === 'transactions' ? 'bg-gradient-to-r from-[#5B55E6] to-[#4A44D0] text-white border-[#4A44D0] shadow-md' : 'bg-white text-slate-600 border-slate-200 hover:border-rose-300 hover:bg-rose-50 hover:text-rose-700 shadow-sm'}`}
-          data-enter-index="8"
-        >
-          SAALA Transaction
-        </button>
-        <button 
-          type="button" 
-          onClick={() => setTab('payments')} 
-          className={`px-5 py-2 text-sm font-black uppercase rounded-lg border-2 transition-all duration-200 tracking-wider ${tab === 'payments' ? 'bg-gradient-to-r from-[#5B55E6] to-[#4A44D0] text-white border-[#4A44D0] shadow-md' : 'bg-white text-slate-600 border-slate-200 hover:border-rose-300 hover:bg-rose-50 hover:text-rose-700 shadow-sm'}`}
-          data-enter-index="9"
-        >
-          Record Payment
-        </button>
-        <button 
-          type="button" 
-          onClick={() => setTab('dateRangeReport')} 
-          className={`px-5 py-2 text-sm font-black uppercase rounded-lg border-2 transition-all duration-200 tracking-wider ${tab === 'dateRangeReport' ? 'bg-gradient-to-r from-[#5B55E6] to-[#4A44D0] text-white border-[#4A44D0] shadow-md' : 'bg-white text-slate-600 border-slate-200 hover:border-rose-300 hover:bg-rose-50 hover:text-rose-700 shadow-sm'}`}
-          data-enter-index="10"
-        >
-          Date Range Report
-        </button>
+        {[
+          { key: 'customers',       label: 'Customer Addition',  idx: '7'  },
+          { key: 'transactions',    label: 'SAALA Transaction',  idx: '8'  },
+          { key: 'payments',        label: 'Record Payment',     idx: '9'  },
+          { key: 'dateRangeReport', label: 'Date Range Report',  idx: '10' },
+        ].map(({ key, label, idx }) => (
+          <button
+            key={key}
+            type="button"
+            onClick={() => setTab(key)}
+            className={`px-5 py-2 text-sm font-black uppercase rounded-lg border-2 transition-all duration-200 tracking-wider ${
+              tab === key
+                ? 'bg-gradient-to-r from-[#5B55E6] to-[#4A44D0] text-white border-[#4A44D0] shadow-md'
+                : 'bg-white text-slate-600 border-slate-200 hover:border-rose-300 hover:bg-rose-50 hover:text-rose-700 shadow-sm'
+            }`}
+            data-enter-index={idx}
+          >
+            {label}
+          </button>
+        ))}
       </div>
 
       {/* Tab Content */}
@@ -1235,32 +1147,16 @@ export default function SaalaView({ catalog, onCancel, showNotify }) {
       ) : (
         <>
           {tab === 'customers' && (
-            <CustomerAdditionTab 
-              customers={customers} 
-              setCustomers={setCustomers} 
-              showNotify={showNotify} 
-            />
+            <CustomerAdditionTab customers={customers} setCustomers={setCustomers} showNotify={showNotify} />
           )}
           {tab === 'transactions' && (
-            <SaalaTransactionTab 
-              customers={customers} 
-              catalog={catalog || []} 
-              showNotify={showNotify} 
-              setDropdownOpen={setDropdownOpen}
-            />
+            <SaalaTransactionTab customers={customers} catalog={catalog || []} showNotify={showNotify} setDropdownOpen={setDropdownOpen} />
           )}
           {tab === 'payments' && (
-            <SaalaPaymentTab 
-              customers={customers} 
-              showNotify={showNotify} 
-              setDropdownOpen={setDropdownOpen}
-            />
+            <SaalaPaymentTab customers={customers} showNotify={showNotify} setDropdownOpen={setDropdownOpen} />
           )}
           {tab === 'dateRangeReport' && (
-            <DateRangeReportTab 
-              customers={customers} 
-              showNotify={showNotify} 
-            />
+            <DateRangeReportTab customers={customers} showNotify={showNotify} />
           )}
         </>
       )}

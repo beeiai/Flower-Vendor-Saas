@@ -385,31 +385,6 @@ export const api = {
     return result;
   },
   
-  // SMS Single Customer Daily Sale APIs
-  getSmsSingleCustomerDailySale: async (groupName, customerName, fromDate, toDate) => {
-    const params = {
-      group_name: groupName,
-      customer_name: customerName,
-      from_date: fromDate,
-      to_date: toDate
-    };
-    
-    console.log('[API] Calling /reports/sms-single-customer-daily-sale with params:', params);
-    const response = await request('/reports/sms-single-customer-daily-sale', { params });
-    console.log('[API] Response received:', response);
-    return response;
-  },
-  
-  getSmsAvailableGroups: async () => {
-    const response = await request('/reports/sms-available-groups');
-    return response;
-  },
-  
-  getSmsCustomersByGroup: async (groupName) => {
-    const response = await request(`/reports/sms-customers-by-group/${groupName}`);
-    return response;
-  },
-  
   // Additional APIs
   getSaalaCustomerTotalOutstanding: (customerId) => request(`/saala/customers/${customerId}/total-outstanding/`),
   getSilkDailyCredit: async (date) => {
