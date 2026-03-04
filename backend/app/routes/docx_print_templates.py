@@ -329,13 +329,19 @@ def get_ledger_report_docx(
         # Insert print button before </body> tag
         html_content = html_content.replace('</body>', print_button_html + auto_print_script + '</body>')
         
-        # Fix logo path - use absolute path from templates directory
-        BASE_DIR = Path(__file__).resolve().parent.parent
-        logo_path = BASE_DIR / "templates" / "SKFS_logo.png"
+        # Convert logo to base64 data URI for reliable display in popup windows
+        import base64
+        logo_path = Path(__file__).resolve().parent.parent / "templates" / "SKFS_logo.png"
         if logo_path.exists():
-            html_content = html_content.replace('src="SKFS_logo.png"', f'src="file:///{logo_path.as_posix()}"')
-        else:
-            html_content = html_content.replace('src="SKFS_logo.png"', 'src="/templates/SKFS_logo.png"')
+            try:
+                with open(logo_path, 'rb') as img_file:
+                    img_data = base64.b64encode(img_file.read()).decode('utf-8')
+                    # Replace all logo references with data URI
+                    html_content = html_content.replace('src="/static/images/SKFS_logo.png"', f'src="data:image/png;base64,{img_data}"')
+                    html_content = html_content.replace('src="SKFS_logo.png"', f'src="data:image/png;base64,{img_data}"')
+            except Exception as e:
+                print(f"Error converting logo: {e}")
+                # Fallback: keep original path
         
         return HTMLResponse(content=html_content)
         
@@ -546,13 +552,19 @@ def get_group_patti_report_docx(
         # Insert print button before </body> tag
         html_content = html_content.replace('</body>', print_button_html + auto_print_script + '</body>')
         
-        # Fix logo path - use absolute path from templates directory
-        BASE_DIR = Path(__file__).resolve().parent.parent
-        logo_path = BASE_DIR / "templates" / "SKFS_logo.png"
+        # Convert logo to base64 data URI for reliable display in popup windows
+        import base64
+        logo_path = Path(__file__).resolve().parent.parent / "templates" / "SKFS_logo.png"
         if logo_path.exists():
-            html_content = html_content.replace('src="SKFS_logo.png"', f'src="file:///{logo_path.as_posix()}"')
-        else:
-            html_content = html_content.replace('src="SKFS_logo.png"', 'src="/templates/SKFS_logo.png"')
+            try:
+                with open(logo_path, 'rb') as img_file:
+                    img_data = base64.b64encode(img_file.read()).decode('utf-8')
+                    # Replace all logo references with data URI
+                    html_content = html_content.replace('src="/static/images/SKFS_logo.png"', f'src="data:image/png;base64,{img_data}"')
+                    html_content = html_content.replace('src="SKFS_logo.png"', f'src="data:image/png;base64,{img_data}"')
+            except Exception as e:
+                print(f"Error converting logo: {e}")
+                # Fallback: keep original path
         
         return HTMLResponse(content=html_content)
         
@@ -767,13 +779,19 @@ def get_group_total_report_docx(
         # Insert print button before </body> tag
         html_content = html_content.replace('</body>', print_button_html + auto_print_script + '</body>')
         
-        # Fix logo path - use absolute path from templates directory
-        BASE_DIR = Path(__file__).resolve().parent.parent
-        logo_path = BASE_DIR / "templates" / "SKFS_logo.png"
+        # Convert logo to base64 data URI for reliable display in popup windows
+        import base64
+        logo_path = Path(__file__).resolve().parent.parent / "templates" / "SKFS_logo.png"
         if logo_path.exists():
-            html_content = html_content.replace('src="SKFS_logo.png"', f'src="file:///{logo_path.as_posix()}"')
-        else:
-            html_content = html_content.replace('src="SKFS_logo.png"', 'src="/templates/SKFS_logo.png"')
+            try:
+                with open(logo_path, 'rb') as img_file:
+                    img_data = base64.b64encode(img_file.read()).decode('utf-8')
+                    # Replace all logo references with data URI
+                    html_content = html_content.replace('src="/static/images/SKFS_logo.png"', f'src="data:image/png;base64,{img_data}"')
+                    html_content = html_content.replace('src="SKFS_logo.png"', f'src="data:image/png;base64,{img_data}"')
+            except Exception as e:
+                print(f"Error converting logo: {e}")
+                # Fallback: keep original path
         
         return HTMLResponse(content=html_content)
         
@@ -883,13 +901,19 @@ def get_daily_sales_report_docx(
         # Insert print button before </body> tag
         html_content = html_content.replace('</body>', print_button_html + auto_print_script + '</body>')
         
-        # Fix logo path - use absolute path from templates directory
-        BASE_DIR = Path(__file__).resolve().parent.parent
-        logo_path = BASE_DIR / "templates" / "SKFS_logo.png"
+        # Convert logo to base64 data URI for reliable display in popup windows
+        import base64
+        logo_path = Path(__file__).resolve().parent.parent / "templates" / "SKFS_logo.png"
         if logo_path.exists():
-            html_content = html_content.replace('src="SKFS_logo.png"', f'src="file:///{logo_path.as_posix()}"')
-        else:
-            html_content = html_content.replace('src="SKFS_logo.png"', 'src="/templates/SKFS_logo.png"')
+            try:
+                with open(logo_path, 'rb') as img_file:
+                    img_data = base64.b64encode(img_file.read()).decode('utf-8')
+                    # Replace all logo references with data URI
+                    html_content = html_content.replace('src="/static/images/SKFS_logo.png"', f'src="data:image/png;base64,{img_data}"')
+                    html_content = html_content.replace('src="SKFS_logo.png"', f'src="data:image/png;base64,{img_data}"')
+            except Exception as e:
+                print(f"Error converting logo: {e}")
+                # Fallback: keep original path
         
         return HTMLResponse(content=html_content)
         
