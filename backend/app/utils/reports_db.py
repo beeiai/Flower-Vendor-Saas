@@ -533,6 +533,7 @@ def get_daily_sales_data(
     
     try:
         # Query collection items with vehicle information and all required fields
+        # IMPORTANT: Use outerjoin but apply filters correctly to avoid excluding NULL farmer records
         query = db.query(
             CollectionItem.date,
             CollectionItem.vehicle_name,
@@ -550,7 +551,8 @@ def get_daily_sales_data(
             CollectionItem.remarks
         ).outerjoin(
             Farmer, CollectionItem.farmer_id == Farmer.id
-        ).filter(
+        ).where(
+            # Use .where() instead of .filter() for clarity - same behavior but clearer intent
             CollectionItem.vendor_id == vendor_id,
             CollectionItem.date >= from_date,
             CollectionItem.date <= to_date
@@ -559,7 +561,7 @@ def get_daily_sales_data(
         # Optional: filter by item name
         if item_name:
             logger.info(f"Filtering by item_name: {item_name}")
-            query = query.filter(CollectionItem.item_name == item_name)
+            query = query.where(CollectionItem.item_name == item_name)
         
         logger.info(f"Executing query...")
         results = query.order_by(
@@ -568,6 +570,9 @@ def get_daily_sales_data(
         ).all()
         
         logger.info(f"Query returned {len(results)} results")
+        
+        # Debug: Log raw query SQL for troubleshooting
+        logger.debug(f"Raw SQL query: {str(query)}")
         
         entries_list = []
         grand_total_qty = Decimal("0")

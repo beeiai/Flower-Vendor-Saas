@@ -118,6 +118,8 @@ const SmsSingleCustomerDailySale = ({ onCancel, showNotify }) => {
       return;
     }
 
+    console.log('[SMS Single Customer] Fetching data:', { selectedGroup, selectedCustomer, fromDate, toDate });
+    
     setState(prev => ({ ...prev, loading: true, error: null }));
     try {
       const response = await api.getSmsSingleCustomerDailySale(
@@ -127,23 +129,38 @@ const SmsSingleCustomerDailySale = ({ onCancel, showNotify }) => {
         toDate
       );
       
+      console.log('[SMS Single Customer] Response received:', response);
+      console.log('[SMS Single Customer] Sales data count:', response?.sales_data?.length || 0);
+      
+      // Validate response structure
+      if (!response || !response.sales_data || !Array.isArray(response.sales_data)) {
+        console.warn('[SMS Single Customer] Invalid response structure:', response);
+        throw new Error('Invalid response format from server');
+      }
+      
       setState(prev => ({
         ...prev,
-        salesData: response.sales_data,
-        totalQty: response.totals.total_quantity,
-        totalAmount: response.totals.amount_total,
+        salesData: response.sales_data || [],
+        totalQty: response.totals?.total_quantity || 0,
+        totalAmount: response.totals?.amount_total || 0,
         loading: false
       }));
       
-      showNotify?.(`Loaded ${response.record_count} records`, 'success');
+      const recordCount = response.record_count || response.sales_data?.length || 0;
+      if (recordCount > 0) {
+        showNotify?.(`Loaded ${recordCount} records`, 'success');
+      } else {
+        showNotify?.('No sales data found for this customer', 'info');
+      }
     } catch (err) {
-      console.error('Failed to load sales data:', err);
+      console.error('[SMS Single Customer] Failed to load sales data:', err);
+      const errorMessage = err?.message || err?.details || 'Failed to load data';
       setState(prev => ({ 
         ...prev, 
-        error: err.message || 'Failed to load data', 
+        error: errorMessage, 
         loading: false 
       }));
-      showNotify?.('Failed to load sales data', 'error');
+      showNotify?.(errorMessage || 'Failed to load sales data', 'error');
     }
   }, [selectedGroup, selectedCustomer, fromDate, toDate, showNotify]);
 

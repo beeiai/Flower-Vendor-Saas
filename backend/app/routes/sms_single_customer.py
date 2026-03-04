@@ -106,8 +106,18 @@ def get_sms_single_customer_daily_sale(
         total_qty = Decimal("0")
         total_amount = Decimal("0")
         
+        # Log first few entries for debugging
+        if sales_data:
+            sample_sale = sales_data[0] if len(sales_data) > 0 else None
+            if sample_sale:
+                logger.info(f"Sample sale data - item_name: {sample_sale.item_name}, qty_kg: {sample_sale.qty_kg}, rate_per_kg: {sample_sale.rate_per_kg}")
+        
         for idx, sale in enumerate(sales_data, 1):
             try:
+                # Log first 3 entries for debugging
+                if idx <= 3:
+                    logger.debug(f"Processing sale {idx}: item_name={sale.item_name}, qty={sale.qty_kg}, rate={sale.rate_per_kg}, date={sale.date}")
+                
                 # Safely handle numeric values
                 qty = Decimal(str(sale.qty_kg)) if sale.qty_kg is not None else Decimal("0")
                 rate = Decimal(str(sale.rate_per_kg)) if sale.rate_per_kg is not None else Decimal("0")

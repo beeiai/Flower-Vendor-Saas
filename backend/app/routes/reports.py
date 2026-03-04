@@ -1017,8 +1017,18 @@ def get_daily_sales_report(
         
         logger.info(f"Processing {len(sales_data.get('entries', []))} entries")
         
-        for entry in sales_data.get("entries", []):
+        # Log first few entries for debugging
+        if sales_data.get('entries'):
+            sample_entry = sales_data['entries'][0] if sales_data['entries'] else {}
+            logger.info(f"Sample entry keys: {list(sample_entry.keys()) if isinstance(sample_entry, dict) else 'Not a dict'}")
+            logger.debug(f"Sample entry data: {sample_entry}")
+        
+        for idx, entry in enumerate(sales_data.get("entries", [])):
             try:
+                # Log first 3 entries for debugging
+                if idx < 3:
+                    logger.debug(f"Processing entry {idx}: party_name={entry.get('party_name')}, party={entry.get('party')}, item_name={entry.get('item_name')}, item={entry.get('item')}")
+                
                 # Safely extract and convert numeric values
                 qty_val = entry.get("qty", "0")
                 rate_val = entry.get("rate", "0")
@@ -1053,9 +1063,10 @@ def get_daily_sales_report(
                 row_data = {
                     "date": entry_date or "",
                     "vehicle": vehicle_val,
-                    "party": entry.get("party", "N/A") or "N/A",
+                    # Backend returns party_name, frontend expects party - map correctly
+                    "party": entry.get("party_name") or entry.get("party") or "N/A",
                     "group": entry.get("group", "Unknown") or "Unknown",
-                    "itemName": entry.get("item", "N/A") or "N/A",
+                    "itemName": entry.get("item_name") or entry.get("item") or "N/A",
                     "qty": f"{qty:.2f}",
                     "rate": f"{rate:.2f}",
                     "total": f"{total:.2f}"
