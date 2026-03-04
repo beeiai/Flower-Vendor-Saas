@@ -230,6 +230,17 @@ export function useKeyboardNavigation(options = {}) {
       return;
     }
 
+    // CRITICAL: Don't interfere with searchable select components
+    // These components have their own keyboard handling
+    if (target?.closest('[data-searchable-select]')) {
+      return;
+    }
+
+    // Don't interfere with Reports tab - it has its own navigation system
+    if (target?.closest('[data-testid="reports-view"]')) {
+      return;
+    }
+
     // Handle Enter key
     if (e.key === KEY_CODES.ENTER) {
       // Prevent Enter key from activating navigation bar elements
