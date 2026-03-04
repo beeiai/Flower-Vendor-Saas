@@ -115,15 +115,31 @@ export function GroupTotalView({ groups, customers, ledgerStore, onCancel, setAc
         );
       }
       
+      console.log('[Group Total Print] Response received:', response);
+      
       // Handle response - open preview in new tab
+      // The response is already an HTML string
+      const htmlContent = typeof response === 'string' ? response : (response?.data || '');
+      
+      if (!htmlContent) {
+        throw new Error('Received empty response from server');
+      }
+      
       const previewWindow = window.open('about:blank', '_blank');
       if (previewWindow) {
-        previewWindow.document.write(response.data);
+        previewWindow.document.open();
+        previewWindow.document.write(htmlContent);
         previewWindow.document.close();
-        previewWindow.focus();
+        
+        // Wait for content to load before focusing
+        setTimeout(() => {
+          previewWindow.focus();
+        }, 100);
+      } else {
+        throw new Error('Unable to open preview window. Please check popup blocker settings.');
       }
     } catch (error) {
-      console.error('Print error:', error);
+      console.error('[Group Total Print] Error:', error);
       alert(`Print failed: ${error.message}`);
       // Return focus to group selection on error
       setTimeout(() => groupRef.current?.focus(), 100);

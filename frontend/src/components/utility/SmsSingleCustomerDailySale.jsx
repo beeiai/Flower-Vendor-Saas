@@ -1,5 +1,3 @@
-<<<<<<< HEAD
-=======
 import React, { useState, useEffect, useCallback } from 'react';
 import { 
   X, 
@@ -401,4 +399,3 @@ Thank you for your business!`;
 };
 
 export default SmsSingleCustomerDailySale;
->>>>>>> 14a5e590fee9895a9b2f44cb9838684ce98c7ac4

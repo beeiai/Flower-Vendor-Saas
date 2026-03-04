@@ -101,7 +101,8 @@ def get_ledger_report_pdf(
         for item in items:  # Use the original items to get date and vehicle
             qty = float(item.qty_kg or 0)
             rate = float(item.rate_per_kg or 0)
-            luggage = float(item.transport_cost or 0)
+            luggage_per_unit = float(item.transport_cost or 0)  # Luggage per unit
+            luggage_total = luggage_per_unit * qty  # Total luggage = luggage * qty
             coolie = float(item.coolie_cost or 0)  # Add coolie from item
             paid = float(item.paid_amount or 0)
             total = qty * rate
@@ -109,7 +110,7 @@ def get_ledger_report_pdf(
             # Commission calculation per row
             row_commission = total * commission_rate
             row_net = total - row_commission
-            row_balance = row_net - paid - luggage - coolie
+            row_balance = row_net - paid - luggage_total - coolie
             
             # Get vehicle information
             vehicle_info = "N/A"
@@ -129,7 +130,7 @@ def get_ledger_report_pdf(
                 "address": farmer.address or "N/A",
                 "qty": f"{qty:.2f}",
                 "rate": f"{rate:.2f}",
-                "luggage": f"{luggage:.2f}",
+                "luggage": f"{luggage_total:.2f}",  # Now shows luggage total (luggage * qty)
                 "coolie": f"{coolie:.2f}",
                 "paid": f"{paid:.2f}",
                 "gross": f"{total:.2f}",
@@ -437,15 +438,18 @@ def get_group_patti_report_docx(
                 farmer_luggage += luggage
                 farmer_qty += qty
                 
-                # Add transaction entry
+                # Add transaction entry with all required fields
                 transactions.append({
                     "date": item.date.strftime("%d-%m-%Y") if item.date else "N/A",
-                    "vehicle": getattr(item, 'vehicle', 'N/A') if hasattr(item, 'vehicle') else (getattr(item.vehicle, 'vehicle_number', 'N/A') if hasattr(item, 'vehicle') and item.vehicle else (getattr(item, 'vehicle_number', 'N/A') if hasattr(item, 'vehicle_number') else "N/A")),
+                    "vehicle": getattr(item, 'vehicle', 'N/A') if hasattr(item, 'vehicle') and item.vehicle else (getattr(item, 'vehicle_number', 'N/A') if hasattr(item, 'vehicle_number') else "N/A"),
+                    "item_code": item.item_code or "N/A",
+                    "product_name": item.item_name or "N/A",
                     "qty": f"{qty:.2f}",
-                    "price": f"{rate:.2f}",
-                    "total": f"{qty * rate:.2f}",
+                    "rate": f"{rate:.2f}",
                     "luggage": f"{luggage:.2f}",
+                    "coolie": f"{float(item.coolie_cost or 0):.2f}",
                     "paid": f"{paid:.2f}",
+                    "total": f"{qty * rate:.2f}",
                     "amount": f"{(qty * rate + luggage - paid):.2f}"
                 })
             
