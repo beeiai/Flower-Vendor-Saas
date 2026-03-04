@@ -140,6 +140,17 @@ export function GroupTotalView({ groups, customers, ledgerStore, onCancel, setAc
       }
     } catch (error) {
       console.error('[Group Total Print] Error:', error);
+      
+      // Handle 401 unauthorized - redirect to login
+      if (error?.response?.status === 401 || error?.message?.includes('401')) {
+        alert('Your session has expired. Please login again.');
+        // Clear invalid token
+        localStorage.removeItem('skfs_auth_token');
+        // Redirect to login page
+        window.location.href = '/login';
+        return;
+      }
+      
       alert(`Print failed: ${error.message}`);
       // Return focus to group selection on error
       setTimeout(() => groupRef.current?.focus(), 100);

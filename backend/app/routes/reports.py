@@ -484,17 +484,21 @@ def get_group_total_report_by_group(
     logger.info(f"Found group: {group.name} (ID: {group.id})")
     
     # Query collection items for this group's farmers within the date range
+    # Include luggage (transport_cost), coolie_cost, and farmer address
     try:
         results = db.query(
             Farmer.id.label("farmer_id"),
             Farmer.name.label("farmer_name"),
+            Farmer.address.label("farmer_address"),  # Add farmer address
             
             CollectionItem.date,
             CollectionItem.vehicle_name,
             CollectionItem.vehicle_number,
             CollectionItem.qty_kg,
             CollectionItem.rate_per_kg,
-            CollectionItem.paid_amount
+            CollectionItem.paid_amount,
+            CollectionItem.transport_cost.label("luggage"),  # Add luggage
+            CollectionItem.coolie_cost.label("coolie")  # Add coolie
         ).join(
             CollectionItem, CollectionItem.farmer_id == Farmer.id
         ).filter(
@@ -521,8 +525,10 @@ def get_group_total_report_by_group(
         'total_paid': Decimal("0"),
         'total_commission': Decimal("0"),
         'total_luggage': Decimal("0"),
+        'total_coolie': Decimal("0"),  # Add coolie tracking
         'total_net_amount': Decimal("0"),
-        'transaction_count': 0
+        'transaction_count': 0,
+        'farmer_address': ''  # Store farmer address
     })
     
     logger.info(f"Processing {len(results)} collection items for group: {group_name}")
@@ -534,6 +540,12 @@ def get_group_total_report_by_group(
         rate = Decimal(str(row.rate_per_kg or 0))
         price = qty * rate
         paid = Decimal(str(row.paid_amount or 0))
+        
+        # Get luggage and coolie - handle both per-unit and total scenarios
+        luggage_per_unit = Decimal(str(row.luggage or 0))
+        luggage_total = luggage_per_unit * qty  # Luggage total = luggage rate × qty
+        
+        coolie_per_entry = Decimal(str(row.coolie or 0))  # Coolie is typically per entry
         
         # Calculate commission (using default 12%)
         commission = (price * Decimal("12") / 100).quantize(Decimal("0.01"))
@@ -547,7 +559,13 @@ def get_group_total_report_by_group(
         customer_data[farmer_key]['total_paid'] += paid
         customer_data[farmer_key]['total_commission'] += commission
         customer_data[farmer_key]['total_net_amount'] += net_amount
+        customer_data[farmer_key]['total_luggage'] += luggage_total  # Add luggage total
+        customer_data[farmer_key]['total_coolie'] += coolie_per_entry  # Add coolie
         customer_data[farmer_key]['transaction_count'] += 1
+        
+        # Store farmer address (same for all entries of this farmer)
+        if not customer_data[farmer_key]['farmer_address'] and hasattr(row, 'farmer_address'):
+            customer_data[farmer_key]['farmer_address'] = row.farmer_address or ''
     
     # Prepare rows for the template (one row per customer)
     rows = []
@@ -561,21 +579,24 @@ def get_group_total_report_by_group(
     logger.info(f"Creating {len(customer_data)} customer rows for template")
     
     for farmer_id, data in customer_data.items():
-        # Get farmer name
+        # Get farmer name and address
         farmer = next((r for r in results if r.farmer_id == farmer_id), None) if results else None
         farmer_name = farmer.farmer_name if farmer else "Unknown"
+        farmer_address = data['farmer_address'] or (farmer.farmer_address if farmer and hasattr(farmer, 'farmer_address') else "N/A")
         
         row_data = {
             "group_name": group_name,  # This is what the template expects
             "customer_count": 1,  # Each row represents one customer
-            "total_qty": f"{data['total_qty']:.2f}",
-            "total_amount": f"{data['total_net_amount']:.2f}",  # Using net amount for display
             "farmer_name": farmer_name,
+            "address": farmer_address,  # Add farmer address
+            "total_qty": f"{data['total_qty']:.2f}",
             "total_price": f"{data['total_price']:.2f}",
             "total_commission": f"{data['total_commission']:.2f}",
-            "total_luggage": f"{data['total_luggage']:.2f}",
+            "total_luggage": f"{data['total_luggage']:.2f}",  # Now includes actual luggage total
+            "total_coolie": f"{data['total_coolie']:.2f}",  # Now includes actual coolie total
             "total_net_amount": f"{data['total_net_amount']:.2f}",
-            "total_paid": f"{data['total_paid']:.2f}"
+            "total_paid": f"{data['total_paid']:.2f}",
+            "total_amount": f"{data['total_net_amount']:.2f}"  # Using net amount for display
         }
         
         logger.debug(f"Customer row created - {farmer_name}: qty={data['total_qty']:.2f}, net_amount={data['total_net_amount']:.2f}")

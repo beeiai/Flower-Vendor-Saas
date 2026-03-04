@@ -14,24 +14,7 @@ import {
   Printer,
   Search
 } from 'lucide-react';
-
-/**
- * Internal API definition to ensure the component is runnable within the preview environment.
- */
-const api = {
-  getDailySales: async (fromDate, toDate) => {
-    await new Promise(resolve => setTimeout(resolve, 800));
-    return [
-      { id: 1, date: '03-03-2026', party: 'John Doe', item_name: 'Rose (Red)', qty: 15.5, rate: 45 },
-      { id: 2, date: '03-03-2026', party: 'Jane Smith', item_name: 'Lily (White)', qty: 10.0, rate: 50 },
-      { id: 3, date: '03-03-2026', party: 'John Doe', item_name: 'Jasmine', qty: 5.2, rate: 42 },
-    ];
-  },
-  sendSms: async ({ phoneNumber, message }) => {
-    await new Promise(resolve => setTimeout(resolve, 1500));
-    return { success: true };
-  }
-};
+import { api } from '../../utils/api'; // Import real backend API
 
 const SmsSingle = ({ customers = [], onCancel, showNotify }) => {
   const [state, setState] = useState({
