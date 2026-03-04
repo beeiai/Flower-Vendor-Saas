@@ -26,24 +26,27 @@ export function EnhancedSearchableSelect({
   disabled, 
   className = "", 
   onSelectionComplete,
-  error 
+  error,
+  showAllOnEnter = false 
 }) {
   const [isOpen, setIsOpen] = useState(false);
   const [highlightIndex, setHighlightIndex] = useState(0);
   const [searchTerm, setSearchTerm] = useState(value || "");
   const [isEditing, setIsEditing] = useState(false);
+  const [forceShowAll, setForceShowAll] = useState(false);
   const containerRef = useRef(null);
   const inputRef = useRef(null);
   const dropdownRef = useRef(null);
 
-  // Always show full dataset, filter visually for client-side filtering
+  // Show all options when forceShowAll is true (triggered by Enter key)
+  // Otherwise filter based on search term
   const filteredOptions = useMemo(() => {
-    if (!searchTerm) return options || [];
+    if (forceShowAll || !searchTerm) return options || [];
     const lower = String(searchTerm).toLowerCase();
     return (options || []).filter(option =>
       String(option).toLowerCase().includes(lower)
     );
-  }, [options, searchTerm]);
+  }, [options, searchTerm, forceShowAll]);
 
   // Sync value to search term when not editing
   useEffect(() => {
@@ -125,26 +128,25 @@ export function EnhancedSearchableSelect({
         case 'Escape':
           e.preventDefault();
           setIsOpen(false);
+          setForceShowAll(false);
           setHighlightIndex(0);
           break;
         default:
+          setForceShowAll(false);
           return; // Let other keys go to input for typing
       }
     } else {
       // Dropdown is closed
       if (e.key === 'Enter') {
         e.preventDefault();
-        if (value) {
-          // Already has value, move to next field
-          onSelectionComplete?.();
-        } else {
-          // No value, open dropdown
-          setIsOpen(true);
-          setHighlightIndex(0);
-        }
+        // Always open dropdown and show all options when Enter is pressed
+        setIsOpen(true);
+        setForceShowAll(true);
+        setHighlightIndex(0);
       } else if (!["Tab", "Escape", "ArrowLeft", "ArrowRight", "Shift", "Control", "Alt", "Meta"].includes(e.key)) {
         // Any printable key opens dropdown
         setIsOpen(true);
+        setForceShowAll(false);
         setHighlightIndex(0);
       }
     }
