@@ -300,7 +300,7 @@ export default function ReportsView({ groups, customers, vehicles, advanceStore 
 										/>
 									</div>
 									<div className="col-span-4">
-										{/* ✅ Group → on selection complete, jump directly to Customer */}
+										{/* ✅ Group → on selection complete, jump directly to Customer and open dropdown */}
 										<EnhancedSearchableSelect
 											label="Group Name"
 											options={groups.map(g => g.name)}
@@ -312,14 +312,10 @@ export default function ReportsView({ groups, customers, vehicles, advanceStore 
 												setTimeout(() => {
 													const customerInput = customerRef.current?.querySelector('input');
 													if (customerInput) {
+														// Focus will trigger onFocus which opens dropdown
 														customerInput.focus();
-														// Auto-open customer dropdown
-														setTimeout(() => {
-															const enterEvent = new KeyboardEvent('keydown', { key: 'Enter', bubbles: true });
-															customerInput.dispatchEvent(enterEvent);
-														}, 50);
 													}
-												}, 100);
+												}, 50);
 											}}
 											className={`focus:border-rose-500 focus:ring-rose-500/20 rounded-lg shadow-sm hover:shadow-md transition-all border-rose-200 w-full ${filterError && !groupName ? 'border-red-500 ring-2 ring-red-100' : ''}`}
 											error={filterError && !groupName}
@@ -337,14 +333,10 @@ export default function ReportsView({ groups, customers, vehicles, advanceStore 
 												setTimeout(() => {
 													const customerInput = customerRef.current?.querySelector('input');
 													if (customerInput) {
+														// Focus will trigger onFocus which opens dropdown
 														customerInput.focus();
-														// Auto-open customer dropdown
-														setTimeout(() => {
-															const enterEvent = new KeyboardEvent('keydown', { key: 'Enter', bubbles: true });
-															customerInput.dispatchEvent(enterEvent);
-														}, 50);
 													}
-												}, 100);
+												}, 50);
 											}}
 											className="focus:border-rose-500 focus:ring-rose-500/20 rounded-lg shadow-sm hover:shadow-md transition-all border-rose-200 w-full"
 										/>
