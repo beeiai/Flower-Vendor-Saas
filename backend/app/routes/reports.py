@@ -35,7 +35,7 @@ router = APIRouter(
 
 def render_template(template_name: str, data: dict, template_dir: str = "templates") -> str:
     """
-    Render Jinja2 template with provided data and add print button.
+    Render Jinja2 template with provided data.
     
     Args:
         template_name: Name of template file (e.g., 'ledger_report.html')
@@ -43,7 +43,7 @@ def render_template(template_name: str, data: dict, template_dir: str = "templat
         template_dir: Directory containing templates
     
     Returns:
-        Rendered HTML string with corrected asset paths and print button
+        Rendered HTML string with corrected asset paths
     """
     template_path = os.path.join(template_dir, template_name)
     
@@ -59,33 +59,6 @@ def render_template(template_name: str, data: dict, template_dir: str = "templat
     except Exception as e:
         print(f"Template rendering error: {e}")
         return f"<h1>Template rendering error: {str(e)}</h1>"
-    
-    # Add print button with JavaScript
-    print_button_html = '''
-    <div style="position: fixed; top: 10px; right: 10px; z-index: 1000; background: white; padding: 10px; border-radius: 5px; box-shadow: 0 2px 10px rgba(0,0,0,0.2);">
-        <button onclick="window.print()" style="padding: 10px 20px; background-color: #007bff; color: white; border: none; border-radius: 4px; cursor: pointer; font-size: 14px; font-weight: bold;">🖨️ Print</button>
-    </div>
-    '''
-    
-    # Add script to automatically trigger print when page loads
-    auto_print_script = '''
-    <script>
-        // Auto-print when page loads
-        window.onload = function() {
-            // Small delay to ensure page is fully loaded
-            setTimeout(function() {
-                window.print();
-            }, 500);
-        };
-    </script>
-    '''
-    
-    # Insert print button before </body> tag if it exists
-    if '</body>' in html:
-        html = html.replace('</body>', print_button_html + auto_print_script + '</body>')
-    else:
-        # If no </body> tag, append the scripts at the end
-        html += print_button_html + auto_print_script
     
     # Convert logo to data URI for reliable printing in production
     logo_path = os.path.join("static", "images", "SKFS_logo.png")
@@ -197,7 +170,7 @@ def get_ledger_report(
             "date": date_val,
             "vehicle": vehicle_val,
             "item_code": entry.get("item_code", "N/A"),
-            "item_name": entry.get("item_name", "N/A"),
+            "product_name": entry.get("item_name", "N/A"),
             "customer": ledger_data.get("customer", {}).get("name", "N/A"),
             "address": ledger_data.get("customer", {}).get("address", "N/A"),
             "qty": entry.get("qty", "0"),
@@ -821,7 +794,7 @@ def get_group_patti_report(
                 "date": date_val,
                 "vehicle": vehicle,
                 "item_code": entry.get("item_code", "N/A"),
-                "item_name": entry.get("item_name", "N/A"),
+                "product_name": entry.get("item_name", "N/A"),
                 "qty": f"{qty:.2f}",
                 "rate": f"{rate:.2f}",
                 "luggage": f"{luggage:.2f}",
@@ -1021,6 +994,9 @@ def get_daily_sales_report(
         rows = []
         total_qty = 0
         total_amount = 0
+        total_luggage = 0
+        total_coolie = 0
+        total_paid = 0
         
         logger.info(f"Processing {len(sales_data.get('entries', []))} entries")
         
@@ -1067,21 +1043,42 @@ def get_daily_sales_report(
                 if not vehicle_val:
                     vehicle_val = "N/A"
                 
+                # Extract luggage, coolie, paid safely
+                luggage_val = float(entry.get('luggage', 0)) if entry.get('luggage') is not None else 0.0
+                coolie_val = float(entry.get('coolie', 0)) if entry.get('coolie') is not None else 0.0
+                paid_val = float(entry.get('paid', 0)) if entry.get('paid') is not None else 0.0
+                
+                luggage_str = f"{luggage_val:.2f}"
+                coolie_str = f"{coolie_val:.2f}"
+                paid_str = f"{paid_val:.2f}"
+                
+                # Get all required fields safely - ensure ALL fields are populated
                 row_data = {
                     "date": entry_date or "",
                     "vehicle": vehicle_val,
                     # Backend returns party_name, frontend expects party - map correctly
                     "party": entry.get("party_name") or entry.get("party") or "N/A",
-                    "group": entry.get("group", "Unknown") or "Unknown",
-                    "itemName": entry.get("item_name") or entry.get("item") or "N/A",
+                    "address": entry.get("party_address") or "N/A",
+                    "item_code": entry.get("item_code") or "N/A",
+                    "product_name": entry.get("item_name") or entry.get("item") or "N/A",
                     "qty": f"{qty:.2f}",
                     "rate": f"{rate:.2f}",
+                    "luggage": luggage_str,
+                    "coolie": coolie_str,
+                    "paid": paid_str,
                     "total": f"{total:.2f}"
                 }
                 
                 rows.append(row_data)
                 total_qty += qty
                 total_amount += total
+                # Parse back to float for totals
+                try:
+                    total_luggage += float(luggage_str)
+                    total_coolie += float(coolie_str)
+                    total_paid += float(paid_str)
+                except (ValueError, TypeError):
+                    pass
                 
             except Exception as entry_error:
                 logger.warning(f"Error processing entry: {entry_error}, entry: {entry}")
@@ -1103,7 +1100,10 @@ def get_daily_sales_report(
             "totals": {
                 "record_count": len(rows),
                 "total_qty": f"{total_qty:.2f}",
-                "total_amount": f"{total_amount:.2f}"
+                "total_amount": f"{total_amount:.2f}",
+                "total_luggage": f"{total_luggage:.2f}",
+                "total_coolie": f"{total_coolie:.2f}",
+                "total_paid": f"{total_paid:.2f}"
             }
         }
         
