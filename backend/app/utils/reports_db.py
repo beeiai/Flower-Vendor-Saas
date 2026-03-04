@@ -124,7 +124,7 @@ def get_ledger_data(
         CollectionItem.qty_kg,
         CollectionItem.rate_per_kg,
         CollectionItem.transport_cost.label("luggage"),
-        CollectionItem.coolie,
+        CollectionItem.coolie_cost.label("coolie"),
         CollectionItem.paid_amount,
         CollectionItem.remarks
     ).filter(
@@ -232,7 +232,7 @@ def get_group_total_data(
         CollectionItem.qty_kg,
         CollectionItem.rate_per_kg,
         CollectionItem.transport_cost.label("luggage"),
-        CollectionItem.coolie,
+        CollectionItem.coolie_cost.label("coolie"),
         CollectionItem.paid_amount,
         CollectionItem.remarks
     ).join(
@@ -414,7 +414,7 @@ def get_group_patti_data(
             CollectionItem.qty_kg,
             CollectionItem.rate_per_kg,
             CollectionItem.transport_cost.label("luggage"),
-            CollectionItem.coolie,
+            CollectionItem.coolie_cost.label("coolie"),
             CollectionItem.paid_amount,
             CollectionItem.remarks
         ).filter(
@@ -566,7 +566,7 @@ def get_daily_sales_data(
             CollectionItem.qty_kg,
             CollectionItem.rate_per_kg,
             CollectionItem.transport_cost.label("luggage"),
-            CollectionItem.coolie,
+            CollectionItem.coolie_cost.label("coolie"),
             CollectionItem.paid_amount,
             CollectionItem.remarks
         ).outerjoin(
