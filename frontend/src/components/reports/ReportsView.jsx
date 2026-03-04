@@ -243,8 +243,12 @@ export default function ReportsView({ groups, customers, vehicles, advanceStore 
 				document.body.appendChild(a);
 				a.click();
 				document.body.removeChild(a);
+				// Revoke URL after download starts
+				setTimeout(() => window.URL.revokeObjectURL(url), 100);
+			} else {
+				// Revoke URL after print window loads (delayed to allow page to load)
+				setTimeout(() => window.URL.revokeObjectURL(url), 5000);
 			}
-			window.URL.revokeObjectURL(url);
 			setTimeout(() => groupRef.current?.querySelector('input')?.focus(), 100);
 		} catch (error) {
 			console.error('Print error:', error);
