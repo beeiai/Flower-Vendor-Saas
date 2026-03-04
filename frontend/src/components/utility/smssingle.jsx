@@ -128,13 +128,6 @@ const SmsSingle = ({ customers = [], onCancel, showNotify }) => {
 
     setState(prev => ({ ...prev, loading: true, error: null }));
     try {
-<<<<<<< HEAD
-      const data = await api.getDailySales(fromDate, toDate);
-      const customerData = data.filter(item => 
-        item.party === selectedCustomer || 
-        item.farmer_name === selectedCustomer
-      );
-=======
       console.log('[SMS Single] Fetching daily sales for:', { selectedCustomer, fromDate, toDate });
       
       // Get all daily sales data for the date range
@@ -169,14 +162,9 @@ const SmsSingle = ({ customers = [], onCancel, showNotify }) => {
         );
         console.log('[SMS Single] Filtered customer data count:', customerData.length);
       }
->>>>>>> 14a5e590fee9895a9b2f44cb9838684ce98c7ac4
 
       // Calculate totals safely
       const totals = customerData.reduce((acc, item) => {
-<<<<<<< HEAD
-        const qty = parseFloat(item.qty) || 0;
-        const rate = parseFloat(item.rate) || 0;
-=======
         // Try multiple field names for qty and rate
         const qty = parseFloat(item.qty_kg || item.qty || 0) || 0;
         const rate = parseFloat(item.rate_per_kg || item.rate || 0) || 0;
@@ -184,7 +172,6 @@ const SmsSingle = ({ customers = [], onCancel, showNotify }) => {
         // Calculate line total
         const lineTotal = qty * rate;
         
->>>>>>> 14a5e590fee9895a9b2f44cb9838684ce98c7ac4
         return {
           qty: acc.qty + qty,
           amount: acc.amount + lineTotal
@@ -207,15 +194,10 @@ const SmsSingle = ({ customers = [], onCancel, showNotify }) => {
         showNotify?.('No sales data found for this customer', 'info');
       }
     } catch (err) {
-<<<<<<< HEAD
-      setState(prev => ({ ...prev, error: err.message || 'Failed to load data', loading: false }));
-      showNotify?.('Failed to load sales data', 'error');
-=======
       console.error('[SMS Single] Error fetching data:', err);
       const errorMessage = err?.message || err?.details || 'Failed to load data';
       setState(prev => ({ ...prev, error: errorMessage, loading: false }));
       showNotify?.(errorMessage || 'Failed to load sales data', 'error');
->>>>>>> 14a5e590fee9895a9b2f44cb9838684ce98c7ac4
     }
   }, [selectedCustomer, fromDate, toDate, showNotify]);
 
