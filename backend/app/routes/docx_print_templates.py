@@ -4,6 +4,8 @@ from sqlalchemy.orm import Session, joinedload
 from sqlalchemy import func
 from datetime import date
 from typing import Optional
+from pathlib import Path
+import os
 
 from app.core.db import get_db
 from app.dependencies import get_current_user
@@ -100,6 +102,7 @@ def get_ledger_report_pdf(
             qty = float(item.qty_kg or 0)
             rate = float(item.rate_per_kg or 0)
             luggage = float(item.transport_cost or 0)
+            coolie = float(item.coolie_cost or 0)  # Add coolie from item
             paid = float(item.paid_amount or 0)
             total = qty * rate
             
