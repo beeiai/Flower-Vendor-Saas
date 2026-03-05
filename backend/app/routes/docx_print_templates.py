@@ -332,16 +332,46 @@ def get_ledger_report_docx(
         # Convert logo to base64 data URI for reliable display in popup windows
         import base64
         logo_path = Path(__file__).resolve().parent.parent / "templates" / "SKFS_logo.png"
+        print(f"[LOGO] Checking logo path: {logo_path}")
+        print(f"[LOGO] Logo exists: {logo_path.exists()}")
+        
         if logo_path.exists():
             try:
                 with open(logo_path, 'rb') as img_file:
-                    img_data = base64.b64encode(img_file.read()).decode('utf-8')
-                    # Replace all logo references with data URI
-                    html_content = html_content.replace('src="/static/images/SKFS_logo.png"', f'src="data:image/png;base64,{img_data}"')
-                    html_content = html_content.replace('src="SKFS_logo.png"', f'src="data:image/png;base64,{img_data}"')
+                    img_bytes = img_file.read()
+                    img_data = base64.b64encode(img_bytes).decode('utf-8')
+                    data_uri = f'data:image/png;base64,{img_data}'
+                    print(f"[LOGO] Successfully converted logo to base64 (size: {len(img_data)} chars)")
+                    
+                    # Replace ALL possible logo reference patterns
+                    replacements = [
+                        ('src="/static/images/SKFS_logo.png"', f'src="{data_uri}"'),
+                        ('src="SKFS_logo.png"', f'src="{data_uri}"'),
+                        ("src='/static/images/SKFS_logo.png'", f'src="{data_uri}"'),
+                        ("src='SKFS_logo.png'", f'src="{data_uri}"'),
+                        ('href="/static/images/SKFS_logo.png"', f'href="{data_uri}"'),
+                        ('href="SKFS_logo.png"', f'href="{data_uri}"'),
+                    ]
+                    
+                    for old, new in replacements:
+                        count = html_content.count(old)
+                        if count > 0:
+                            html_content = html_content.replace(old, new)
+                            print(f"[LOGO] Replaced {count} occurrence(s) of: {old[:50]}")
+                    
+                    # Verify replacement worked
+                    if 'src="/static/images/SKFS_logo.png"' in html_content or 'src="SKFS_logo.png"' in html_content:
+                        print("[LOGO] WARNING: Some logo references were NOT replaced!")
+                    else:
+                        print("[LOGO] SUCCESS: All logo references replaced with data URI")
+                        
             except Exception as e:
-                print(f"Error converting logo: {e}")
+                print(f"[LOGO] ERROR converting logo: {e}")
+                import traceback
+                traceback.print_exc()
                 # Fallback: keep original path
+        else:
+            print(f"[LOGO] ERROR: Logo file not found at {logo_path}")
         
         return HTMLResponse(content=html_content)
         
@@ -555,16 +585,46 @@ def get_group_patti_report_docx(
         # Convert logo to base64 data URI for reliable display in popup windows
         import base64
         logo_path = Path(__file__).resolve().parent.parent / "templates" / "SKFS_logo.png"
+        print(f"[LOGO] Checking logo path: {logo_path}")
+        print(f"[LOGO] Logo exists: {logo_path.exists()}")
+        
         if logo_path.exists():
             try:
                 with open(logo_path, 'rb') as img_file:
-                    img_data = base64.b64encode(img_file.read()).decode('utf-8')
-                    # Replace all logo references with data URI
-                    html_content = html_content.replace('src="/static/images/SKFS_logo.png"', f'src="data:image/png;base64,{img_data}"')
-                    html_content = html_content.replace('src="SKFS_logo.png"', f'src="data:image/png;base64,{img_data}"')
+                    img_bytes = img_file.read()
+                    img_data = base64.b64encode(img_bytes).decode('utf-8')
+                    data_uri = f'data:image/png;base64,{img_data}'
+                    print(f"[LOGO] Successfully converted logo to base64 (size: {len(img_data)} chars)")
+                    
+                    # Replace ALL possible logo reference patterns
+                    replacements = [
+                        ('src="/static/images/SKFS_logo.png"', f'src="{data_uri}"'),
+                        ('src="SKFS_logo.png"', f'src="{data_uri}"'),
+                        ("src='/static/images/SKFS_logo.png'", f'src="{data_uri}"'),
+                        ("src='SKFS_logo.png'", f'src="{data_uri}"'),
+                        ('href="/static/images/SKFS_logo.png"', f'href="{data_uri}"'),
+                        ('href="SKFS_logo.png"', f'href="{data_uri}"'),
+                    ]
+                    
+                    for old, new in replacements:
+                        count = html_content.count(old)
+                        if count > 0:
+                            html_content = html_content.replace(old, new)
+                            print(f"[LOGO] Replaced {count} occurrence(s) of: {old[:50]}")
+                    
+                    # Verify replacement worked
+                    if 'src="/static/images/SKFS_logo.png"' in html_content or 'src="SKFS_logo.png"' in html_content:
+                        print("[LOGO] WARNING: Some logo references were NOT replaced!")
+                    else:
+                        print("[LOGO] SUCCESS: All logo references replaced with data URI")
+                        
             except Exception as e:
-                print(f"Error converting logo: {e}")
+                print(f"[LOGO] ERROR converting logo: {e}")
+                import traceback
+                traceback.print_exc()
                 # Fallback: keep original path
+        else:
+            print(f"[LOGO] ERROR: Logo file not found at {logo_path}")
         
         return HTMLResponse(content=html_content)
         
@@ -782,16 +842,46 @@ def get_group_total_report_docx(
         # Convert logo to base64 data URI for reliable display in popup windows
         import base64
         logo_path = Path(__file__).resolve().parent.parent / "templates" / "SKFS_logo.png"
+        print(f"[LOGO] Checking logo path: {logo_path}")
+        print(f"[LOGO] Logo exists: {logo_path.exists()}")
+        
         if logo_path.exists():
             try:
                 with open(logo_path, 'rb') as img_file:
-                    img_data = base64.b64encode(img_file.read()).decode('utf-8')
-                    # Replace all logo references with data URI
-                    html_content = html_content.replace('src="/static/images/SKFS_logo.png"', f'src="data:image/png;base64,{img_data}"')
-                    html_content = html_content.replace('src="SKFS_logo.png"', f'src="data:image/png;base64,{img_data}"')
+                    img_bytes = img_file.read()
+                    img_data = base64.b64encode(img_bytes).decode('utf-8')
+                    data_uri = f'data:image/png;base64,{img_data}'
+                    print(f"[LOGO] Successfully converted logo to base64 (size: {len(img_data)} chars)")
+                    
+                    # Replace ALL possible logo reference patterns
+                    replacements = [
+                        ('src="/static/images/SKFS_logo.png"', f'src="{data_uri}"'),
+                        ('src="SKFS_logo.png"', f'src="{data_uri}"'),
+                        ("src='/static/images/SKFS_logo.png'", f'src="{data_uri}"'),
+                        ("src='SKFS_logo.png'", f'src="{data_uri}"'),
+                        ('href="/static/images/SKFS_logo.png"', f'href="{data_uri}"'),
+                        ('href="SKFS_logo.png"', f'href="{data_uri}"'),
+                    ]
+                    
+                    for old, new in replacements:
+                        count = html_content.count(old)
+                        if count > 0:
+                            html_content = html_content.replace(old, new)
+                            print(f"[LOGO] Replaced {count} occurrence(s) of: {old[:50]}")
+                    
+                    # Verify replacement worked
+                    if 'src="/static/images/SKFS_logo.png"' in html_content or 'src="SKFS_logo.png"' in html_content:
+                        print("[LOGO] WARNING: Some logo references were NOT replaced!")
+                    else:
+                        print("[LOGO] SUCCESS: All logo references replaced with data URI")
+                        
             except Exception as e:
-                print(f"Error converting logo: {e}")
+                print(f"[LOGO] ERROR converting logo: {e}")
+                import traceback
+                traceback.print_exc()
                 # Fallback: keep original path
+        else:
+            print(f"[LOGO] ERROR: Logo file not found at {logo_path}")
         
         return HTMLResponse(content=html_content)
         
@@ -904,16 +994,46 @@ def get_daily_sales_report_docx(
         # Convert logo to base64 data URI for reliable display in popup windows
         import base64
         logo_path = Path(__file__).resolve().parent.parent / "templates" / "SKFS_logo.png"
+        print(f"[LOGO] Checking logo path: {logo_path}")
+        print(f"[LOGO] Logo exists: {logo_path.exists()}")
+        
         if logo_path.exists():
             try:
                 with open(logo_path, 'rb') as img_file:
-                    img_data = base64.b64encode(img_file.read()).decode('utf-8')
-                    # Replace all logo references with data URI
-                    html_content = html_content.replace('src="/static/images/SKFS_logo.png"', f'src="data:image/png;base64,{img_data}"')
-                    html_content = html_content.replace('src="SKFS_logo.png"', f'src="data:image/png;base64,{img_data}"')
+                    img_bytes = img_file.read()
+                    img_data = base64.b64encode(img_bytes).decode('utf-8')
+                    data_uri = f'data:image/png;base64,{img_data}'
+                    print(f"[LOGO] Successfully converted logo to base64 (size: {len(img_data)} chars)")
+                    
+                    # Replace ALL possible logo reference patterns
+                    replacements = [
+                        ('src="/static/images/SKFS_logo.png"', f'src="{data_uri}"'),
+                        ('src="SKFS_logo.png"', f'src="{data_uri}"'),
+                        ("src='/static/images/SKFS_logo.png'", f'src="{data_uri}"'),
+                        ("src='SKFS_logo.png'", f'src="{data_uri}"'),
+                        ('href="/static/images/SKFS_logo.png"', f'href="{data_uri}"'),
+                        ('href="SKFS_logo.png"', f'href="{data_uri}"'),
+                    ]
+                    
+                    for old, new in replacements:
+                        count = html_content.count(old)
+                        if count > 0:
+                            html_content = html_content.replace(old, new)
+                            print(f"[LOGO] Replaced {count} occurrence(s) of: {old[:50]}")
+                    
+                    # Verify replacement worked
+                    if 'src="/static/images/SKFS_logo.png"' in html_content or 'src="SKFS_logo.png"' in html_content:
+                        print("[LOGO] WARNING: Some logo references were NOT replaced!")
+                    else:
+                        print("[LOGO] SUCCESS: All logo references replaced with data URI")
+                        
             except Exception as e:
-                print(f"Error converting logo: {e}")
+                print(f"[LOGO] ERROR converting logo: {e}")
+                import traceback
+                traceback.print_exc()
                 # Fallback: keep original path
+        else:
+            print(f"[LOGO] ERROR: Logo file not found at {logo_path}")
         
         return HTMLResponse(content=html_content)
         
