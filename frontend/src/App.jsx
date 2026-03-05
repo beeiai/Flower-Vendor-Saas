@@ -1436,7 +1436,8 @@ export default function App() {
         )}
         {activeSection === 'sms-single' && customers !== undefined && (
           <SmsSingle 
-            customers={customers} 
+            customers={customers}
+            groups={groups}
             onCancel={() => setActiveSection('daily')} 
             showNotify={showNotify} 
           />

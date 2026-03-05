@@ -16,7 +16,7 @@ import {
 } from 'lucide-react';
 import { api } from '../../utils/api'; // Import real backend API
 
-const SmsSingle = ({ customers = [], onCancel, showNotify }) => {
+const SmsSingle = ({ customers = [], groups = [], onCancel, showNotify }) => {
   const [state, setState] = useState({
     selectedGroup: '',
     selectedCustomer: '',
@@ -82,10 +82,16 @@ const SmsSingle = ({ customers = [], onCancel, showNotify }) => {
     setState(prev => ({ ...prev, toDate: value }));
   }, []);
 
-  const groups = useMemo(() => {
+  // Use groups from props if available, otherwise derive from customers
+  const groupsList = useMemo(() => {
+    // If groups prop is provided and not empty, use it
+    if (groups && Array.isArray(groups) && groups.length > 0) {
+      return groups.map(g => g.name);
+    }
+    // Otherwise derive from customers
     if (!customers || !Array.isArray(customers)) return [];
     return [...new Set(customers.map(c => c.group).filter(Boolean))];
-  }, [customers]);
+  }, [customers, groups]);
 
   const filteredCustomers = useMemo(() => {
     if (!customers || !Array.isArray(customers)) return [];
@@ -247,7 +253,7 @@ const SmsSingle = ({ customers = [], onCancel, showNotify }) => {
                 className="w-full border border-slate-200 rounded-xl px-4 py-2.5 bg-slate-50 focus:ring-2 focus:ring-indigo-100 outline-none transition-all appearance-none"
               >
                 <option value="">-- Select Group --</option>
-                {groups.map(g => <option key={g} value={g}>{g}</option>)}
+                {groupsList.map(g => <option key={g} value={g}>{g}</option>)}
               </select>
             </div>
 
