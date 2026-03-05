@@ -376,12 +376,19 @@ export const api = {
 
   // SMS Module APIs
   sendSms: async (payload) => {
+    const requestBody = {
+      phone: payload.phoneNumber,
+      message: payload.message || ''
+    };
+    
+    // Add template variables for DLT compliance if provided
+    if (payload.templateVariables) {
+      requestBody.template_variables = payload.templateVariables;
+    }
+    
     const result = await request('/sms/send', { 
       method: 'POST', 
-      body: JSON.stringify({
-        phone: payload.phoneNumber,
-        message: payload.message
-      })
+      body: JSON.stringify(requestBody)
     });
     return result;
   },

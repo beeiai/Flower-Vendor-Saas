@@ -10,7 +10,7 @@ from app.models.vendor import Vendor
 
 from app.utils.serializer import serialize_model
 from app.services.sms_service import send_sms
-from app.services.sms_templates import settlement_template
+from app.services.sms_templates import settlement_template, get_settlement_dlt_variables
 from app.services.pdf_service import generate_settlement_pdf
 
 
@@ -189,7 +189,8 @@ def calculate_settlement(
     # -------------------------------------------------
     # 1️⃣3️⃣ SMS notification
     # -------------------------------------------------
-    message = settlement_template(
+    # Prepare DLT template variables
+    dlt_variables = get_settlement_dlt_variables(
         farmer_name=farmer.name,
         date_from=str(date_from),
         date_to=str(date_to),
@@ -197,13 +198,16 @@ def calculate_settlement(
         advance_deducted=float(advance_deducted),
     )
 
+    # For DLT compliance, message parameter can be ignored when using template_variables
+    # The actual template is configured in environment variables
     send_sms(
         db=db,
         vendor_id=vendor_id,
         farmer_id=farmer.id,
         phone=farmer.phone,
-        message=message,
+        message="settlement",  # This will be ignored in DLT mode
         sms_type="settlement",
+        template_variables=dlt_variables,
     )
 
     return settlement

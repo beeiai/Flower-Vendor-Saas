@@ -58,6 +58,9 @@ class Settings(BaseModel):
     SMS_API_URL: str | None = None
     SMS_API_KEY: str | None = None
     SMS_SENDER_ID: str | None = None
+    SMS_ENTITY_ID: str | None = None
+    SMS_TEMPLATE_ID: str | None = None
+    SMS_DLT_ROUTE: str = "dlt"
     SMS_MAX_RETRY: int = 3
 
     # =========================
@@ -139,6 +142,9 @@ settings = Settings(
     SMS_API_URL=os.getenv("SMS_API_URL"),
     SMS_API_KEY=os.getenv("SMS_API_KEY"),
     SMS_SENDER_ID=os.getenv("SMS_SENDER_ID"),
+    SMS_ENTITY_ID=os.getenv("SMS_ENTITY_ID"),
+    SMS_TEMPLATE_ID=os.getenv("SMS_TEMPLATE_ID"),
+    SMS_DLT_ROUTE=os.getenv("SMS_DLT_ROUTE", "dlt"),
     SMS_MAX_RETRY=int(os.getenv("SMS_MAX_RETRY", "3")),
 
     CORS_ALLOWED_ORIGINS=os.getenv("CORS_ALLOWED_ORIGINS", Settings.model_fields["CORS_ALLOWED_ORIGINS"].default),

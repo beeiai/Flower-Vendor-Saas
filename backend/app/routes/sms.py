@@ -18,19 +18,32 @@ def send_single_sms(
     message: str,
     vendor_id: Optional[int] = None,
     farmer_id: Optional[int] = None,
+    template_variables: Optional[dict] = None,
     current_user: User = Depends(get_current_user),
     db: Session = Depends(get_db)
 ):
     """
     Send a single SMS to a specified phone number with a custom message
+    
+    For DLT-compliant SMS:
+    - The 'message' parameter should contain the values for template variables
+    - template_variables should be a dict with variable names and values
+    - The actual template is pre-configured in environment variables
+    
+    Example for DLT:
+    {
+        "phone": "9876543210",
+        "message": "Gowtham",  // This can be ignored if using template_variables
+        "template_variables": {
+            "customer_name": "Gowtham",
+            "amount": "1000"
+        }
+    }
     """
     try:
         # Validate inputs
         if not phone or len(phone.strip()) == 0:
             raise HTTPException(status_code=400, detail="Phone number is required")
-        
-        if not message or len(message.strip()) == 0:
-            raise HTTPException(status_code=400, detail="Message is required")
         
         # If vendor_id is not provided, try to infer from current user
         if not vendor_id:
@@ -48,7 +61,8 @@ def send_single_sms(
             phone=phone,
             message=message,
             sms_type="single_message",
-            farmer_id=farmer_id
+            farmer_id=farmer_id,
+            template_variables=template_variables
         )
         
         return {"success": True, "message": "SMS sent successfully", "log_id": sms_log.id}
