@@ -642,15 +642,25 @@ function SaalaTransactionTab({ customers, catalog, showNotify, setDropdownOpen }
     }
 
     let cancelled = false;
-    (async () => {
+    
+    const fetchTransactions = async () => {
       try {
+        console.log('[SaalaTransaction] Fetching transactions for customer:', selectedCustomerId);
         const [txns, summ] = await Promise.all([
           api.listSaalaTransactions(selectedCustomerId),
           api.getSaalaCustomerSummary(selectedCustomerId)
         ]);
-        if (cancelled) return;
-        console.log('Fetched transactions:', txns);
-        setTransactions(txns);
+        
+        if (cancelled) {
+          console.log('[SaalaTransaction] Request cancelled for customer:', selectedCustomerId);
+          return;
+        }
+        
+        console.log('[SaalaTransaction] Fetched transactions:', txns);
+        console.log('[SaalaTransaction] Transaction count:', txns.length);
+        
+        // Ensure we're setting fresh arrays, not references
+        setTransactions([...txns]);
         // Map API response to expected frontend format
         setSummary({
           totalCredit: summ.total_amount,
@@ -658,15 +668,35 @@ function SaalaTransactionTab({ customers, catalog, showNotify, setDropdownOpen }
           balance: summ.current_balance
         });
       } catch (e) {
-        showNotify?.(`Failed to load data: ${e.message}`, 'error');
+        if (!cancelled) {
+          showNotify?.(`Failed to load data: ${e.message}`, 'error');
+        }
       }
-    })();
-    return () => { cancelled = true; };
+    };
+    
+    fetchTransactions();
+    
+    return () => { 
+      cancelled = true;
+      console.log('[SaalaTransaction] Cleanup for customer:', selectedCustomerId);
+    };
   }, [selectedCustomerId]);
 
   const handleCustomerSelect = (name) => {
+    console.log('[SaalaTransaction] Customer selected:', name);
     const customer = customers.find(c => c.name === name);
-    setSelectedCustomerId(customer?.id || null);
+    console.log('[SaalaTransaction] Customer object:', customer);
+    
+    // Only update if customer ID is different to prevent unnecessary re-renders
+    setSelectedCustomerId(prevId => {
+      if (prevId === customer?.id) {
+        console.log('[SaalaTransaction] Same customer selected, skipping update');
+        return prevId;
+      }
+      console.log('[SaalaTransaction] Setting new customer ID:', customer?.id);
+      return customer?.id || null;
+    });
+    
     // Reset entry form
     setCurrentEntry({
       id: null,
@@ -755,12 +785,26 @@ function SaalaTransactionTab({ customers, catalog, showNotify, setDropdownOpen }
         console.log('Updated transaction response:', updated);
         // Merge API response with the original payload to ensure all fields are correctly updated
         const mergedData = { ...payload, ...updated };
-        setTransactions(transactions.map(t => t.id === currentEntry.id ? { ...t, ...mergedData } : t));
+        setTransactions(prevTransactions => {
+          const newTransactions = prevTransactions.map(t => t.id === currentEntry.id ? { ...t, ...mergedData } : t);
+          console.log('[SaalaTransaction] Updated transactions:', newTransactions);
+          return newTransactions;
+        });
         showNotify?.('Transaction updated', 'success');
       } else {
         const created = await api.createSaalaTransaction(selectedCustomerId, payload);
         console.log('Created transaction response:', created);
-        setTransactions([created, ...transactions]);
+        setTransactions(prevTransactions => {
+          // Check for duplicates before adding
+          const exists = prevTransactions.some(t => t.id === created.id);
+          if (exists) {
+            console.warn('[SaalaTransaction] Transaction already exists, skipping add:', created.id);
+            return prevTransactions;
+          }
+          const newTransactions = [created, ...prevTransactions];
+          console.log('[SaalaTransaction] Added new transaction. Total count:', newTransactions.length);
+          return newTransactions;
+        });
         showNotify?.('Transaction added', 'success');
       }
 
@@ -819,7 +863,11 @@ function SaalaTransactionTab({ customers, catalog, showNotify, setDropdownOpen }
     if (!confirm('Delete this transaction?')) return;
     try {
       await api.deleteSaalaTransaction(id);
-      setTransactions(transactions.filter(t => t.id !== id));
+      setTransactions(prevTransactions => {
+        const newTransactions = prevTransactions.filter(t => t.id !== id);
+        console.log('[SaalaTransaction] Deleted transaction. Remaining count:', newTransactions.length);
+        return newTransactions;
+      });
       const summ = await api.getSaalaCustomerSummary(selectedCustomerId);
       // Map API response to expected frontend format
       setSummary({
@@ -1061,6 +1109,13 @@ function SaalaTransactionTab({ customers, catalog, showNotify, setDropdownOpen }
                 </tr>
               ) : (
                 transactions.map((txn, idx) => {
+                  // Debug logging for duplicate detection
+                  if (idx === 0) {
+                    console.log('[SaalaTransaction] Rendering transactions table. Total count:', transactions.length);
+                    console.log('[SaalaTransaction] First transaction:', txn);
+                    console.log('[SaalaTransaction] Last transaction:', transactions[transactions.length - 1]);
+                  }
+                  
                   const total = Number(txn.total_amount || txn.totalAmount || 0);
                   const paid = Number(txn.paid_amount || txn.paidAmount || 0);
                   const remaining = total - paid;
