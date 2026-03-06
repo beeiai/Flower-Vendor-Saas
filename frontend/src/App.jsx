@@ -32,7 +32,6 @@ function GroupCustomerRegistryForm({ title = 'ADD GROUP', initialTab = 'group', 
   const [tab, setTab] = useState(initialTab);
   const [groupName, setGroupName] = useState('');
   const [groupError, setGroupError] = useState('');
-  const [selectedGroupForDelete, setSelectedGroupForDelete] = useState(null);
   const [custForm, setCustForm] = useState({ groupName: '', name: '', contact: '', address: '' });
   const [custError, setCustError] = useState('');
   const [phoneError, setPhoneError] = useState('');
@@ -80,35 +79,8 @@ function GroupCustomerRegistryForm({ title = 'ADD GROUP', initialTab = 'group', 
         document.querySelector('input[placeholder="Enter group name"]')?.focus();
       }, 100);
     } catch (e) {
-      // Handle duplicate group error from API
-      if (e.status === 409 || (e.message && e.message.toLowerCase().includes('already exists'))) {
-        setGroupError('Group already exists.');
-        showNotify?.('Group already exists.', 'error');
-      } else {
-        setGroupError(e.message);
-        showNotify?.(`Group add failed: ${e.message}`, 'error');
-      }
-    }
-  };
-
-  const deleteGroup = async () => {
-    if (!selectedGroupForDelete) {
-      showNotify?.('Please select a group to delete.', 'error');
-      return;
-    }
-    
-    // Show confirmation dialog
-    const confirmed = window.confirm('Are you sure you want to delete this group?');
-    if (!confirmed) return;
-    
-    try {
-      await api.deleteGroup(selectedGroupForDelete.id);
-      setGroups(prev => prev.filter(g => g.id !== selectedGroupForDelete.id));
-      setSelectedGroupForDelete(null);
-      setGroupName('');
-      showNotify?.('Group deleted successfully.', 'success');
-    } catch (e) {
-      showNotify?.(`Failed to delete group: ${e.message}`, 'error');
+      setGroupError(e.message);
+      showNotify?.(`Group add failed: ${e.message}`, 'error');
     }
   };
 
@@ -116,8 +88,10 @@ function GroupCustomerRegistryForm({ title = 'ADD GROUP', initialTab = 'group', 
     // Remove any non-digit characters
     const digitsOnly = phone.replace(/\D/g, '');
     // Check if exactly 10 digits
-    if (digitsOnly.length === 0) return true; // Allow empty
-    return digitsOnly.length === 10;
+    if (digitsOnly.length > 0 && digitsOnly.length !== 10) {
+      return false;
+    }
+    return true;
   };
 
   const addCustomer = async () => {
@@ -136,13 +110,6 @@ function GroupCustomerRegistryForm({ title = 'ADD GROUP', initialTab = 'group', 
     if (!name) {
       setCustError('Enter customer name');
       showNotify?.('Customer add failed: Enter customer name', 'error');
-      return;
-    }
-    
-    // Check for duplicate customer in the same group
-    if (checkCustomerExists(name, groupName)) {
-      setCustError('Customer already exists.');
-      showNotify?.('Customer already exists.', 'error');
       return;
     }
     
@@ -169,39 +136,8 @@ function GroupCustomerRegistryForm({ title = 'ADD GROUP', initialTab = 'group', 
         document.querySelector('[data-enter="2"]')?.focus();
       }, 100);
     } catch (e) {
-      // Handle duplicate customer error from API
-      if (e.status === 409 || (e.message && e.message.toLowerCase().includes('already exists'))) {
-        setCustError('Customer already exists.');
-        showNotify?.('Customer already exists.', 'error');
-      } else {
-        setCustError(e.message);
-        showNotify?.(`Customer add failed: ${e.message}`, 'error');
-      }
-    }
-  };
-
-  const deleteCustomer = async () => {
-    // Find customer by name and group
-    const customerToDelete = customers.find(
-      c => c.name === custForm.name && c.group === custForm.groupName
-    );
-    
-    if (!customerToDelete) {
-      showNotify?.('No customer found to delete. Please ensure the customer exists.', 'error');
-      return;
-    }
-    
-    // Show confirmation dialog
-    const confirmed = window.confirm('Are you sure you want to delete this customer?');
-    if (!confirmed) return;
-    
-    try {
-      await api.deleteCustomer(customerToDelete.id);
-      setCustomers(prev => prev.filter(c => c.id !== customerToDelete.id));
-      setCustForm({ groupName: '', name: '', contact: '', address: '' });
-      showNotify?.('Customer deleted successfully.', 'success');
-    } catch (e) {
-      showNotify?.(`Failed to delete customer: ${e.message}`, 'error');
+      setCustError(e.message);
+      showNotify?.(`Customer add failed: ${e.message}`, 'error');
     }
   };
 
@@ -223,54 +159,32 @@ function GroupCustomerRegistryForm({ title = 'ADD GROUP', initialTab = 'group', 
         {tab === 'group' && (
           <div className="space-y-6">
             <div className="bg-slate-50/50 p-4 rounded-xl border border-slate-200">
-              <div className="relative">
-                <SearchableSelect
-                  label="Group Name"
-                  options={groups.map(g => g.name)}
-                  value={groupName}
-                  onChange={(val) => { 
-                    setGroupName(val); 
-                    setGroupError('');
-                    // Find and set selected group for deletion
-                    const group = groups.find(g => g.name === val);
-                    setSelectedGroupForDelete(group || null);
-                  }}
-                  placeholder="Enter group name"
-                  data-enter="1"
-                  className="focus:border-rose-500 focus:ring-rose-500/20 rounded-lg shadow-sm hover:shadow-md transition-all border-rose-200"
-                  onKeyDown={e => {
-                    if (e.key === 'Enter') { e.preventDefault(); document.querySelector('[data-enter="2"]')?.focus(); }
-                  }}
-                />
-                <div className="absolute right-3 top-8 text-slate-700">
-                  <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
-                  </svg>
-                </div>
-              </div>
+              <label className="text-xs font-bold uppercase text-slate-600 tracking-widest block mb-2">Group Name</label>
+              <input
+                type="text"
+                className={`w-full border border-rose-200 rounded-lg px-4 py-3 text-sm font-medium bg-white outline-none focus:border-rose-500 focus:ring-2 focus:ring-rose-500/20 shadow-sm hover:shadow-md transition-all ${groupError ? 'border-red-500' : ''}`}
+                style={{height: '46px'}}
+                value={groupName}
+                onChange={e => { 
+                  setGroupName(e.target.value); 
+                  setGroupError('');
+                }}
+                placeholder="Enter group name"
+                data-enter="1"
+                onKeyDown={e => {
+                  if (e.key === 'Enter') { e.preventDefault(); document.querySelector('[data-enter="2"]')?.focus(); }
+                }}
+              />
               {groupError && <div className="text-xs text-red-600 mt-1 font-semibold">{groupError}</div>}
             </div>
-            <div className="grid grid-cols-2 gap-4">
-              <button
-                data-action="primary"
-                onClick={addGroup}
-                className="bg-gradient-to-r from-[#5B55E6] to-[#4A44D0] text-white py-3 font-bold uppercase text-sm shadow-lg hover:from-[#4A44D0] hover:to-[#3A34C0] rounded-xl transition-all hover:shadow-xl active:translate-y-0.5"
-                style={{height: '48px'}}
-                data-enter="2"
-                onKeyDown={e => { if (e.key === 'Enter') { e.preventDefault(); document.querySelector('[data-enter="1"]')?.focus(); } }}
-              >Add Group</button>
-              <button
-                type="button"
-                onClick={deleteGroup}
-                disabled={!selectedGroupForDelete}
-                className="bg-gradient-to-r from-rose-600 to-rose-700 text-white py-3 font-bold uppercase text-sm shadow-lg hover:from-rose-700 hover:to-rose-800 rounded-xl transition-all hover:shadow-xl active:translate-y-0.5 disabled:opacity-50 disabled:cursor-not-allowed"
-                style={{height: '48px'}}
-                title={!selectedGroupForDelete ? 'Please enter a group name to delete' : 'Delete this group'}
-              >
-                <Trash2 className="w-4 h-4 inline mr-2" />
-                Delete Group
-              </button>
-            </div>
+            <button
+              data-action="primary"
+              onClick={addGroup}
+              className="w-full bg-gradient-to-r from-[#5B55E6] to-[#4A44D0] text-white py-3 font-bold uppercase text-sm shadow-lg hover:from-[#4A44D0] hover:to-[#3A34C0] rounded-xl transition-all hover:shadow-xl active:translate-y-0.5"
+              style={{height: '48px'}}
+              data-enter="2"
+              onKeyDown={e => { if (e.key === 'Enter') { e.preventDefault(); document.querySelector('[data-enter="1"]')?.focus(); } }}
+            >Add Group</button>
           </div>
         )}
 
@@ -298,28 +212,19 @@ function GroupCustomerRegistryForm({ title = 'ADD GROUP', initialTab = 'group', 
               </div>
             </div>
             <div className="bg-slate-50/50 p-4 rounded-xl border border-slate-200">
-              <div className="relative">
-                <SearchableSelect
-                  label="Customer Name"
-                  options={customers.map(c => c.name)}
-                  value={custForm.name}
-                  onChange={(val) => { 
-                    setCustForm({ ...custForm, name: val }); 
-                    setCustError('');
-                  }}
-                  placeholder="Enter customer name"
-                  data-enter="2"
-                  className="focus:border-rose-500 focus:ring-rose-500/20 rounded-lg shadow-sm hover:shadow-md transition-all border-rose-200"
-                  onKeyDown={e => {
-                    if (e.key === 'Enter') { e.preventDefault(); document.querySelector('[data-enter="3"]')?.focus(); }
-                  }}
-                />
-                <div className="absolute right-3 top-8 text-slate-700">
-                  <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
-                  </svg>
-                </div>
-              </div>
+              <label className="text-xs font-bold uppercase text-slate-600 tracking-widest block mb-2">Customer Name</label>
+              <input
+                type="text"
+                className={`w-full border border-rose-200 rounded-lg px-4 py-3 text-sm font-medium bg-white outline-none focus:border-rose-500 focus:ring-2 focus:ring-rose-500/20 shadow-sm hover:shadow-md transition-all ${custError && !custForm.name ? 'border-red-500' : ''}`}
+                style={{height: '46px'}}
+                value={custForm.name}
+                onChange={e => { setCustForm({ ...custForm, name: e.target.value }); setCustError(''); }}
+                placeholder="Enter customer name"
+                data-enter="2"
+                onKeyDown={e => {
+                  if (e.key === 'Enter') { e.preventDefault(); document.querySelector('[data-enter="3"]')?.focus(); }
+                }}
+              />
               {custError && !custForm.name && <div className="text-xs text-red-600 mt-1 font-semibold">{custError}</div>}
             </div>
             <div className="grid grid-cols-2 gap-4">
@@ -359,35 +264,231 @@ function GroupCustomerRegistryForm({ title = 'ADD GROUP', initialTab = 'group', 
                 />
               </div>
             </div>
+            <button
+              data-action="primary"
+              onClick={addCustomer}
+              className="w-full bg-gradient-to-r from-[#5B55E6] to-[#4A44D0] text-white py-3 font-bold uppercase text-sm shadow-lg hover:from-[#4A44D0] hover:to-[#3A34C0] rounded-xl transition-all hover:shadow-xl active:translate-y-0.5"
+              style={{height: '48px'}}
+              data-enter="5"
+              onKeyDown={e => { 
+                if (e.key === 'Enter') { 
+                  e.preventDefault(); 
+                  addCustomer(); 
+                } 
+              }}
+            >Add Customer</button>
+            {custError && custForm.name && <div className="text-xs text-red-600 mt-2 font-semibold">{custError}</div>}
+          </div>
+        )}
+          </div>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+function DeleteGroupCustomer({ groups, setGroups, customers, setCustomers, onCancel, showNotify }) {
+  const [selectedGroup, setSelectedGroup] = useState('');
+  const [selectedCustomer, setSelectedCustomer] = useState('');
+  const [error, setError] = useState('');
+
+  // Filter customers by selected group
+  const filteredCustomers = useMemo(() => {
+    if (!selectedGroup) return [];
+    return customers.filter(c => c.group === selectedGroup);
+  }, [customers, selectedGroup]);
+
+  const handleDeleteCustomer = async () => {
+    if (!selectedGroup) {
+      setError('Please select a group first.');
+      showNotify?.('Please select a group first.', 'error');
+      return;
+    }
+    if (!selectedCustomer) {
+      setError('Please select a customer to delete.');
+      showNotify?.('Please select a customer to delete.', 'error');
+      return;
+    }
+
+    const confirmed = window.confirm('Are you sure you want to delete this customer?');
+    if (!confirmed) return;
+
+    try {
+      // Find customer by name and group (case-insensitive)
+      const customerToDelete = customers.find(
+        c => c.name.toLowerCase().trim() === selectedCustomer.toLowerCase().trim() &&
+             c.group.toLowerCase().trim() === selectedGroup.toLowerCase().trim()
+      );
+
+      if (!customerToDelete) {
+        showNotify?.('Customer not found.', 'error');
+        return;
+      }
+
+      await api.deleteCustomer(customerToDelete.id);
+      setCustomers(prev => prev.filter(c => c.id !== customerToDelete.id));
+      setSelectedCustomer('');
+      showNotify?.('Customer deleted successfully.', 'success');
+    } catch (e) {
+      showNotify?.(`Failed to delete customer: ${e.message}`, 'error');
+    }
+  };
+
+  const handleDeleteGroup = async () => {
+    if (!selectedGroup) {
+      setError('Please select a group to delete.');
+      showNotify?.('Please select a group to delete.', 'error');
+      return;
+    }
+
+    const confirmed = window.confirm('Are you sure you want to delete this group and all customers inside it?');
+    if (!confirmed) return;
+
+    try {
+      // Find group by name
+      const groupToDelete = groups.find(g => g.name === selectedGroup);
+      
+      if (!groupToDelete) {
+        showNotify?.('Group not found.', 'error');
+        return;
+      }
+
+      // Check if group has customers
+      const groupCustomers = customers.filter(c => c.group === selectedGroup);
+      if (groupCustomers.length > 0) {
+        const confirmWithCustomers = window.confirm(
+          `This group has ${groupCustomers.length} customer(s). Deleting the group will also delete all customers inside it. Continue?`
+        );
+        if (!confirmWithCustomers) return;
+
+        // Delete all customers in the group first
+        for (const customer of groupCustomers) {
+          try {
+            await api.deleteCustomer(customer.id);
+          } catch (err) {
+            console.error('Failed to delete customer:', err);
+          }
+        }
+        setCustomers(prev => prev.filter(c => c.group !== selectedGroup));
+      }
+
+      // Delete the group
+      await api.deleteGroup(groupToDelete.id);
+      setGroups(prev => prev.filter(g => g.id !== groupToDelete.id));
+      setSelectedGroup('');
+      setSelectedCustomer('');
+      showNotify?.('Group and all its customers deleted successfully.', 'success');
+    } catch (e) {
+      showNotify?.(`Failed to delete group: ${e.message}`, 'error');
+    }
+  };
+
+  return (
+    <div className="flex-1 flex flex-col h-full bg-gradient-to-br from-slate-50 to-slate-100 overflow-hidden">
+      <div className="bg-gradient-to-r from-[#5B55E6] to-[#4A44D0] px-5 py-3 flex justify-between items-center text-white shrink-0 shadow-xl rounded-b-xl">
+        <h1 className="text-base font-bold uppercase flex items-center gap-2.5 tracking-wider"><Trash2 className="w-5 h-5 text-white" /> Delete Customer / Group</h1>
+        <button data-action="secondary" onClick={onCancel} className="p-1.5 rounded-lg hover:bg-white/20 transition-all"><X className="w-5 h-5" /></button>
+      </div>
+
+      <div className="p-6 flex-1 overflow-auto">
+        <div className="max-w-[760px] mx-auto bg-white border border-slate-200 shadow-xl rounded-2xl overflow-hidden">
+          <div className="p-6 space-y-6">
+            {/* Select Group */}
+            <div className="bg-slate-50/50 p-4 rounded-xl border border-slate-200">
+              <div className="relative">
+                <SearchableSelect
+                  label="Select Group"
+                  options={groups.map(g => g.name)}
+                  value={selectedGroup}
+                  onChange={(val) => { 
+                    setSelectedGroup(val); 
+                    setSelectedCustomer('');
+                    setError('');
+                  }}
+                  placeholder="Type to search groups..."
+                  data-enter="1"
+                  className="focus:border-rose-500 focus:ring-rose-500/20 rounded-lg shadow-sm hover:shadow-md transition-all border-rose-200"
+                  onKeyDown={e => {
+                    if (e.key === 'Enter') { e.preventDefault(); document.querySelector('[data-enter="2"]')?.focus(); }
+                  }}
+                />
+                <div className="absolute right-3 top-8 text-slate-700">
+                  <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
+                  </svg>
+                </div>
+              </div>
+              {error && !selectedGroup && <div className="text-xs text-red-600 mt-2 font-semibold">{error}</div>}
+            </div>
+
+            {/* Select Customer */}
+            <div className="bg-slate-50/50 p-4 rounded-xl border border-slate-200">
+              <div className="relative">
+                <SearchableSelect
+                  label="Select Customer"
+                  options={filteredCustomers.map(c => c.name)}
+                  value={selectedCustomer}
+                  onChange={(val) => { 
+                    setSelectedCustomer(val); 
+                    setError('');
+                  }}
+                  placeholder={selectedGroup ? "Type to search customers..." : "Select a group first"}
+                  disabled={!selectedGroup}
+                  data-enter="2"
+                  className="focus:border-rose-500 focus:ring-rose-500/20 rounded-lg shadow-sm hover:shadow-md transition-all border-rose-200"
+                  onKeyDown={e => {
+                    if (e.key === 'Enter') { e.preventDefault(); handleDeleteCustomer(); }
+                  }}
+                />
+                <div className="absolute right-3 top-8 text-slate-700">
+                  <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
+                  </svg>
+                </div>
+              </div>
+              {error && !selectedCustomer && selectedGroup && <div className="text-xs text-red-600 mt-2 font-semibold">{error}</div>}
+            </div>
+
+            {/* Action Buttons */}
             <div className="grid grid-cols-2 gap-4">
               <button
-                data-action="primary"
-                onClick={addCustomer}
-                className="bg-gradient-to-r from-[#5B55E6] to-[#4A44D0] text-white py-3 font-bold uppercase text-sm shadow-lg hover:from-[#4A44D0] hover:to-[#3A34C0] rounded-xl transition-all hover:shadow-xl active:translate-y-0.5"
-                style={{height: '48px'}}
-                data-enter="5"
-                onKeyDown={e => { 
-                  if (e.key === 'Enter') { 
-                    e.preventDefault(); 
-                    addCustomer(); 
-                  } 
-                }}
-              >Add Customer</button>
-              <button
                 type="button"
-                onClick={deleteCustomer}
-                disabled={!custForm.name || !custForm.groupName}
+                onClick={handleDeleteCustomer}
+                disabled={!selectedCustomer || !selectedGroup}
                 className="bg-gradient-to-r from-rose-600 to-rose-700 text-white py-3 font-bold uppercase text-sm shadow-lg hover:from-rose-700 hover:to-rose-800 rounded-xl transition-all hover:shadow-xl active:translate-y-0.5 disabled:opacity-50 disabled:cursor-not-allowed"
                 style={{height: '48px'}}
-                title={!custForm.name || !custForm.groupName ? 'Please enter customer name and select group to delete' : 'Delete this customer'}
+                title={!selectedCustomer || !selectedGroup ? 'Please select both group and customer' : 'Delete selected customer'}
               >
                 <Trash2 className="w-4 h-4 inline mr-2" />
                 Delete Customer
               </button>
+              <button
+                type="button"
+                onClick={handleDeleteGroup}
+                disabled={!selectedGroup}
+                className="bg-gradient-to-r from-orange-600 to-orange-700 text-white py-3 font-bold uppercase text-sm shadow-lg hover:from-orange-700 hover:to-orange-800 rounded-xl transition-all hover:shadow-xl active:translate-y-0.5 disabled:opacity-50 disabled:cursor-not-allowed"
+                style={{height: '48px'}}
+                title={!selectedGroup ? 'Please select a group' : 'Delete entire group with all customers'}
+              >
+                <Trash2 className="w-4 h-4 inline mr-2" />
+                Delete Entire Group
+              </button>
             </div>
-            {custError && custForm.name && <div className="text-xs text-red-600 mt-2 font-semibold">{custError}</div>}
-          </div>
-        )}
+
+            {/* Info Box */}
+            <div className="bg-blue-50 border border-blue-200 rounded-xl p-4">
+              <div className="flex items-start gap-3">
+                <Info className="w-5 h-5 text-blue-600 shrink-0 mt-0.5" />
+                <div className="text-sm text-blue-800">
+                  <p className="font-semibold mb-1">Deletion Information:</p>
+                  <ul className="list-disc list-inside space-y-1 text-blue-700">
+                    <li><strong>Delete Customer:</strong> Removes only the selected customer from the group</li>
+                    <li><strong>Delete Entire Group:</strong> Removes the group and ALL customers inside it</li>
+                    <li>This action cannot be undone</li>
+                  </ul>
+                </div>
+              </div>
+            </div>
           </div>
         </div>
       </div>
@@ -1291,6 +1392,7 @@ export default function App() {
         return [
           { id: 'daily', l: 'Daily Transaction', i: Receipt }, 
           { id: 'group-reg', l: 'New Group', i: FolderPlus }, 
+          { id: 'delete-group-customer', l: 'Delete Customer / Group', i: Trash2 },
           { id: 'item-reg', l: 'New Item', i: PackagePlus },
           { id: 'party', l: 'Party Details', i: Users },
           { id: 'vehicle', l: 'Extra Vehicle', i: Truck }
@@ -1499,6 +1601,7 @@ export default function App() {
                 {[ 
                   { id: 'daily', l: 'Daily Transaction', i: Receipt }, 
                   { id: 'group-reg', l: 'New Group', i: FolderPlus }, 
+                  { id: 'delete-group-customer', l: 'Delete Customer / Group', i: Trash2 },
                   { id: 'item-reg', l: 'New Item', i: PackagePlus },
                   { id: 'party', l: 'Party Details', i: Users },
                   { id: 'vehicle', l: 'Extra Vehicle', i: Truck }
@@ -1760,6 +1863,7 @@ export default function App() {
           }
         }} advanceStore={advanceStore} commissionPct={commissionPct} setCommissionPct={setCommissionPct} onViewReport={() => setActiveSection('reports')} totalPaidAmount={totalPaidAmount} activeSection={activeSection} />}
         {activeSection === 'group-reg' && <GroupCustomerRegistryForm title="NEW GROUP" initialTab="group" groups={groups} setGroups={setGroups} customers={customers} setCustomers={setCustomers} showNotify={showNotify} onCancel={() => setActiveSection('daily')} />}
+        {activeSection === 'delete-group-customer' && <DeleteGroupCustomer groups={groups} setGroups={setGroups} customers={customers} setCustomers={setCustomers} showNotify={showNotify} onCancel={() => setActiveSection('daily')} />}
         {activeSection === 'party' && customers !== undefined && <PartyDetailsView customers={customers} showNotify={showNotify} onCancel={() => setActiveSection('daily')} />}
         {activeSection === 'item-reg' && <ItemRegistryForm form={itemForm} setForm={setItemForm} onSave={async () => {
           try {
