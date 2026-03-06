@@ -37,6 +37,24 @@ function GroupCustomerRegistryForm({ title = 'ADD GROUP', initialTab = 'group', 
   const [custError, setCustError] = useState('');
   const [phoneError, setPhoneError] = useState('');
 
+  // Check if group name already exists (case-insensitive)
+  const checkGroupExists = (name) => {
+    if (!name) return false;
+    const lowerName = name.toLowerCase().trim();
+    return groups.some(g => g.name.toLowerCase().trim() === lowerName);
+  };
+
+  // Check if customer name already exists in the selected group (case-insensitive)
+  const checkCustomerExists = (name, groupName) => {
+    if (!name || !groupName) return false;
+    const lowerName = name.toLowerCase().trim();
+    const lowerGroup = groupName.toLowerCase().trim();
+    return customers.some(c => 
+      c.name.toLowerCase().trim() === lowerName && 
+      c.group.toLowerCase().trim() === lowerGroup
+    );
+  };
+
   const addGroup = async () => {
     setGroupError('');
     const name = String(groupName || '').trim();
@@ -45,6 +63,14 @@ function GroupCustomerRegistryForm({ title = 'ADD GROUP', initialTab = 'group', 
       showNotify?.('Group add failed: Enter group name', 'error');
       return;
     }
+    
+    // Check for duplicate
+    if (checkGroupExists(name)) {
+      setGroupError('Group already exists.');
+      showNotify?.('Group already exists.', 'error');
+      return;
+    }
+    
     try {
       const created = await api.createGroup(name);
       setGroups(prev => [...prev, created]);
@@ -54,8 +80,14 @@ function GroupCustomerRegistryForm({ title = 'ADD GROUP', initialTab = 'group', 
         document.querySelector('input[placeholder="Enter group name"]')?.focus();
       }, 100);
     } catch (e) {
-      setGroupError(e.message);
-      showNotify?.(`Group add failed: ${e.message}`, 'error');
+      // Handle duplicate group error from API
+      if (e.status === 409 || (e.message && e.message.toLowerCase().includes('already exists'))) {
+        setGroupError('Group already exists.');
+        showNotify?.('Group already exists.', 'error');
+      } else {
+        setGroupError(e.message);
+        showNotify?.(`Group add failed: ${e.message}`, 'error');
+      }
     }
   };
 
@@ -84,10 +116,8 @@ function GroupCustomerRegistryForm({ title = 'ADD GROUP', initialTab = 'group', 
     // Remove any non-digit characters
     const digitsOnly = phone.replace(/\D/g, '');
     // Check if exactly 10 digits
-    if (digitsOnly.length > 0 && digitsOnly.length !== 10) {
-      return false;
-    }
-    return true;
+    if (digitsOnly.length === 0) return true; // Allow empty
+    return digitsOnly.length === 10;
   };
 
   const addCustomer = async () => {
@@ -106,6 +136,13 @@ function GroupCustomerRegistryForm({ title = 'ADD GROUP', initialTab = 'group', 
     if (!name) {
       setCustError('Enter customer name');
       showNotify?.('Customer add failed: Enter customer name', 'error');
+      return;
+    }
+    
+    // Check for duplicate customer in the same group
+    if (checkCustomerExists(name, groupName)) {
+      setCustError('Customer already exists.');
+      showNotify?.('Customer already exists.', 'error');
       return;
     }
     
@@ -132,8 +169,14 @@ function GroupCustomerRegistryForm({ title = 'ADD GROUP', initialTab = 'group', 
         document.querySelector('[data-enter="2"]')?.focus();
       }, 100);
     } catch (e) {
-      setCustError(e.message);
-      showNotify?.(`Customer add failed: ${e.message}`, 'error');
+      // Handle duplicate customer error from API
+      if (e.status === 409 || (e.message && e.message.toLowerCase().includes('already exists'))) {
+        setCustError('Customer already exists.');
+        showNotify?.('Customer already exists.', 'error');
+      } else {
+        setCustError(e.message);
+        showNotify?.(`Customer add failed: ${e.message}`, 'error');
+      }
     }
   };
 
@@ -180,25 +223,31 @@ function GroupCustomerRegistryForm({ title = 'ADD GROUP', initialTab = 'group', 
         {tab === 'group' && (
           <div className="space-y-6">
             <div className="bg-slate-50/50 p-4 rounded-xl border border-slate-200">
-              <label className="text-xs font-bold uppercase text-slate-600 tracking-widest block mb-2">Group Name</label>
-              <input
-                type="text"
-                className={`w-full border border-rose-200 rounded-lg px-4 py-3 text-sm font-medium bg-white outline-none focus:border-rose-500 focus:ring-2 focus:ring-rose-500/20 shadow-sm hover:shadow-md transition-all ${groupError ? 'border-red-500' : ''}`}
-                style={{height: '46px'}}
-                value={groupName}
-                onChange={e => { 
-                  setGroupName(e.target.value); 
-                  setGroupError('');
-                  // Find and set selected group for deletion
-                  const group = groups.find(g => g.name === e.target.value);
-                  setSelectedGroupForDelete(group || null);
-                }}
-                placeholder="Enter group name"
-                data-enter="1"
-                onKeyDown={e => {
-                  if (e.key === 'Enter') { e.preventDefault(); document.querySelector('[data-enter="2"]')?.focus(); }
-                }}
-              />
+              <div className="relative">
+                <SearchableSelect
+                  label="Group Name"
+                  options={groups.map(g => g.name)}
+                  value={groupName}
+                  onChange={(val) => { 
+                    setGroupName(val); 
+                    setGroupError('');
+                    // Find and set selected group for deletion
+                    const group = groups.find(g => g.name === val);
+                    setSelectedGroupForDelete(group || null);
+                  }}
+                  placeholder="Enter group name"
+                  data-enter="1"
+                  className="focus:border-rose-500 focus:ring-rose-500/20 rounded-lg shadow-sm hover:shadow-md transition-all border-rose-200"
+                  onKeyDown={e => {
+                    if (e.key === 'Enter') { e.preventDefault(); document.querySelector('[data-enter="2"]')?.focus(); }
+                  }}
+                />
+                <div className="absolute right-3 top-8 text-slate-700">
+                  <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
+                  </svg>
+                </div>
+              </div>
               {groupError && <div className="text-xs text-red-600 mt-1 font-semibold">{groupError}</div>}
             </div>
             <div className="grid grid-cols-2 gap-4">
@@ -249,19 +298,28 @@ function GroupCustomerRegistryForm({ title = 'ADD GROUP', initialTab = 'group', 
               </div>
             </div>
             <div className="bg-slate-50/50 p-4 rounded-xl border border-slate-200">
-              <label className="text-xs font-bold uppercase text-slate-600 tracking-widest block mb-2">Customer Name</label>
-              <input
-                type="text"
-                className={`w-full border border-rose-200 rounded-lg px-4 py-3 text-sm font-medium bg-white outline-none focus:border-rose-500 focus:ring-2 focus:ring-rose-500/20 shadow-sm hover:shadow-md transition-all ${custError && !custForm.name ? 'border-red-500' : ''}`}
-                style={{height: '46px'}}
-                value={custForm.name}
-                onChange={e => { setCustForm({ ...custForm, name: e.target.value }); setCustError(''); }}
-                placeholder="Enter customer name"
-                data-enter="2"
-                onKeyDown={e => {
-                  if (e.key === 'Enter') { e.preventDefault(); document.querySelector('[data-enter="3"]')?.focus(); }
-                }}
-              />
+              <div className="relative">
+                <SearchableSelect
+                  label="Customer Name"
+                  options={customers.map(c => c.name)}
+                  value={custForm.name}
+                  onChange={(val) => { 
+                    setCustForm({ ...custForm, name: val }); 
+                    setCustError('');
+                  }}
+                  placeholder="Enter customer name"
+                  data-enter="2"
+                  className="focus:border-rose-500 focus:ring-rose-500/20 rounded-lg shadow-sm hover:shadow-md transition-all border-rose-200"
+                  onKeyDown={e => {
+                    if (e.key === 'Enter') { e.preventDefault(); document.querySelector('[data-enter="3"]')?.focus(); }
+                  }}
+                />
+                <div className="absolute right-3 top-8 text-slate-700">
+                  <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
+                  </svg>
+                </div>
+              </div>
               {custError && !custForm.name && <div className="text-xs text-red-600 mt-1 font-semibold">{custError}</div>}
             </div>
             <div className="grid grid-cols-2 gap-4">
