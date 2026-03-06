@@ -1596,11 +1596,24 @@ export default function App() {
   return (
     <div className="h-screen flex flex-col bg-white overflow-hidden text-slate-900 font-sans">
       <Toast message={notification.message} type={notification.type} onClose={() => setNotification({ message: '', type: 'info' })} />
-      <nav className="h-12 bg-slate-900 flex items-center px-5 shrink-0 z-[4000] border-b border-black/50 shadow-2xl navbar-element" data-navbar-element>
-        <div className="flex items-center gap-6 h-full">
-          <div ref={navRefs.logo} className="flex items-center gap-2 pr-6 border-r border-slate-700 cursor-pointer h-full navbar-element" onClick={() => setActiveSection('daily')} data-navbar-element><Flower2 className="w-5 h-5 text-primary-400" /><span className="text-sm font-bold text-white tracking-wide">SKFS ERP</span><span className="text-xs text-slate-400 font-medium">v5.0.4</span></div>
+      
+      {/* Top Navigation Bar */}
+      <nav className="h-[52px] bg-gradient-to-r from-slate-900 via-slate-800 to-slate-900 flex items-center justify-between px-6 shrink-0 z-[4000] border-b border-slate-700/50 shadow-lg navbar-element" data-navbar-element>
+        {/* Left Section - Logo & Main Menus */}
+        <div className="flex items-center gap-1 h-full">
+          {/* Logo */}
+          <div 
+            ref={navRefs.logo} 
+            className="flex items-center gap-2.5 pr-5 mr-1 border-r border-slate-600/50 cursor-pointer h-full navbar-element hover:bg-slate-800/50 rounded-lg px-3 -ml-3 transition-all duration-200" 
+            onClick={() => setActiveSection('daily')} 
+            data-navbar-element
+          >
+            <Flower2 className="w-5 h-5 text-primary-400" />
+            <span className="text-sm font-bold text-white tracking-wide">SKFS ERP</span>
+            <span className="text-xs text-slate-400 font-medium">v5.0.4</span>
+          </div>
           
-          {/* Transaction Dropdown - Controlled by activeDropdown state */}
+          {/* Transaction Dropdown */}
           <div className="relative h-full flex items-center">
             <button 
               ref={navRefs.transactionMenu} 
@@ -1611,18 +1624,24 @@ export default function App() {
                   toggleDropdown('transaction');
                 }
               }}
-              className={`flex items-center gap-2 px-4 h-full text-xs font-semibold transition-all ${activeDropdown === 'transaction' ? 'bg-white text-slate-900 shadow-xl' : 'text-slate-300 hover:text-white'} navbar-element`} 
+              className={`flex items-center gap-2 px-4 h-[40px] text-xs font-semibold rounded-lg transition-all duration-200 ${
+                activeDropdown === 'transaction' 
+                  ? 'bg-white text-slate-900 shadow-lg scale-105' 
+                  : 'text-slate-300 hover:text-white hover:bg-slate-800/50'
+              } navbar-element`} 
               data-navbar-element
               aria-expanded={activeDropdown === 'transaction'}
               aria-haspopup="true"
               aria-controls="transaction-menu"
             >
-              Transaction <ChevronDown className={`w-3.5 h-3.5 transition-transform duration-200 ${activeDropdown === 'transaction' ? 'text-slate-900 rotate-180' : 'text-slate-300'}`} />
+              Transaction 
+              <ChevronDown className={`w-3.5 h-3.5 transition-transform duration-200 ${activeDropdown === 'transaction' ? 'rotate-180' : ''}`} />
             </button>
+            
             {activeDropdown === 'transaction' && (
               <div 
                 id="transaction-menu"
-                className="absolute top-12 left-0 w-56 bg-white border border-slate-200 shadow-dropdown py-1 animate-in slide-in-from-top-2 duration-150 rounded-sm overflow-hidden z-[5000]" 
+                className="absolute top-[48px] left-0 w-60 bg-white border border-slate-200 shadow-xl py-1.5 animate-in slide-in-from-top-2 duration-200 rounded-lg overflow-hidden z-[5000]" 
                 role="menu"
                 aria-activedescendant={focusedMenuItem >= 0 ? `transaction-item-${focusedMenuItem}` : undefined}
               >
@@ -1643,12 +1662,12 @@ export default function App() {
                     }} 
                     tabIndex={-1}
                     id={`transaction-item-${index}`}
-                    className={`w-full text-left px-4 py-2.5 text-sm font-medium flex items-center gap-3 transition-colors ${
+                    className={`w-full text-left px-4 py-2.5 text-sm font-medium flex items-center gap-3 transition-all duration-150 ${
                       activeSection === item.id 
-                        ? 'bg-primary-600 text-white' 
+                        ? 'bg-gradient-to-r from-primary-600 to-primary-500 text-white shadow-md' 
                         : focusedMenuItem === index
                           ? 'bg-primary-50 text-primary-700 outline outline-2 outline-primary-300'
-                          : 'text-slate-700 hover:bg-primary-50 hover:text-primary-700'
+                          : 'text-slate-700 hover:bg-gradient-to-r hover:from-slate-50 hover:to-white hover:text-primary-700'
                     } navbar-element`} 
                     data-navbar-element
                     role="menuitem"
@@ -1662,20 +1681,33 @@ export default function App() {
             )}
           </div>
 
-          {/* Reports Button - Closes all dropdowns when clicked */}
-          <button 
-            ref={navRefs.reportsButton} 
-            onClick={() => { 
-              closeAllDropdowns(); 
-              setActiveSection('reports'); 
-            }} 
-            className={`flex items-center gap-2 px-4 h-full text-xs font-semibold transition-all ${activeSection === 'reports' ? 'bg-white text-slate-900' : 'text-slate-300 hover:text-white'} navbar-element`} 
-            data-navbar-element
-          >
-            Reports
-          </button>
+          {/* Reports Dropdown */}
+          <div className="relative h-full flex items-center">
+            <button 
+              ref={navRefs.reportsMenu} 
+              onClick={() => {
+                closeAllDropdowns();
+                setActiveSection('reports');
+              }} 
+              onKeyDown={(e) => {
+                if (e.key === 'ArrowDown' || e.key === 'Enter' || e.key === ' ') {
+                  e.preventDefault();
+                  closeAllDropdowns();
+                  setActiveSection('reports');
+                }
+              }}
+              className={`flex items-center gap-2 px-4 h-[40px] text-xs font-semibold rounded-lg transition-all duration-200 ${
+                activeSection === 'reports' 
+                  ? 'bg-white text-slate-900 shadow-lg scale-105' 
+                  : 'text-slate-300 hover:text-white hover:bg-slate-800/50'
+              } navbar-element`} 
+              data-navbar-element
+            >
+              Reports
+            </button>
+          </div>
 
-          {/* Utility Dropdown - Controlled by activeDropdown state */}
+          {/* Utility Dropdown */}
           <div className="relative h-full flex items-center">
             <button 
               ref={navRefs.utilityMenu} 
@@ -1686,18 +1718,24 @@ export default function App() {
                   toggleDropdown('utility');
                 }
               }}
-              className={`flex items-center gap-2 px-4 h-full text-xs font-semibold transition-all ${activeDropdown === 'utility' ? 'bg-white text-slate-900 shadow-xl' : 'text-slate-300 hover:text-white'} navbar-element`} 
+              className={`flex items-center gap-2 px-4 h-[40px] text-xs font-semibold rounded-lg transition-all duration-200 ${
+                activeDropdown === 'utility' 
+                  ? 'bg-white text-slate-900 shadow-lg scale-105' 
+                  : 'text-slate-300 hover:text-white hover:bg-slate-800/50'
+              } navbar-element`} 
               data-navbar-element
               aria-expanded={activeDropdown === 'utility'}
               aria-haspopup="true"
               aria-controls="utility-menu"
             >
-              Utility <ChevronDown className={`w-3.5 h-3.5 transition-transform duration-200 ${activeDropdown === 'utility' ? 'text-slate-900 rotate-180' : 'text-slate-300'}`} />
+              Utility 
+              <ChevronDown className={`w-3.5 h-3.5 transition-transform duration-200 ${activeDropdown === 'utility' ? 'rotate-180' : ''}`} />
             </button>
+            
             {activeDropdown === 'utility' && (
               <div 
                 id="utility-menu"
-                className="absolute top-12 left-0 w-64 bg-white border border-slate-200 shadow-dropdown py-1 animate-in slide-in-from-top-2 duration-150 rounded-sm overflow-hidden z-[5000]" 
+                className="absolute top-[48px] left-0 w-64 bg-white border border-slate-200 shadow-xl py-1.5 animate-in slide-in-from-top-2 duration-200 rounded-lg overflow-hidden z-[5000]" 
                 role="menu"
                 aria-activedescendant={focusedMenuItem >= 0 ? `utility-item-${focusedMenuItem}` : undefined}
               >
@@ -1744,12 +1782,12 @@ export default function App() {
                     }} 
                     tabIndex={-1}
                     id={`utility-item-${index}`}
-                    className={`w-full text-left px-4 py-2.5 text-sm font-medium flex items-center gap-3 transition-colors ${
+                    className={`w-full text-left px-4 py-2.5 text-sm font-medium flex items-center gap-3 transition-all duration-150 ${
                       activeSection === item.id 
-                        ? 'bg-primary-50 text-primary-700' 
+                        ? 'bg-gradient-to-r from-primary-600 to-primary-500 text-white shadow-md' 
                         : focusedMenuItem === index
                           ? 'bg-primary-50 text-primary-700 outline outline-2 outline-primary-300'
-                          : 'text-slate-700 hover:bg-slate-50'
+                          : 'text-slate-700 hover:bg-gradient-to-r hover:from-slate-50 hover:to-white hover:text-primary-700'
                     } navbar-element`} 
                     data-navbar-element
                     role="menuitem"
@@ -1763,7 +1801,7 @@ export default function App() {
             )}
           </div>
 
-          {/* More Dropdown - Controlled by activeDropdown state */}
+          {/* More Dropdown */}
           <div className="relative h-full flex items-center">
             <button 
               ref={navRefs.moreMenu} 
@@ -1774,18 +1812,24 @@ export default function App() {
                   toggleDropdown('more');
                 }
               }}
-              className={`flex items-center gap-2 px-4 h-full text-xs font-semibold transition-all ${activeDropdown === 'more' ? 'bg-white text-slate-900 shadow-xl' : 'text-slate-300 hover:text-white'} navbar-element`} 
+              className={`flex items-center gap-2 px-4 h-[40px] text-xs font-semibold rounded-lg transition-all duration-200 ${
+                activeDropdown === 'more' 
+                  ? 'bg-white text-slate-900 shadow-lg scale-105' 
+                  : 'text-slate-300 hover:text-white hover:bg-slate-800/50'
+              } navbar-element`} 
               data-navbar-element
               aria-expanded={activeDropdown === 'more'}
               aria-haspopup="true"
               aria-controls="more-menu"
             >
-              More <ChevronDown className={`w-3.5 h-3.5 transition-transform duration-200 ${activeDropdown === 'more' ? 'text-slate-900 rotate-180' : 'text-slate-300'}`} />
+              More 
+              <ChevronDown className={`w-3.5 h-3.5 transition-transform duration-200 ${activeDropdown === 'more' ? 'rotate-180' : ''}`} />
             </button>
+            
             {activeDropdown === 'more' && (
               <div 
                 id="more-menu"
-                className="absolute top-12 left-0 w-52 bg-white border border-slate-200 shadow-dropdown py-1 animate-in slide-in-from-top-2 duration-150 rounded-sm overflow-hidden z-[5000]" 
+                className="absolute top-[48px] left-0 w-56 bg-white border border-slate-200 shadow-xl py-1.5 animate-in slide-in-from-top-2 duration-200 rounded-lg overflow-hidden z-[5000]" 
                 role="menu"
                 aria-activedescendant={focusedMenuItem >= 0 ? `more-item-${focusedMenuItem}` : undefined}
               >
@@ -1799,12 +1843,12 @@ export default function App() {
                     }} 
                     tabIndex={-1}
                     id={`more-item-${index}`}
-                    className={`w-full text-left px-4 py-2.5 text-sm font-medium flex items-center gap-3 transition-colors ${
+                    className={`w-full text-left px-4 py-2.5 text-sm font-medium flex items-center gap-3 transition-all duration-150 ${
                       activeSection === item.id 
-                        ? 'bg-primary-50 text-primary-700' 
+                        ? 'bg-gradient-to-r from-primary-600 to-primary-500 text-white shadow-md' 
                         : focusedMenuItem === index
                           ? 'bg-primary-50 text-primary-700 outline outline-2 outline-primary-300'
-                          : 'text-slate-700 hover:bg-slate-50'
+                          : 'text-slate-700 hover:bg-gradient-to-r hover:from-slate-50 hover:to-white hover:text-primary-700'
                     } navbar-element`} 
                     data-navbar-element
                     role="menuitem"
@@ -1818,12 +1862,17 @@ export default function App() {
             )}
           </div>
         </div>
-        <div className="ml-auto flex items-center">
+
+        {/* Right Section - Logout */}
+        <div className="flex items-center gap-3">
           <button 
             onClick={auth.logout}
-            className="text-slate-300 hover:text-white text-xs font-semibold px-3 py-1 rounded transition-colors"
+            className="text-slate-300 hover:text-white hover:bg-red-600/80 text-xs font-semibold px-4 py-2 rounded-lg transition-all duration-200 flex items-center gap-2"
             title="Logout"
           >
+            <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17 16l4-4m0 0l-4-4m4 4H7m6 4v1a3 3 0 01-3 3H6a3 3 0 01-3-3V7a3 3 0 013-3h4a3 3 0 013 3v1" />
+            </svg>
             Logout
           </button>
         </div>
