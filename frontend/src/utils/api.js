@@ -397,9 +397,19 @@ export const api = {
   getSaalaCustomerTotalOutstanding: (customerId) => request(`/saala/customers/${customerId}/total-outstanding/`),
   getSilkDailyCredit: async (date) => {
     console.log('[API CALL] getSilkDailyCredit - Input date:', date);
-    const response = await request(`/silk/credit`, { params: { date } });
-    console.log('[API CALL] getSilkDailyCredit response:', response);
-    return response;
+    try {
+      const response = await request(`/silk/credit`, { params: { date } });
+      console.log('[API CALL] getSilkDailyCredit response:', response);
+      return response;
+    } catch (error) {
+      console.error('[API ERROR] getSilkDailyCredit failed:', error);
+      console.error('[API ERROR] Error details:', {
+        message: error.message,
+        status: error.status,
+        url: `/silk/credit`
+      });
+      throw error;
+    }
   },
   
   // Print Template APIs (DOCX-based)

@@ -195,9 +195,26 @@ def create_saala_transaction(
         total_amount = transaction_data.qty * transaction_data.rate
     
     paid_amount = transaction_data.paid_amount or 0
-    balance = (total_amount or 0) - paid_amount
     
-    print(f"Calculated values - Total: {total_amount}, Paid: {paid_amount}, Balance: {balance}")
+    # CRITICAL FIX: Calculate cumulative balance correctly
+    # Get the sum of all previous transaction balances for this customer
+    previous_transactions = db.query(SaalaTransaction).filter(
+        SaalaTransaction.customer_id == customer_id
+    ).all()
+    
+    # Sum up all previous balances (this represents the outstanding balance before this transaction)
+    previous_balance = sum(t.balance or 0 for t in previous_transactions)
+    
+    # New transaction's own balance
+    new_transaction_balance = (total_amount or 0) - paid_amount
+    
+    # Total cumulative balance = previous outstanding + new transaction balance
+    balance = previous_balance + new_transaction_balance
+    
+    print(f"Calculated values - Total: {total_amount}, Paid: {paid_amount}")
+    print(f"Previous balance (from all transactions): {previous_balance}")
+    print(f"New transaction balance: {new_transaction_balance}")
+    print(f"FINAL CUMULATIVE BALANCE: {balance}")
     
     transaction = SaalaTransaction(
         customer_id=customer_id,
@@ -284,9 +301,26 @@ def update_saala_transaction(
     else:
         paid_amount = transaction.paid_amount
     
-    balance = (total_amount or transaction.total_amount or 0) - paid_amount
+    # CRITICAL FIX: Recalculate cumulative balance correctly for updates
+    # Get all OTHER transactions for this customer (excluding current one)
+    other_transactions = db.query(SaalaTransaction).filter(
+        SaalaTransaction.customer_id == transaction.customer_id,
+        SaalaTransaction.id != transaction_id
+    ).all()
     
-    print(f"Calculated values - total_amount: {total_amount}, paid_amount: {paid_amount}, balance: {balance}")
+    # Sum up balances from all other transactions
+    other_balance_sum = sum(t.balance or 0 for t in other_transactions)
+    
+    # This transaction's own balance
+    this_transaction_balance = (total_amount or transaction.total_amount or 0) - paid_amount
+    
+    # Total cumulative balance = other transactions' balance + this transaction's balance
+    balance = other_balance_sum + this_transaction_balance
+    
+    print(f"Updated values - total_amount: {total_amount}, paid_amount: {paid_amount}")
+    print(f"Other transactions balance sum: {other_balance_sum}")
+    print(f"This transaction balance: {this_transaction_balance}")
+    print(f"FINAL CUMULATIVE BALANCE: {balance}")
     
     # Update fields
     for field, value in transaction_data.dict(exclude_unset=True).items():

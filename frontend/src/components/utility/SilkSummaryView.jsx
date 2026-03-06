@@ -251,27 +251,58 @@ export function SilkSummaryView({ ledgerStore = {}, customers = [], onCancel }) 
     try {
       // Get the daily credit from the new Silk endpoint
       console.log('[CALCULATE CREDIT AMOUNT] Calling API to get daily credit');
+      console.log('[CALCULATE CREDIT AMOUNT] Selected date:', selectedDate);
+      
       const response = await api.getSilkDailyCredit(selectedDate);
-      console.log('[CREDIT RESPONSE] API response:', response);
-      const totalCredit = response.total_credit || 0;
+      console.log('[CREDIT RESPONSE] Full API response:', response);
+      console.log('[CREDIT RESPONSE] Type of response:', typeof response);
+      console.log('[CREDIT RESPONSE] Response keys:', Object.keys(response || {}));
+      
+      // Handle different response formats
+      let totalCredit = 0;
+      if (response && typeof response === 'object') {
+        totalCredit = response.total_credit || response.totalCredit || 0;
+      }
+      
+      console.log('[CREDIT AMOUNT] Extracted total credit:', totalCredit);
       
       // Store backend credit in dedicated state - DO NOT touch silkPayments
       console.log('[SETTING DAILY CREDIT] Setting credit value:', totalCredit);
       setDailyCredit(prev => {
-        console.log('[DAILY CREDIT SET] Updating credit state:', { prev, new: Number(totalCredit) || 0 });
-        return Number(totalCredit) || 0;
+        const newValue = Number(totalCredit) || 0;
+        console.log('[DAILY CREDIT SET] Updating credit state:', { prev, new: newValue });
+        return newValue;
       });
       
       // Update creditAmount state for total calculation
-      setCreditAmount(response.total_credit || 0);
+      setCreditAmount(totalCredit);
+      
+      // Show success message if credit was found
+      if (totalCredit > 0) {
+        console.log('[CREDIT SUCCESS] Successfully fetched credit:', totalCredit);
+      } else {
+        console.log('[CREDIT INFO] No credit found for this date (this is normal)');
+      }
       
       return totalCredit;
     } catch (error) {
       console.error('[CALCULATE CREDIT AMOUNT ERROR] Error calculating auto credit:', error);
-      setDailyCredit(prev => {
-        console.log('[DAILY CREDIT SET TO 0 ON ERROR] Resetting credit to 0 due to error:', { prev });
-        return 0;
+      console.error('[CALCULATE CREDIT AMOUNT ERROR] Error details:', {
+        message: error.message,
+        status: error.status,
+        response: error.response
       });
+      
+      // Set to 0 on error but don't show error to user (credit is optional)
+      setDailyCredit(0);
+      setCreditAmount(0);
+      
+      // Optional: Show warning message
+      setMessage({ 
+        text: `Could not fetch credit: ${error.message || 'Unknown error'}`, 
+        type: 'warning' 
+      });
+      
       return 0;
     } finally {
       setCreditCalculationLoading(false);
