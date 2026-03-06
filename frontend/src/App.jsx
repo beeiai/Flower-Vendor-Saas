@@ -1128,6 +1128,10 @@ export default function App() {
   // Only ONE dropdown can be open at a time - professional SaaS behavior
   const [activeDropdown, setActiveDropdown] = useState(null); // 'transaction', 'utility', 'more', or null
   
+  // Keyboard navigation state for dropdown menus
+  const [focusedMenuItem, setFocusedMenuItem] = useState(-1); // Index of focused menu item
+  const dropdownMenuRefs = useRef({}); // Store refs to menu items for keyboard navigation
+  
   // Navigation refs for keyboard navigation
   const navRefs = {
     logo: useRef(null),
@@ -1144,6 +1148,7 @@ export default function App() {
       const isClickInsideNavbar = event.target.closest('nav');
       if (!isClickInsideNavbar && activeDropdown !== null) {
         setActiveDropdown(null);
+        setFocusedMenuItem(-1); // Reset focus
       }
     };
 
@@ -1155,8 +1160,13 @@ export default function App() {
   const toggleDropdown = useCallback((dropdownName) => {
     setActiveDropdown(prev => {
       // If same dropdown is clicked, close it (toggle behavior)
-      if (prev === dropdownName) return null;
+      if (prev === dropdownName) {
+        setFocusedMenuItem(-1);
+        return null;
+      }
       // Otherwise, open the new dropdown (automatically closes previous)
+      // Reset focus to first item when opening new dropdown
+      setFocusedMenuItem(0);
       return dropdownName;
     });
   }, []);
@@ -1164,7 +1174,121 @@ export default function App() {
   // Close all dropdowns
   const closeAllDropdowns = useCallback(() => {
     setActiveDropdown(null);
+    setFocusedMenuItem(-1);
   }, []);
+
+  // Get current dropdown menu items based on active dropdown
+  const getCurrentMenuItems = useCallback(() => {
+    switch (activeDropdown) {
+      case 'transaction':
+        return [
+          { id: 'daily', l: 'Daily Transaction', i: Receipt }, 
+          { id: 'group-reg', l: 'New Group', i: FolderPlus }, 
+          { id: 'item-reg', l: 'New Item', i: PackagePlus },
+          { id: 'party', l: 'Party Details', i: Users },
+          { id: 'vehicle', l: 'Extra Vehicle', i: Truck }
+        ];
+      case 'utility':
+        return [
+          { id: 'group-print', l: 'Group Printing', i: Printer },
+          { id: 'group-total', l: 'Group Total Report', i: Layers },
+          { id: 'daily-rate-sales', l: 'Daily Rate Wise Sales', i: FileBarChart },
+          { id: 'new-supplier', l: 'New Supplier', i: UserCheck },
+          { id: 'daily-sale', l: 'Daily Sale', i: Monitor },
+          { id: 'sms-single', l: 'SMS Single', i: Send },
+          { id: 'supply-details', l: 'Supply Details', i: List },
+          { id: 'payment-list', l: 'Payment List', i: WalletCards },
+          { id: 'payment-report', l: 'Payment Report', i: BarChart3 },
+          { id: 'move-data', l: 'Move Data', i: ArrowRight },
+          { id: 'view-data', l: 'View Data', i: Search }
+        ];
+      case 'more':
+        return [
+          { id: 'advance', l: 'Advance', i: WalletCards }, 
+          { id: 'saala', l: 'Saala (Credit)', i: Landmark }, 
+          { id: 'silk', l: 'Silk', i: Layers }
+        ];
+      default:
+        return [];
+    }
+  }, [activeDropdown]);
+
+  // Handle keyboard navigation within dropdowns
+  const handleDropdownKeyDown = useCallback((e) => {
+    if (activeDropdown === null) return;
+    
+    const menuItems = getCurrentMenuItems();
+    if (menuItems.length === 0) return;
+
+    switch (e.key) {
+      case 'ArrowDown':
+        e.preventDefault();
+        setFocusedMenuItem(prev => {
+          const nextIndex = prev >= menuItems.length - 1 ? 0 : prev + 1;
+          // Focus the next menu item
+          setTimeout(() => {
+            const nextElement = dropdownMenuRefs.current[`${activeDropdown}-${nextIndex}`];
+            if (nextElement) nextElement.focus();
+          }, 0);
+          return nextIndex;
+        });
+        break;
+        
+      case 'ArrowUp':
+        e.preventDefault();
+        setFocusedMenuItem(prev => {
+          const prevIndex = prev <= 0 ? menuItems.length - 1 : prev - 1;
+          // Focus the previous menu item
+          setTimeout(() => {
+            const prevElement = dropdownMenuRefs.current[`${activeDropdown}-${prevIndex}`];
+            if (prevElement) prevElement.focus();
+          }, 0);
+          return prevIndex;
+        });
+        break;
+        
+      case 'Enter':
+      case ' ':
+        e.preventDefault();
+        if (focusedMenuItem >= 0 && focusedMenuItem < menuItems.length) {
+          // Trigger click on focused menu item
+          const focusedElement = dropdownMenuRefs.current[`${activeDropdown}-${focusedMenuItem}`];
+          if (focusedElement) focusedElement.click();
+        }
+        break;
+        
+      case 'Escape':
+        e.preventDefault();
+        closeAllDropdowns();
+        // Return focus to the dropdown button that opened this menu
+        if (activeDropdown === 'transaction' && navRefs.current.transactionMenu) {
+          navRefs.current.transactionMenu.focus();
+        } else if (activeDropdown === 'utility' && navRefs.current.utilityMenu) {
+          navRefs.current.utilityMenu.focus();
+        } else if (activeDropdown === 'more' && navRefs.current.moreMenu) {
+          navRefs.current.moreMenu.focus();
+        }
+        break;
+        
+      case 'Tab':
+        // Close dropdown and let normal tab navigation continue
+        closeAllDropdowns();
+        break;
+        
+      default:
+        break;
+    }
+  }, [activeDropdown, focusedMenuItem, getCurrentMenuItems, closeAllDropdowns]);
+
+  // Add global keyboard listener when dropdown is open
+  useEffect(() => {
+    if (activeDropdown !== null) {
+      document.addEventListener('keydown', handleDropdownKeyDown);
+      return () => {
+        document.removeEventListener('keydown', handleDropdownKeyDown);
+      };
+    }
+  }, [activeDropdown, handleDropdownKeyDown]);
 
   // Standalone keyboard navigation for Group Patti Printing Page
   const useGroupPattiNavigation = (containerRef) => {
@@ -1244,31 +1368,54 @@ export default function App() {
             <button 
               ref={navRefs.transactionMenu} 
               onClick={() => toggleDropdown('transaction')} 
+              onKeyDown={(e) => {
+                if (e.key === 'ArrowDown' || e.key === 'Enter' || e.key === ' ') {
+                  e.preventDefault();
+                  toggleDropdown('transaction');
+                }
+              }}
               className={`flex items-center gap-2 px-4 h-full text-xs font-semibold transition-all ${activeDropdown === 'transaction' ? 'bg-white text-slate-900 shadow-xl' : 'text-slate-300 hover:text-white'} navbar-element`} 
               data-navbar-element
               aria-expanded={activeDropdown === 'transaction'}
               aria-haspopup="true"
+              aria-controls="transaction-menu"
             >
               Transaction <ChevronDown className={`w-3.5 h-3.5 transition-transform duration-200 ${activeDropdown === 'transaction' ? 'text-slate-900 rotate-180' : 'text-slate-300'}`} />
             </button>
             {activeDropdown === 'transaction' && (
-              <div className="absolute top-12 left-0 w-56 bg-white border border-slate-200 shadow-dropdown py-1 animate-in slide-in-from-top-2 duration-150 rounded-sm overflow-hidden z-[5000]" role="menu">
+              <div 
+                id="transaction-menu"
+                className="absolute top-12 left-0 w-56 bg-white border border-slate-200 shadow-dropdown py-1 animate-in slide-in-from-top-2 duration-150 rounded-sm overflow-hidden z-[5000]" 
+                role="menu"
+                aria-activedescendant={focusedMenuItem >= 0 ? `transaction-item-${focusedMenuItem}` : undefined}
+              >
                 {[ 
                   { id: 'daily', l: 'Daily Transaction', i: Receipt }, 
                   { id: 'group-reg', l: 'New Group', i: FolderPlus }, 
                   { id: 'item-reg', l: 'New Item', i: PackagePlus },
                   { id: 'party', l: 'Party Details', i: Users },
                   { id: 'vehicle', l: 'Extra Vehicle', i: Truck }
-                ].map(item => (
+                ].map((item, index) => (
                   <button 
                     key={item.id} 
+                    ref={(el) => dropdownMenuRefs.current[`transaction-${index}`] = el}
                     onClick={() => { 
                       closeAllDropdowns(); 
                       setActiveSection(item.id); 
                     }} 
-                    className={`w-full text-left px-4 py-2.5 text-sm font-medium flex items-center gap-3 transition-colors ${activeSection === item.id ? 'bg-primary-600 text-white' : 'text-slate-700 hover:bg-primary-50 hover:text-primary-700'} navbar-element`} 
+                    tabIndex={-1}
+                    id={`transaction-item-${index}`}
+                    className={`w-full text-left px-4 py-2.5 text-sm font-medium flex items-center gap-3 transition-colors ${
+                      activeSection === item.id 
+                        ? 'bg-primary-600 text-white' 
+                        : focusedMenuItem === index
+                          ? 'bg-primary-50 text-primary-700 outline outline-2 outline-primary-300'
+                          : 'text-slate-700 hover:bg-primary-50 hover:text-primary-700'
+                    } navbar-element`} 
                     data-navbar-element
                     role="menuitem"
+                    aria-selected={focusedMenuItem === index}
+                    onMouseEnter={() => setFocusedMenuItem(index)}
                   >
                     <item.i className="w-4 h-4" /> {item.l}
                   </button>
@@ -1295,15 +1442,27 @@ export default function App() {
             <button 
               ref={navRefs.utilityMenu} 
               onClick={() => toggleDropdown('utility')} 
+              onKeyDown={(e) => {
+                if (e.key === 'ArrowDown' || e.key === 'Enter' || e.key === ' ') {
+                  e.preventDefault();
+                  toggleDropdown('utility');
+                }
+              }}
               className={`flex items-center gap-2 px-4 h-full text-xs font-semibold transition-all ${activeDropdown === 'utility' ? 'bg-white text-slate-900 shadow-xl' : 'text-slate-300 hover:text-white'} navbar-element`} 
               data-navbar-element
               aria-expanded={activeDropdown === 'utility'}
               aria-haspopup="true"
+              aria-controls="utility-menu"
             >
               Utility <ChevronDown className={`w-3.5 h-3.5 transition-transform duration-200 ${activeDropdown === 'utility' ? 'text-slate-900 rotate-180' : 'text-slate-300'}`} />
             </button>
             {activeDropdown === 'utility' && (
-              <div className="absolute top-12 left-0 w-64 bg-white border border-slate-200 shadow-dropdown py-1 animate-in slide-in-from-top-2 duration-150 rounded-sm overflow-hidden z-[5000]" role="menu">
+              <div 
+                id="utility-menu"
+                className="absolute top-12 left-0 w-64 bg-white border border-slate-200 shadow-dropdown py-1 animate-in slide-in-from-top-2 duration-150 rounded-sm overflow-hidden z-[5000]" 
+                role="menu"
+                aria-activedescendant={focusedMenuItem >= 0 ? `utility-item-${focusedMenuItem}` : undefined}
+              >
                 {[ 
                   { id: 'group-print', l: 'Group Printing', i: Printer },
                   { id: 'group-total', l: 'Group Total Report', i: Layers },
@@ -1316,9 +1475,10 @@ export default function App() {
                   { id: 'payment-report', l: 'Payment Report', i: BarChart3 },
                   { id: 'move-data', l: 'Move Data', i: ArrowRight },
                   { id: 'view-data', l: 'View Data', i: Search }
-                ].map(item => (
+                ].map((item, index) => (
                   <button 
                     key={item.id} 
+                    ref={(el) => dropdownMenuRefs.current[`utility-${index}`] = el}
                     onClick={() => {
                       closeAllDropdowns();
                       if (item.id === 'group-print') {
@@ -1344,9 +1504,19 @@ export default function App() {
                       }
                       setActiveSection(item.id);
                     }} 
-                    className={`w-full text-left px-4 py-2.5 text-sm font-medium flex items-center gap-3 transition-colors ${activeSection === item.id ? 'bg-primary-50 text-primary-700' : 'text-slate-700 hover:bg-slate-50'} navbar-element`} 
+                    tabIndex={-1}
+                    id={`utility-item-${index}`}
+                    className={`w-full text-left px-4 py-2.5 text-sm font-medium flex items-center gap-3 transition-colors ${
+                      activeSection === item.id 
+                        ? 'bg-primary-50 text-primary-700' 
+                        : focusedMenuItem === index
+                          ? 'bg-primary-50 text-primary-700 outline outline-2 outline-primary-300'
+                          : 'text-slate-700 hover:bg-slate-50'
+                    } navbar-element`} 
                     data-navbar-element
                     role="menuitem"
+                    aria-selected={focusedMenuItem === index}
+                    onMouseEnter={() => setFocusedMenuItem(index)}
                   >
                     <item.i className="w-4 h-4" /> {item.l}
                   </button>
@@ -1360,25 +1530,48 @@ export default function App() {
             <button 
               ref={navRefs.moreMenu} 
               onClick={() => toggleDropdown('more')} 
+              onKeyDown={(e) => {
+                if (e.key === 'ArrowDown' || e.key === 'Enter' || e.key === ' ') {
+                  e.preventDefault();
+                  toggleDropdown('more');
+                }
+              }}
               className={`flex items-center gap-2 px-4 h-full text-xs font-semibold transition-all ${activeDropdown === 'more' ? 'bg-white text-slate-900 shadow-xl' : 'text-slate-300 hover:text-white'} navbar-element`} 
               data-navbar-element
               aria-expanded={activeDropdown === 'more'}
               aria-haspopup="true"
+              aria-controls="more-menu"
             >
               More <ChevronDown className={`w-3.5 h-3.5 transition-transform duration-200 ${activeDropdown === 'more' ? 'text-slate-900 rotate-180' : 'text-slate-300'}`} />
             </button>
             {activeDropdown === 'more' && (
-              <div className="absolute top-12 left-0 w-52 bg-white border border-slate-200 shadow-dropdown py-1 animate-in slide-in-from-top-2 duration-150 rounded-sm overflow-hidden z-[5000]" role="menu">
-                {[ { id: 'advance', l: 'Advance', i: WalletCards }, { id: 'saala', l: 'Saala (Credit)', i: Landmark }, { id: 'silk', l: 'Silk', i: Layers } ].map(item => (
+              <div 
+                id="more-menu"
+                className="absolute top-12 left-0 w-52 bg-white border border-slate-200 shadow-dropdown py-1 animate-in slide-in-from-top-2 duration-150 rounded-sm overflow-hidden z-[5000]" 
+                role="menu"
+                aria-activedescendant={focusedMenuItem >= 0 ? `more-item-${focusedMenuItem}` : undefined}
+              >
+                {[ { id: 'advance', l: 'Advance', i: WalletCards }, { id: 'saala', l: 'Saala (Credit)', i: Landmark }, { id: 'silk', l: 'Silk', i: Layers } ].map((item, index) => (
                   <button 
                     key={item.id} 
+                    ref={(el) => dropdownMenuRefs.current[`more-${index}`] = el}
                     onClick={() => { 
                       closeAllDropdowns(); 
                       setActiveSection(item.id); 
                     }} 
-                    className={`w-full text-left px-4 py-2.5 text-sm font-medium flex items-center gap-3 transition-colors ${activeSection === item.id ? 'bg-primary-50 text-primary-700' : 'text-slate-700 hover:bg-slate-50'} navbar-element`} 
+                    tabIndex={-1}
+                    id={`more-item-${index}`}
+                    className={`w-full text-left px-4 py-2.5 text-sm font-medium flex items-center gap-3 transition-colors ${
+                      activeSection === item.id 
+                        ? 'bg-primary-50 text-primary-700' 
+                        : focusedMenuItem === index
+                          ? 'bg-primary-50 text-primary-700 outline outline-2 outline-primary-300'
+                          : 'text-slate-700 hover:bg-slate-50'
+                    } navbar-element`} 
                     data-navbar-element
                     role="menuitem"
+                    aria-selected={focusedMenuItem === index}
+                    onMouseEnter={() => setFocusedMenuItem(index)}
                   >
                     <item.i className="w-4 h-4" /> {item.l}
                   </button>

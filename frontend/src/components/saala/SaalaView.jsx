@@ -614,6 +614,7 @@ function SaalaTransactionTab({ customers, catalog, showNotify, setDropdownOpen }
   const [selectedCustomerId, setSelectedCustomerId] = useState(null);
   const [transactions, setTransactions] = useState([]);
   const [summary, setSummary] = useState({ totalCredit: 0, totalPaid: 0, balance: 0 });
+  const [isSubmitting, setIsSubmitting] = useState(false); // Prevent duplicate submissions
   const [currentEntry, setCurrentEntry] = useState({
     id: null,
     date: new Date().toISOString().split('T')[0],
@@ -748,61 +749,98 @@ function SaalaTransactionTab({ customers, catalog, showNotify, setDropdownOpen }
   }, [computedTotal, currentEntry.paidAmount]);
 
   const handleAddOrUpdate = async () => {
-    // Validation
-    if (!selectedCustomerId) return showNotify?.('Select a customer first', 'error');
-    if (!currentEntry.itemName?.trim()) return showNotify?.('Enter item name', 'error');
+    // PREVENT DUPLICATE SUBMISSIONS - Critical fix
+    if (isSubmitting) {
+      console.warn('[SaalaTransaction] Submission already in progress, ignoring duplicate call');
+      return;
+    }
+
+    console.log('[SaalaTransaction] === Starting Add/Update Operation ===');
+    console.log('[SaalaTransaction] Current time:', new Date().toISOString());
     
-    const qty = currentEntry.qty ? Number(currentEntry.qty) : 0;
-    const rate = currentEntry.rate ? Number(currentEntry.rate) : 0;
-    const paid = currentEntry.paidAmount ? Number(currentEntry.paidAmount) : 0;
+    // Set submitting flag immediately
+    setIsSubmitting(true);
     
-    if (isNaN(qty) || qty <= 0) return showNotify?.('Enter valid quantity (> 0)', 'error');
-    if (isNaN(rate) || rate <= 0) return showNotify?.('Enter valid rate (> 0)', 'error');
-    if (isNaN(paid) || paid < 0) return showNotify?.('Enter valid paid amount (>= 0)', 'error');
-    if (paid > computedTotal) return showNotify?.('Paid amount cannot exceed total amount', 'error');
-
-    // Build payload with snake_case field names to match backend expectations
-    const payload = {
-      date: currentEntry.date,
-      description: currentEntry.remarks?.trim() || 'regular',
-      item_code: currentEntry.itemCode?.trim() || '',
-      item_name: currentEntry.itemName?.trim() || '',
-      qty: qty,
-      rate: rate,
-      total_amount: computedTotal,
-      paid_amount: paid
-    };
-
-    // Debug logging
-    console.log('SAALA API Payload:', payload);
-    console.log('Current entry state:', currentEntry);
-    console.log('Computed values - qty:', qty, 'rate:', rate, 'total:', computedTotal, 'paid:', paid);
-    console.log('Form values - itemCode:', currentEntry.itemCode, 'itemName:', currentEntry.itemName, 'paidAmount:', currentEntry.paidAmount);
-
     try {
+      // Validation
+      if (!selectedCustomerId) {
+        showNotify?.('Select a customer first', 'error');
+        return;
+      }
+      if (!currentEntry.itemName?.trim()) {
+        showNotify?.('Enter item name', 'error');
+        return;
+      }
+      
+      const qty = currentEntry.qty ? Number(currentEntry.qty) : 0;
+      const rate = currentEntry.rate ? Number(currentEntry.rate) : 0;
+      const paid = currentEntry.paidAmount ? Number(currentEntry.paidAmount) : 0;
+      
+      if (isNaN(qty) || qty <= 0) {
+        showNotify?.('Enter valid quantity (> 0)', 'error');
+        return;
+      }
+      if (isNaN(rate) || rate <= 0) {
+        showNotify?.('Enter valid rate (> 0)', 'error');
+        return;
+      }
+      if (isNaN(paid) || paid < 0) {
+        showNotify?.('Enter valid paid amount (>= 0)', 'error');
+        return;
+      }
+      if (paid > computedTotal) {
+        showNotify?.('Paid amount cannot exceed total amount', 'error');
+        return;
+      }
+
+      // Build payload with snake_case field names to match backend expectations
+      const payload = {
+        date: currentEntry.date,
+        description: currentEntry.remarks?.trim() || 'regular',
+        item_code: currentEntry.itemCode?.trim() || '',
+        item_name: currentEntry.itemName?.trim() || '',
+        qty: qty,
+        rate: rate,
+        total_amount: computedTotal,
+        paid_amount: paid
+      };
+
+      // Debug logging
+      console.log('[SaalaTransaction] API Payload:', payload);
+      console.log('[SaalaTransaction] Is Update?', currentEntry.id ? 'YES' : 'NO');
+
       if (currentEntry.id) {
+        // UPDATE existing transaction
+        console.log('[SaalaTransaction] Calling updateSaalaTransaction API...');
         const updated = await api.updateSaalaTransaction(currentEntry.id, payload);
-        console.log('Updated transaction response:', updated);
+        console.log('[SaalaTransaction] Updated transaction response:', updated);
+        
         // Merge API response with the original payload to ensure all fields are correctly updated
         const mergedData = { ...payload, ...updated };
         setTransactions(prevTransactions => {
-          const newTransactions = prevTransactions.map(t => t.id === currentEntry.id ? { ...t, ...mergedData } : t);
-          console.log('[SaalaTransaction] Updated transactions:', newTransactions);
+          const newTransactions = prevTransactions.map(t => 
+            t.id === currentEntry.id ? { ...t, ...mergedData } : t
+          );
+          console.log('[SaalaTransaction] Updated transactions array:', newTransactions);
           return newTransactions;
         });
         showNotify?.('Transaction updated', 'success');
       } else {
+        // CREATE new transaction
+        console.log('[SaalaTransaction] Calling createSaalaTransaction API...');
         const created = await api.createSaalaTransaction(selectedCustomerId, payload);
-        console.log('Created transaction response:', created);
+        console.log('[SaalaTransaction] Created transaction response:', created);
+        
         setTransactions(prevTransactions => {
-          // Check for duplicates before adding
+          // CRITICAL: Check for duplicates before adding
           const exists = prevTransactions.some(t => t.id === created.id);
           if (exists) {
-            console.warn('[SaalaTransaction] Transaction already exists, skipping add:', created.id);
+            console.error('[SaalaTransaction] DUPLICATE DETECTED! Transaction already exists:', created.id);
+            console.error('[SaalaTransaction] This should NEVER happen. Check for multiple API calls.');
             return prevTransactions;
           }
           const newTransactions = [created, ...prevTransactions];
-          console.log('[SaalaTransaction] Added new transaction. Total count:', newTransactions.length);
+          console.log('[SaalaTransaction] Successfully added transaction. New count:', newTransactions.length);
           return newTransactions;
         });
         showNotify?.('Transaction added', 'success');
@@ -810,14 +848,13 @@ function SaalaTransactionTab({ customers, catalog, showNotify, setDropdownOpen }
 
       // Refresh summary
       const summ = await api.getSaalaCustomerSummary(selectedCustomerId);
-      // Map API response to expected frontend format
       setSummary({
         totalCredit: summ.total_amount,
         totalPaid: summ.total_paid,
         balance: summ.current_balance
       });
 
-      // Reset form
+      // Reset form AFTER successful submission
       setCurrentEntry({
         id: null,
         date: new Date().toISOString().split('T')[0],
@@ -837,8 +874,15 @@ function SaalaTransactionTab({ customers, catalog, showNotify, setDropdownOpen }
           customerSelect.focus();
         }
       }, 100);
+      
+      console.log('[SaalaTransaction] === Add/Update Operation Complete ===');
     } catch (e) {
+      console.error('[SaalaTransaction] Error during operation:', e);
       showNotify?.(`Failed: ${e.message}`, 'error');
+    } finally {
+      // ALWAYS reset submitting flag, even on error
+      console.log('[SaalaTransaction] Resetting isSubmitting flag');
+      setIsSubmitting(false);
     }
   };
 
@@ -1064,13 +1108,21 @@ function SaalaTransactionTab({ customers, catalog, showNotify, setDropdownOpen }
             <div className="ml-auto pr-1">
               <button 
                 data-action="primary"
-                onClick={handleAddOrUpdate} 
-                disabled={!selectedCustomerId}
-                className="bg-primary-600 text-white px-8 text-sm font-semibold rounded-sm hover:bg-primary-700 shadow-md transition-all active:translate-y-px disabled:opacity-40"
+                onClick={handleAddOrUpdate}
+                disabled={!selectedCustomerId || isSubmitting}
+                className="bg-primary-600 text-white px-8 text-sm font-semibold rounded-sm hover:bg-primary-700 shadow-md transition-all active:translate-y-px disabled:opacity-40 disabled:cursor-not-allowed"
                 style={{ height: '36px' }}
                 data-enter-index="16"
+                title={isSubmitting ? 'Processing...' : (currentEntry.id ? 'Update' : 'Add')}
               >
-                {currentEntry.id ? 'Update' : 'Add'}
+                {isSubmitting ? (
+                  <>
+                    <span className="inline-block animate-spin mr-2">⏳</span>
+                    Processing...
+                  </>
+                ) : (
+                  currentEntry.id ? 'Update' : 'Add'
+                )}
               </button>
             </div>
           </div>
