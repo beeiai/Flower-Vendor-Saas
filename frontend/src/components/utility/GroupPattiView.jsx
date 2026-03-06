@@ -68,7 +68,8 @@ export function GroupPattiView({ groups, customers, onCancel, setActiveSection }
         throw new Error('Group not found');
       }
       
-      const response = await api.getGroupPattiReport(
+      // Use NEW HTML endpoint instead of legacy DOCX endpoint
+      const response = await api.getGroupPattiReportHtml(
         selectedGroup.id,
         form.fromDate,
         form.toDate,
