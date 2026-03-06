@@ -34,6 +34,24 @@ function CustomerAdditionTab({ customers, setCustomers, showNotify }) {
     }
   };
 
+  // Handle Enter key navigation for Customer Addition form
+  const handleCustomerAdditionKeyDown = (e, currentIndex) => {
+    if (e.key === 'Enter') {
+      e.preventDefault();
+      const inputs = [
+        document.querySelector('[data-customer-add-index="1"]'),
+        document.querySelector('[data-customer-add-index="2"]'),
+        document.querySelector('[data-customer-add-index="3"]'),
+        document.querySelector('[data-customer-add-index="4"]')
+      ];
+      
+      let nextIndex = currentIndex + 1;
+      if (nextIndex >= inputs.length) nextIndex = 0;
+      
+      inputs[nextIndex]?.focus();
+    }
+  };
+
   const handleEdit = (customer) => {
     setEditingId(customer.id);
     setForm({ name: customer.name, contact: customer.contact || '', address: customer.address || '' });
@@ -71,7 +89,8 @@ function CustomerAdditionTab({ customers, setCustomers, showNotify }) {
               value={form.name} 
               onChange={e => setForm({ ...form, name: e.target.value })} 
               placeholder="Enter name"
-              data-enter-index="1"
+              data-customer-add-index="1"
+              onKeyDown={(e) => handleCustomerAdditionKeyDown(e, 0)}
             />
           </div>
           <div>
@@ -82,7 +101,8 @@ function CustomerAdditionTab({ customers, setCustomers, showNotify }) {
               value={form.contact} 
               onChange={e => setForm({ ...form, contact: e.target.value })} 
               placeholder="Phone number"
-              data-enter-index="2"
+              data-customer-add-index="2"
+              onKeyDown={(e) => handleCustomerAdditionKeyDown(e, 1)}
             />
           </div>
           <div>
@@ -93,7 +113,8 @@ function CustomerAdditionTab({ customers, setCustomers, showNotify }) {
               value={form.address} 
               onChange={e => setForm({ ...form, address: e.target.value })} 
               placeholder="Address"
-              data-enter-index="3"
+              data-customer-add-index="3"
+              onKeyDown={(e) => handleCustomerAdditionKeyDown(e, 2)}
             />
           </div>
           <div className="flex gap-3 pt-2">
@@ -101,7 +122,8 @@ function CustomerAdditionTab({ customers, setCustomers, showNotify }) {
               data-action="primary"
               onClick={handleSave} 
               className="flex-1 bg-gradient-to-r from-[#5B55E6] to-[#4A44D0] text-white py-2.5 font-black uppercase text-xs rounded-lg shadow-lg hover:from-[#4A44D0] hover:to-[#3A34C0] transition-all duration-200 tracking-wider"
-              data-enter-index="4"
+              data-customer-add-index="4"
+              onKeyDown={(e) => handleCustomerAdditionKeyDown(e, 3)}
             >
               {editingId ? 'UPDATE' : 'ADD CUSTOMER'}
             </button>
@@ -109,7 +131,7 @@ function CustomerAdditionTab({ customers, setCustomers, showNotify }) {
               <button 
                 onClick={handleCancel} 
                 className="px-4 bg-gradient-to-r from-slate-200 to-slate-300 text-slate-700 py-2.5 font-black uppercase text-xs rounded-lg shadow-lg hover:from-slate-300 hover:to-slate-400 transition-all duration-200 border border-slate-300 tracking-wider"
-                data-enter-index="5"
+                data-customer-add-index="5"
               >
                 CANCEL
               </button>
@@ -495,6 +517,25 @@ function SaalaPaymentTab({ customers, showNotify, setDropdownOpen }) {
     }
   };
 
+  // Handle Enter key navigation for Payment form
+  const handlePaymentKeyDown = (e, currentIndex) => {
+    if (e.key === 'Enter') {
+      e.preventDefault();
+      const inputs = [
+        document.querySelector('[data-payment-index="18"]'), // Customer
+        document.querySelector('[data-payment-index="19"]'), // Date
+        document.querySelector('[data-payment-index="20"]'), // Amount
+        document.querySelector('[data-payment-index="21"]'), // Description
+        document.querySelector('[data-payment-index="22"]'), // Submit Button
+      ];
+      
+      let nextIndex = currentIndex + 1;
+      if (nextIndex >= inputs.length) nextIndex = 0;
+      
+      inputs[nextIndex]?.focus();
+    }
+  };
+
   return (
     <div className="flex-1 flex flex-col gap-3 p-3 overflow-hidden">
       {/* Customer Selection & Summary */}
@@ -558,7 +599,8 @@ function SaalaPaymentTab({ customers, showNotify, setDropdownOpen }) {
                 className="w-full bg-rose-50 border-2 border-rose-200 rounded-lg p-2.5 text-sm font-bold text-slate-800 outline-none transition-all duration-200 hover:border-rose-300 focus:border-rose-400 focus:ring-2 focus:ring-rose-100" 
                 value={paymentForm.date} 
                 onChange={e => setPaymentForm({...paymentForm, date: e.target.value})} 
-                data-enter-index="19"
+                data-payment-index="19"
+                onKeyDown={(e) => handlePaymentKeyDown(e, 1)}
               />
             </div>
             <div>
@@ -571,7 +613,8 @@ function SaalaPaymentTab({ customers, showNotify, setDropdownOpen }) {
                 placeholder="0.00"
                 min="0"
                 step="any"
-                data-enter-index="20"
+                data-payment-index="20"
+                onKeyDown={(e) => handlePaymentKeyDown(e, 2)}
               />
             </div>
             <div className="col-span-2">
@@ -582,7 +625,8 @@ function SaalaPaymentTab({ customers, showNotify, setDropdownOpen }) {
                 value={paymentForm.description} 
                 onChange={e => setPaymentForm({...paymentForm, description: e.target.value})} 
                 placeholder="Payment description (optional)"
-                data-enter-index="21"
+                data-payment-index="21"
+                onKeyDown={(e) => handlePaymentKeyDown(e, 3)}
               />
             </div>
           </div>
@@ -591,7 +635,8 @@ function SaalaPaymentTab({ customers, showNotify, setDropdownOpen }) {
               onClick={handlePaymentSubmit} 
               disabled={!selectedCustomerId || !paymentForm.amount}
               className="bg-gradient-to-r from-emerald-500 to-emerald-600 text-white px-6 py-2.5 font-black uppercase text-xs rounded-lg shadow-lg hover:from-emerald-600 hover:to-emerald-700 transition-all duration-200 tracking-wider flex items-center gap-2 disabled:opacity-40"
-              data-enter-index="22"
+              data-payment-index="22"
+              onKeyDown={(e) => handlePaymentKeyDown(e, 4)}
             >
               <Save className="w-4 h-4" />
               RECORD PAYMENT
@@ -729,6 +774,36 @@ function SaalaTransactionTab({ customers, catalog, showNotify, setDropdownOpen }
         itemName: item.itemName || '',
         rate: String(item.rate || '')
       });
+      
+      // Focus on item name field after item code selection
+      setTimeout(() => {
+        const itemNameField = document.querySelector('[data-enter-index="13"]');
+        if (itemNameField) {
+          itemNameField.focus();
+        }
+      }, 50);
+    }
+  };
+
+  // Handle Enter key navigation for Saala Transaction form
+  const handleTransactionKeyDown = (e, currentIndex) => {
+    if (e.key === 'Enter') {
+      e.preventDefault();
+      const inputs = [
+        document.querySelector('[data-enter-index="10"]'), // Customer
+        document.querySelector('[data-enter-index="10-date"]'), // Date
+        document.querySelector('[data-enter-index="11"]'), // Item Code
+        document.querySelector('[data-enter-index="13"]'), // Item Name
+        document.querySelector('[data-enter-index="12"]'), // Qty
+        document.querySelector('[data-enter-index="13-rate"]'), // Rate
+        document.querySelector('[data-enter-index="14"]'), // Paid Amount
+        document.querySelector('[data-enter-index="15"]'), // Add Button
+      ];
+      
+      let nextIndex = currentIndex + 1;
+      if (nextIndex >= inputs.length) nextIndex = 0;
+      
+      inputs[nextIndex]?.focus();
     }
   };
 
@@ -1003,7 +1078,8 @@ function SaalaTransactionTab({ customers, catalog, showNotify, setDropdownOpen }
                 style={{ height: '36px' }}
                 value={currentEntry.date} 
                 onChange={e => setCurrentEntry({ ...currentEntry, date: e.target.value })} 
-                data-enter-index="10"
+                data-enter-index="10-date"
+                onKeyDown={(e) => handleTransactionKeyDown(e, 1)}
               />
             </div>
             <div className="w-[90px]">
@@ -1016,13 +1092,13 @@ function SaalaTransactionTab({ customers, catalog, showNotify, setDropdownOpen }
                 data-enter-index="11"
                 onDropdownStateChange={setDropdownOpen}
                 onSelectionComplete={() => {
-                  // Focus on qty field after item code selection
+                  // Focus on item name field after item code selection
                   setTimeout(() => {
-                    const qtyField = document.querySelector('[data-enter-index="12"]');
-                    if (qtyField) {
-                      qtyField.focus();
+                    const itemNameField = document.querySelector('[data-enter-index="13"]');
+                    if (itemNameField) {
+                      itemNameField.focus();
                     }
-                  }, 100);
+                  }, 50);
                 }}
               />
             </div>
@@ -1035,6 +1111,8 @@ function SaalaTransactionTab({ customers, catalog, showNotify, setDropdownOpen }
                 value={currentEntry.itemName} 
                 readOnly
                 placeholder="Auto-filled"
+                data-enter-index="13"
+                onKeyDown={(e) => handleTransactionKeyDown(e, 3)}
               />
             </div>
             <div className="w-[70px]">
@@ -1047,6 +1125,7 @@ function SaalaTransactionTab({ customers, catalog, showNotify, setDropdownOpen }
                 value={currentEntry.qty} 
                 onChange={e => setCurrentEntry({ ...currentEntry, qty: e.target.value })} 
                 data-enter-index="12"
+                onKeyDown={(e) => handleTransactionKeyDown(e, 4)}
               />
             </div>
             <div className="w-[70px]">
@@ -1058,7 +1137,8 @@ function SaalaTransactionTab({ customers, catalog, showNotify, setDropdownOpen }
                 style={{ height: '36px' }}
                 value={currentEntry.rate} 
                 onChange={e => setCurrentEntry({ ...currentEntry, rate: e.target.value })} 
-                data-enter-index="13"
+                data-enter-index="13-rate"
+                onKeyDown={(e) => handleTransactionKeyDown(e, 5)}
               />
             </div>
             <div className="w-[100px]">
@@ -1081,6 +1161,7 @@ function SaalaTransactionTab({ customers, catalog, showNotify, setDropdownOpen }
                 value={currentEntry.paidAmount} 
                 onChange={e => setCurrentEntry({ ...currentEntry, paidAmount: e.target.value })} 
                 data-enter-index="14"
+                onKeyDown={(e) => handleTransactionKeyDown(e, 6)}
               />
             </div>
             <div className="w-[100px]">
@@ -1102,27 +1183,19 @@ function SaalaTransactionTab({ customers, catalog, showNotify, setDropdownOpen }
                 style={{ height: '36px' }}
                 value={currentEntry.remarks} 
                 onChange={e => setCurrentEntry({ ...currentEntry, remarks: e.target.value })} 
-                data-enter-index="15"
+                data-enter-index="14-remarks"
+                onKeyDown={(e) => handleTransactionKeyDown(e, 7)}
               />
             </div>
-            <div className="ml-auto pr-1">
+            <div className="w-[100px]">
               <button 
-                data-action="primary"
-                onClick={handleAddOrUpdate}
-                disabled={!selectedCustomerId || isSubmitting}
-                className="bg-primary-600 text-white px-8 text-sm font-semibold rounded-sm hover:bg-primary-700 shadow-md transition-all active:translate-y-px disabled:opacity-40 disabled:cursor-not-allowed"
-                style={{ height: '36px' }}
-                data-enter-index="16"
-                title={isSubmitting ? 'Processing...' : (currentEntry.id ? 'Update' : 'Add')}
+                onClick={handleAddOrUpdate} 
+                disabled={isSubmitting || !selectedCustomerId}
+                className="w-full bg-gradient-to-r from-primary-600 to-primary-700 text-white py-2.5 font-black uppercase text-xs rounded-sm shadow-lg hover:from-primary-700 hover:to-primary-800 transition-all duration-200 disabled:opacity-40"
+                data-enter-index="15"
+                onKeyDown={(e) => handleTransactionKeyDown(e, 8)}
               >
-                {isSubmitting ? (
-                  <>
-                    <span className="inline-block animate-spin mr-2">⏳</span>
-                    Processing...
-                  </>
-                ) : (
-                  currentEntry.id ? 'Update' : 'Add'
-                )}
+                {isSubmitting ? 'SAVING...' : (currentEntry.id ? 'UPDATE' : 'ADD')}
               </button>
             </div>
           </div>
