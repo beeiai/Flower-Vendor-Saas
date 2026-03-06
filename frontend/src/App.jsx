@@ -1766,12 +1766,7 @@ export default function App() {
                         return;
                       }
                       if (item.id === 'daily-rate-sales') {
-                        setItemsDailySaleRateForm(prev => ({
-                          ...prev,
-                          itemName: '',
-                        }));
-                        setItemsDailySaleRateRows([]);
-                        setIsItemsDailySaleRateOpen(true);
+                        setActiveSection('daily-rate-sales');
                         return;
                       }
                       if (item.id === 'daily-sale') {
