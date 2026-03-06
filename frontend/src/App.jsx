@@ -602,9 +602,7 @@ export default function App() {
     const handleClickOutside = (event) => {
       const navElement = document.querySelector('nav');
       if (navElement && !navElement.contains(event.target)) {
-        setShowTMenu(false);
-        setShowUMenu(false);
-        setShowMMenu(false);
+        setActiveDropdown(null);
       }
     };
 
@@ -695,9 +693,7 @@ export default function App() {
 
   // Close dropdowns when navigating to a new section
   useEffect(() => {
-    setShowTMenu(false);
-    setShowUMenu(false);
-    setShowMMenu(false);
+    setActiveDropdown(null);
   }, [activeSection]);
 
   const loadItemsDailySaleRate = async () => {
@@ -811,43 +807,10 @@ export default function App() {
         groupPattiForm.commissionPct
       );
       
-      // Open preview in new tab
-      const previewWindow = window.open('about:blank', '_blank');
-      if (previewWindow) {
-        previewWindow.document.write(response);
-        previewWindow.document.close();
-        previewWindow.focus();
-        // Add print button to the preview
-        previewWindow.document.addEventListener('DOMContentLoaded', () => {
-          const printButton = previewWindow.document.createElement('button');
-          printButton.innerHTML = '🖨️ Print';
-          printButton.style.position = 'fixed';
-          printButton.style.top = '20px';
-          printButton.style.right = '20px';
-          printButton.style.zIndex = '999';
-          printButton.style.padding = '8px 18px';
-          printButton.style.fontSize = '15px';
-          printButton.style.background = '#1976d2';
-          printButton.style.color = '#fff';
-          printButton.style.border = 'none';
-          printButton.style.borderRadius = '4px';
-          printButton.style.cursor = 'pointer';
-          printButton.onclick = () => previewWindow.print();
-          previewWindow.document.body.appendChild(printButton);
-        });
-      }
-      if (!previewWindow) {
-        // Fallback to download if popup blocked
-        const a = document.createElement('a');
-        a.href = url;
-        a.download = `group_patti_report_${group}_${new Date().toISOString().slice(0, 10)}.pdf`;
-        document.body.appendChild(a);
-        a.click();
-        document.body.removeChild(a);
-      }
-      
-      // Clean up the URL object
-      window.URL.revokeObjectURL(url);
+      // Print HTML directly via hidden iframe (no new tab)
+      const htmlContent = response || '';
+      const { printHtmlString } = await import('./utils/printService');
+      await printHtmlString(htmlContent);
     } catch (error) {
       console.error('Group Patti Print error:', error);
       let errorMessage = error.message;
@@ -886,36 +849,10 @@ export default function App() {
         );
       }
       
-      // Open preview in new tab
-      const previewWindow = window.open('about:blank', '_blank');
-      if (previewWindow) {
-        previewWindow.document.write(response); // The new endpoint returns text directly
-        previewWindow.document.close();
-        previewWindow.focus();
-        // Add print button to the preview
-        previewWindow.document.addEventListener('DOMContentLoaded', () => {
-          const printButton = previewWindow.document.createElement('button');
-          printButton.innerHTML = '🖨️ Print';
-          printButton.style.position = 'fixed';
-          printButton.style.top = '20px';
-          printButton.style.right = '20px';
-          printButton.style.zIndex = '999';
-          printButton.style.padding = '8px 18px';
-          printButton.style.fontSize = '15px';
-          printButton.style.background = '#1976d2';
-          printButton.style.color = '#fff';
-          printButton.style.border = 'none';
-          printButton.style.borderRadius = '4px';
-          printButton.style.cursor = 'pointer';
-          printButton.onclick = () => previewWindow.print();
-          previewWindow.document.body.appendChild(printButton);
-        });
-      } else {
-        // Fallback: open in current window
-        const newWindow = window.open('about:blank');
-        newWindow.document.write(response);
-        newWindow.document.close();
-      }
+      // Print HTML directly via hidden iframe (no new tab)
+      const htmlContent = response || '';
+      const { printHtmlString } = await import('./utils/printService');
+      await printHtmlString(htmlContent);
     } catch (error) {
       console.error('Group Total Print error:', error);
       let errorMessage = error.message;

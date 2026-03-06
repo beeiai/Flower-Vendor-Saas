@@ -1,6 +1,7 @@
 import React, { useState, useMemo, useEffect, useCallback } from 'react';
 import { Search, Printer, X, Send, Package, ChevronDown, AlertTriangle, CheckCircle, Clock, RefreshCw } from 'lucide-react';
 import { api } from '../../utils/api';
+import { printBlob } from '../../utils/printService';
 import { DEFAULT_STATES } from '../../utils/stateManager';
 
 /**
@@ -223,20 +224,9 @@ const DailySaleReport = ({ onCancel }) => {
       // Handle PDF preview (open in new tab for print preview)
       const url = window.URL.createObjectURL(blob);
       
-      // Open in new tab for preview and print
-      const previewWindow = window.open(url, '_blank');
-      if (!previewWindow) {
-        // Fallback to download if popup blocked
-        const a = document.createElement('a');
-        a.href = url;
-        a.download = `daily_sales_report_${selectedGroup}_${fromDate}_to_${toDate}_${new Date().toISOString().slice(0, 10)}.pdf`;
-        document.body.appendChild(a);
-        a.click();
-        document.body.removeChild(a);
-      }
-      
-      // Clean up the URL object
-      window.URL.revokeObjectURL(url);
+      // Print PDF blob using hidden iframe (avoids opening a new tab)
+      await printBlob(blob);
+      // Clean up the URL object (printBlob revokes when done)
       
     } catch (error) {
       console.error('Print error:', error);
