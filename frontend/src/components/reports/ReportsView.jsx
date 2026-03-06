@@ -246,6 +246,14 @@ export default function ReportsView({ groups, customers, vehicles, advanceStore 
 				// Revoke URL after download starts
 				setTimeout(() => window.URL.revokeObjectURL(url), 100);
 			} else {
+				// Automatically trigger print dialog when page loads
+				previewWindow.onload = () => {
+					// Give the page a moment to fully render
+					setTimeout(() => {
+						previewWindow.focus();
+						previewWindow.print();
+					}, 250);
+				};
 				// Revoke URL after print window loads (delayed to allow page to load)
 				setTimeout(() => window.URL.revokeObjectURL(url), 5000);
 			}

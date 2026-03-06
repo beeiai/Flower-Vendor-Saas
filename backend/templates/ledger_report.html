@@ -24,6 +24,12 @@
             width: 100%;
             padding: 5px;
         }
+        /* Hide print button when printing */
+        @media print {
+            .no-print {
+                display: none !important;
+            }
+        }
         /* Header with photo */
         .header-container {
             display: flex;
@@ -285,7 +291,25 @@
         </tr>
     </table>
 
+    <!-- Print Button (visible only on screen, hidden when printing) -->
+    <div class="no-print" style="text-align: center; margin: 20px 0;">
+        <button onclick="window.print()" style="padding: 10px 30px; font-size: 14px; background-color: #4CAF50; color: white; border: none; border-radius: 5px; cursor: pointer; font-weight: bold;">
+            🖨️ Print Report
+        </button>
+        <p style="margin-top: 10px; color: #666; font-size: 12px;">Or press Ctrl+P / Cmd+P to print</p>
+    </div>
+
 </div>
+
+<script>
+    // Auto-trigger print dialog when page loads
+    window.addEventListener('load', function() {
+        // Small delay to ensure page is fully rendered
+        setTimeout(function() {
+            window.print();
+        }, 500);
+    });
+</script>
 
 </body>
 </html>
