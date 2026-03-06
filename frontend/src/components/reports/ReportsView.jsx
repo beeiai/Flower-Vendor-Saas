@@ -14,6 +14,7 @@ function todayISO() {
 
 export default function ReportsView({ groups, customers, vehicles, advanceStore = {}, onCancel }) {
 	const [filterError, setFilterError] = useState("");
+	const [showGroupWarning, setShowGroupWarning] = useState(false);
 	const [state, setState] = useState(DEFAULT_STATES.reports);
 
 	const { fromDate, toDate, groupName, customerName, vehicle, commissionPct, rows } = state;
@@ -181,6 +182,14 @@ export default function ReportsView({ groups, customers, vehicles, advanceStore 
 		}
 	};
 
+	// Handle customer dropdown focus - show warning if no group selected
+	const handleCustomerFocus = useCallback(() => {
+		if (!groupName) {
+			setShowGroupWarning(true);
+			setTimeout(() => setShowGroupWarning(false), 3000);
+		}
+	}, [groupName]);
+
 	const summary = useMemo(() => {
 		const qty = filteredRows.reduce((acc, r) => acc + r.qty, 0);
 		const total = filteredRows.reduce((acc, r) => acc + (r.qty * r.rate), 0);
@@ -335,28 +344,31 @@ export default function ReportsView({ groups, customers, vehicles, advanceStore 
 									</div>
 									<div className="col-span-2">
 										<EnhancedSearchableSelect
-											label="Vehicle"
+											label={
+												<span className="text-slate-500">
+													Vehicle <span className="italic text-xs font-normal">(Optional)</span>
+												</span>
+											}
 											options={vehicles.map(v => v.name)}
 											value={vehicle}
 											onChange={setVehicle}
-											placeholder="(Opt)"
+											placeholder="Select Vehicle (Optional)"
 											inputRef={vehicleRef}
 											onSelectionComplete={() => {
 												setTimeout(() => {
 													const customerInput = customerRef.current?.querySelector('input');
 													if (customerInput) {
-														// Focus will trigger onFocus which opens dropdown
 														customerInput.focus();
 													}
 												}, 50);
 											}}
-											className="focus:border-rose-500 focus:ring-rose-500/20 rounded-lg shadow-sm hover:shadow-md transition-all border-rose-200 w-full"
+											className="focus:border-slate-300 focus:ring-slate-200/20 rounded-lg shadow-sm hover:shadow-md transition-all border-slate-200 w-full"
 										/>
 									</div>
 								</div>
 
 								<div className="grid grid-cols-12 gap-4 items-end">
-									<div className="col-span-4">
+									<div className="col-span-4 relative">
 										<label className="text-xs font-medium text-slate-600 block mb-1">Customer Name</label>
 										<div className="flex items-end gap-1.5">
 											<div className="flex-1 relative">
@@ -368,18 +380,28 @@ export default function ReportsView({ groups, customers, vehicles, advanceStore 
 													onChange={setCustomerName}
 													placeholder="Select customer"
 													inputRef={customerRef}
+													disabled={!groupName}
+													onFocus={handleCustomerFocus}
 													onSelectionComplete={() => {
 														setTimeout(() => {
 															submitRef.current?.focus();
 														}, 100);
 													}}
-													className={`focus:border-rose-500 focus:ring-rose-500/20 rounded-lg shadow-sm hover:shadow-md transition-all border-rose-200 w-full ${filterError && !customerName ? 'border-red-500 ring-2 ring-red-100' : ''}`}
+													className={`focus:border-rose-500 focus:ring-rose-500/20 rounded-lg shadow-sm hover:shadow-md transition-all border-rose-200 w-full ${!groupName ? 'bg-slate-100 cursor-not-allowed' : ''} ${filterError && !customerName ? 'border-red-500 ring-2 ring-red-100' : ''}`}
 													error={filterError && !customerName}
 												/>
 												{filterError && <div className="text-xs text-red-600 mt-2 font-semibold">{filterError}</div>}
 											</div>
-											<button type="button" className="w-8 border border-slate-300 bg-slate-100 font-semibold text-sm rounded-sm hover:bg-slate-200 transition-colors" style={{ height: '36px' }} onClick={goPrevCustomer} aria-label="Previous customer">{'<'}</button>
-											<button type="button" className="w-8 border border-slate-300 bg-slate-100 font-semibold text-sm rounded-sm hover:bg-slate-200 transition-colors" style={{ height: '36px' }} onClick={goNextCustomer} aria-label="Next customer">{'>'}</button>
+											
+											{/* Warning message when trying to select customer before group */}
+											{showGroupWarning && (
+												<div className="absolute top-full left-0 mt-1 bg-amber-50 border border-amber-300 text-amber-800 px-3 py-2 rounded-lg shadow-lg z-[10000] text-xs font-medium whitespace-nowrap animate-in slide-in-from-top-2 duration-200">
+													⚠️ Please select a group first
+												</div>
+											)}
+											
+											<button type="button" className="w-8 border border-slate-300 bg-slate-100 font-semibold text-sm rounded-sm hover:bg-slate-200 transition-colors disabled:opacity-50 disabled:cursor-not-allowed" style={{ height: '36px' }} onClick={goPrevCustomer} disabled={!groupName} aria-label="Previous customer">{'<'}</button>
+											<button type="button" className="w-8 border border-slate-300 bg-slate-100 font-semibold text-sm rounded-sm hover:bg-slate-200 transition-colors disabled:opacity-50 disabled:cursor-not-allowed" style={{ height: '36px' }} onClick={goNextCustomer} disabled={!groupName} aria-label="Next customer">{'>'}</button>
 										</div>
 									</div>
 									<div className="col-span-3">

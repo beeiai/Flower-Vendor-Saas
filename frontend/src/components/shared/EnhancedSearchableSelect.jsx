@@ -27,7 +27,8 @@ export function EnhancedSearchableSelect({
   className = "", 
   onSelectionComplete,
   error,
-  showAllOnEnter = false 
+  showAllOnEnter = false,
+  onFocus
 }) {
   const [isOpen, setIsOpen] = useState(false);
   const [highlightIndex, setHighlightIndex] = useState(0);
@@ -178,6 +179,7 @@ export function EnhancedSearchableSelect({
             setIsEditing(true);
             setIsOpen(true);
             setHighlightIndex(0);
+            onFocus?.();
           }}
           onBlur={() => {
             setIsEditing(false);
