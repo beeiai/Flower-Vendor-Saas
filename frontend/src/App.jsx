@@ -32,8 +32,10 @@ function GroupCustomerRegistryForm({ title = 'ADD GROUP', initialTab = 'group', 
   const [tab, setTab] = useState(initialTab);
   const [groupName, setGroupName] = useState('');
   const [groupError, setGroupError] = useState('');
+  const [selectedGroupForDelete, setSelectedGroupForDelete] = useState(null);
   const [custForm, setCustForm] = useState({ groupName: '', name: '', contact: '', address: '' });
   const [custError, setCustError] = useState('');
+  const [phoneError, setPhoneError] = useState('');
 
   const addGroup = async () => {
     setGroupError('');
@@ -57,10 +59,45 @@ function GroupCustomerRegistryForm({ title = 'ADD GROUP', initialTab = 'group', 
     }
   };
 
+  const deleteGroup = async () => {
+    if (!selectedGroupForDelete) {
+      showNotify?.('Please select a group to delete.', 'error');
+      return;
+    }
+    
+    // Show confirmation dialog
+    const confirmed = window.confirm('Are you sure you want to delete this group?');
+    if (!confirmed) return;
+    
+    try {
+      await api.deleteGroup(selectedGroupForDelete.id);
+      setGroups(prev => prev.filter(g => g.id !== selectedGroupForDelete.id));
+      setSelectedGroupForDelete(null);
+      setGroupName('');
+      showNotify?.('Group deleted successfully.', 'success');
+    } catch (e) {
+      showNotify?.(`Failed to delete group: ${e.message}`, 'error');
+    }
+  };
+
+  const validatePhoneNumber = (phone) => {
+    // Remove any non-digit characters
+    const digitsOnly = phone.replace(/\D/g, '');
+    // Check if exactly 10 digits
+    if (digitsOnly.length > 0 && digitsOnly.length !== 10) {
+      return false;
+    }
+    return true;
+  };
+
   const addCustomer = async () => {
     setCustError('');
+    setPhoneError('');
+    
     const groupName = String(custForm.groupName || '').trim();
     const name = String(custForm.name || '').trim();
+    const phone = String(custForm.contact || '').trim();
+    
     if (!groupName) {
       setCustError('Select group');
       showNotify?.('Customer add failed: Select group', 'error');
@@ -71,6 +108,15 @@ function GroupCustomerRegistryForm({ title = 'ADD GROUP', initialTab = 'group', 
       showNotify?.('Customer add failed: Enter customer name', 'error');
       return;
     }
+    
+    // Validate phone number (must be exactly 10 digits)
+    if (phone && !validatePhoneNumber(phone)) {
+      setPhoneError('Please enter a valid 10-digit phone number.');
+      showNotify?.('Customer add failed: Invalid phone number', 'error');
+      document.querySelector('[data-enter="3"]')?.focus();
+      return;
+    }
+    
     const groupId = groups.find(g => g.name === groupName)?.id;
     try {
       const created = await api.createCustomer({
@@ -88,6 +134,31 @@ function GroupCustomerRegistryForm({ title = 'ADD GROUP', initialTab = 'group', 
     } catch (e) {
       setCustError(e.message);
       showNotify?.(`Customer add failed: ${e.message}`, 'error');
+    }
+  };
+
+  const deleteCustomer = async () => {
+    // Find customer by name and group
+    const customerToDelete = customers.find(
+      c => c.name === custForm.name && c.group === custForm.groupName
+    );
+    
+    if (!customerToDelete) {
+      showNotify?.('No customer found to delete. Please ensure the customer exists.', 'error');
+      return;
+    }
+    
+    // Show confirmation dialog
+    const confirmed = window.confirm('Are you sure you want to delete this customer?');
+    if (!confirmed) return;
+    
+    try {
+      await api.deleteCustomer(customerToDelete.id);
+      setCustomers(prev => prev.filter(c => c.id !== customerToDelete.id));
+      setCustForm({ groupName: '', name: '', contact: '', address: '' });
+      showNotify?.('Customer deleted successfully.', 'success');
+    } catch (e) {
+      showNotify?.(`Failed to delete customer: ${e.message}`, 'error');
     }
   };
 
@@ -115,7 +186,13 @@ function GroupCustomerRegistryForm({ title = 'ADD GROUP', initialTab = 'group', 
                 className={`w-full border border-rose-200 rounded-lg px-4 py-3 text-sm font-medium bg-white outline-none focus:border-rose-500 focus:ring-2 focus:ring-rose-500/20 shadow-sm hover:shadow-md transition-all ${groupError ? 'border-red-500' : ''}`}
                 style={{height: '46px'}}
                 value={groupName}
-                onChange={e => { setGroupName(e.target.value); setGroupError(''); }}
+                onChange={e => { 
+                  setGroupName(e.target.value); 
+                  setGroupError('');
+                  // Find and set selected group for deletion
+                  const group = groups.find(g => g.name === e.target.value);
+                  setSelectedGroupForDelete(group || null);
+                }}
                 placeholder="Enter group name"
                 data-enter="1"
                 onKeyDown={e => {
@@ -124,14 +201,27 @@ function GroupCustomerRegistryForm({ title = 'ADD GROUP', initialTab = 'group', 
               />
               {groupError && <div className="text-xs text-red-600 mt-1 font-semibold">{groupError}</div>}
             </div>
-            <button
-              data-action="primary"
-              onClick={addGroup}
-              className="w-full bg-gradient-to-r from-[#5B55E6] to-[#4A44D0] text-white py-3 font-bold uppercase text-sm shadow-lg hover:from-[#4A44D0] hover:to-[#3A34C0] rounded-xl transition-all hover:shadow-xl active:translate-y-0.5"
-              style={{height: '48px'}}
-              data-enter="2"
-              onKeyDown={e => { if (e.key === 'Enter') { e.preventDefault(); document.querySelector('[data-enter="1"]')?.focus(); } }}
-            >Add Group</button>
+            <div className="grid grid-cols-2 gap-4">
+              <button
+                data-action="primary"
+                onClick={addGroup}
+                className="bg-gradient-to-r from-[#5B55E6] to-[#4A44D0] text-white py-3 font-bold uppercase text-sm shadow-lg hover:from-[#4A44D0] hover:to-[#3A34C0] rounded-xl transition-all hover:shadow-xl active:translate-y-0.5"
+                style={{height: '48px'}}
+                data-enter="2"
+                onKeyDown={e => { if (e.key === 'Enter') { e.preventDefault(); document.querySelector('[data-enter="1"]')?.focus(); } }}
+              >Add Group</button>
+              <button
+                type="button"
+                onClick={deleteGroup}
+                disabled={!selectedGroupForDelete}
+                className="bg-gradient-to-r from-rose-600 to-rose-700 text-white py-3 font-bold uppercase text-sm shadow-lg hover:from-rose-700 hover:to-rose-800 rounded-xl transition-all hover:shadow-xl active:translate-y-0.5 disabled:opacity-50 disabled:cursor-not-allowed"
+                style={{height: '48px'}}
+                title={!selectedGroupForDelete ? 'Please enter a group name to delete' : 'Delete this group'}
+              >
+                <Trash2 className="w-4 h-4 inline mr-2" />
+                Delete Group
+              </button>
+            </div>
           </div>
         )}
 
@@ -179,14 +269,23 @@ function GroupCustomerRegistryForm({ title = 'ADD GROUP', initialTab = 'group', 
                 <label className="text-xs font-bold uppercase text-slate-600 tracking-widest block mb-2">Phone</label>
                 <input
                   type="text"
-                  className="w-full border border-rose-200 rounded-lg px-4 py-3 text-sm font-medium bg-white outline-none focus:border-rose-500 focus:ring-2 focus:ring-rose-500/20 shadow-sm hover:shadow-md transition-all"
+                  className={`w-full border border-rose-200 rounded-lg px-4 py-3 text-sm font-medium bg-white outline-none focus:border-rose-500 focus:ring-2 focus:ring-rose-500/20 shadow-sm hover:shadow-md transition-all ${phoneError ? 'border-red-500' : ''}`}
                   style={{height: '46px'}}
                   value={custForm.contact}
-                  onChange={e => setCustForm({ ...custForm, contact: e.target.value })}
-                  placeholder="Phone number"
+                  onChange={e => {
+                    const value = e.target.value;
+                    // Only allow digits
+                    if (/^\d*$/.test(value)) {
+                      setCustForm({ ...custForm, contact: value });
+                      setPhoneError('');
+                    }
+                  }}
+                  placeholder="Phone number (10 digits)"
                   data-enter="3"
                   onKeyDown={e => { if (e.key === 'Enter') { e.preventDefault(); document.querySelector('[data-enter="4"]')?.focus(); } }}
+                  maxLength={10}
                 />
+                {phoneError && <div className="text-xs text-red-600 mt-1 font-semibold">{phoneError}</div>}
               </div>
               <div className="bg-slate-50/50 p-4 rounded-xl border border-slate-200">
                 <label className="text-xs font-bold uppercase text-slate-600 tracking-widest block mb-2">Address</label>
@@ -202,19 +301,32 @@ function GroupCustomerRegistryForm({ title = 'ADD GROUP', initialTab = 'group', 
                 />
               </div>
             </div>
-            <button
-              data-action="primary"
-              onClick={addCustomer}
-              className="w-full bg-gradient-to-r from-[#5B55E6] to-[#4A44D0] text-white py-3 font-bold uppercase text-sm shadow-lg hover:from-[#4A44D0] hover:to-[#3A34C0] rounded-xl transition-all hover:shadow-xl active:translate-y-0.5"
-              style={{height: '48px'}}
-              data-enter="5"
-              onKeyDown={e => { 
-                if (e.key === 'Enter') { 
-                  e.preventDefault(); 
-                  addCustomer(); 
-                } 
-              }}
-            >Add Customer</button>
+            <div className="grid grid-cols-2 gap-4">
+              <button
+                data-action="primary"
+                onClick={addCustomer}
+                className="bg-gradient-to-r from-[#5B55E6] to-[#4A44D0] text-white py-3 font-bold uppercase text-sm shadow-lg hover:from-[#4A44D0] hover:to-[#3A34C0] rounded-xl transition-all hover:shadow-xl active:translate-y-0.5"
+                style={{height: '48px'}}
+                data-enter="5"
+                onKeyDown={e => { 
+                  if (e.key === 'Enter') { 
+                    e.preventDefault(); 
+                    addCustomer(); 
+                  } 
+                }}
+              >Add Customer</button>
+              <button
+                type="button"
+                onClick={deleteCustomer}
+                disabled={!custForm.name || !custForm.groupName}
+                className="bg-gradient-to-r from-rose-600 to-rose-700 text-white py-3 font-bold uppercase text-sm shadow-lg hover:from-rose-700 hover:to-rose-800 rounded-xl transition-all hover:shadow-xl active:translate-y-0.5 disabled:opacity-50 disabled:cursor-not-allowed"
+                style={{height: '48px'}}
+                title={!custForm.name || !custForm.groupName ? 'Please enter customer name and select group to delete' : 'Delete this customer'}
+              >
+                <Trash2 className="w-4 h-4 inline mr-2" />
+                Delete Customer
+              </button>
+            </div>
             {custError && custForm.name && <div className="text-xs text-red-600 mt-2 font-semibold">{custError}</div>}
           </div>
         )}
