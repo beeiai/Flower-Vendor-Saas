@@ -1,4 +1,4 @@
-import React, { useState, useMemo, useEffect, useRef } from 'react';
+import React, { useState, useMemo, useEffect, useRef, useCallback } from 'react';
 import useAuth from './hooks/useAuth';
 import AuthTabs from './components/shared/AuthTabs';
 import { useKeyboardNavigation } from './hooks/useKeyboardNavigation';
@@ -1124,7 +1124,9 @@ export default function App() {
     }
   };
 
-  const [showTMenu, setShowTMenu] = useState(false); const [showUMenu, setShowUMenu] = useState(false); const [showMMenu, setShowMMenu] = useState(false);
+  // Single controlled state for all dropdowns (industry-standard approach)
+  // Only ONE dropdown can be open at a time - professional SaaS behavior
+  const [activeDropdown, setActiveDropdown] = useState(null); // 'transaction', 'utility', 'more', or null
   
   // Navigation refs for keyboard navigation
   const navRefs = {
@@ -1134,6 +1136,35 @@ export default function App() {
     utilityMenu: useRef(null),
     moreMenu: useRef(null)
   };
+
+  // Click-outside-to-close handler for dropdowns
+  useEffect(() => {
+    const handleClickOutside = (event) => {
+      // Check if click is outside all navbar dropdown triggers
+      const isClickInsideNavbar = event.target.closest('nav');
+      if (!isClickInsideNavbar && activeDropdown !== null) {
+        setActiveDropdown(null);
+      }
+    };
+
+    document.addEventListener('mousedown', handleClickOutside);
+    return () => document.removeEventListener('mousedown', handleClickOutside);
+  }, [activeDropdown]);
+
+  // Toggle dropdown with proper behavior
+  const toggleDropdown = useCallback((dropdownName) => {
+    setActiveDropdown(prev => {
+      // If same dropdown is clicked, close it (toggle behavior)
+      if (prev === dropdownName) return null;
+      // Otherwise, open the new dropdown (automatically closes previous)
+      return dropdownName;
+    });
+  }, []);
+
+  // Close all dropdowns
+  const closeAllDropdowns = useCallback(() => {
+    setActiveDropdown(null);
+  }, []);
 
   // Standalone keyboard navigation for Group Patti Printing Page
   const useGroupPattiNavigation = (containerRef) => {
@@ -1208,75 +1239,152 @@ export default function App() {
         <div className="flex items-center gap-6 h-full">
           <div ref={navRefs.logo} className="flex items-center gap-2 pr-6 border-r border-slate-700 cursor-pointer h-full navbar-element" onClick={() => setActiveSection('daily')} data-navbar-element><Flower2 className="w-5 h-5 text-primary-400" /><span className="text-sm font-bold text-white tracking-wide">SKFS ERP</span><span className="text-xs text-slate-400 font-medium">v5.0.4</span></div>
           
-          <div className="relative h-full flex items-center"><button ref={navRefs.transactionMenu} onClick={() => setShowTMenu(!showTMenu)} className={`flex items-center gap-2 px-4 h-full text-xs font-semibold transition-all ${showTMenu ? 'bg-white text-slate-900 shadow-xl' : 'text-slate-300 hover:text-white'} navbar-element`} data-navbar-element>Transaction <ChevronDown className={`w-3.5 h-3.5 ${showTMenu ? 'text-slate-900' : 'text-slate-300'}`} /></button>
-            {showTMenu && <div className="absolute top-12 left-0 w-56 bg-white border border-slate-200 shadow-dropdown py-1 animate-in slide-in-from-top-2 duration-150 rounded-sm overflow-hidden z-[5000]">
-              {[ 
-                { id: 'daily', l: 'Daily Transaction', i: Receipt }, 
-                { id: 'group-reg', l: 'New Group', i: FolderPlus }, 
-                { id: 'item-reg', l: 'New Item', i: PackagePlus },
-                { id: 'party', l: 'Party Details', i: Users },
-                { id: 'vehicle', l: 'Extra Vehicle', i: Truck }
-              ].map(item => (
-                <button key={item.id} onClick={() => { setShowTMenu(false); setActiveSection(item.id); }} className={`w-full text-left px-4 py-2.5 text-sm font-medium flex items-center gap-3 transition-colors ${activeSection === item.id ? 'bg-primary-600 text-white' : 'text-slate-700 hover:bg-primary-50 hover:text-primary-700'} navbar-element`} data-navbar-element><item.i className="w-4 h-4" /> {item.l}</button>
-              ))}
-            </div>}
+          {/* Transaction Dropdown - Controlled by activeDropdown state */}
+          <div className="relative h-full flex items-center">
+            <button 
+              ref={navRefs.transactionMenu} 
+              onClick={() => toggleDropdown('transaction')} 
+              className={`flex items-center gap-2 px-4 h-full text-xs font-semibold transition-all ${activeDropdown === 'transaction' ? 'bg-white text-slate-900 shadow-xl' : 'text-slate-300 hover:text-white'} navbar-element`} 
+              data-navbar-element
+              aria-expanded={activeDropdown === 'transaction'}
+              aria-haspopup="true"
+            >
+              Transaction <ChevronDown className={`w-3.5 h-3.5 transition-transform duration-200 ${activeDropdown === 'transaction' ? 'text-slate-900 rotate-180' : 'text-slate-300'}`} />
+            </button>
+            {activeDropdown === 'transaction' && (
+              <div className="absolute top-12 left-0 w-56 bg-white border border-slate-200 shadow-dropdown py-1 animate-in slide-in-from-top-2 duration-150 rounded-sm overflow-hidden z-[5000]" role="menu">
+                {[ 
+                  { id: 'daily', l: 'Daily Transaction', i: Receipt }, 
+                  { id: 'group-reg', l: 'New Group', i: FolderPlus }, 
+                  { id: 'item-reg', l: 'New Item', i: PackagePlus },
+                  { id: 'party', l: 'Party Details', i: Users },
+                  { id: 'vehicle', l: 'Extra Vehicle', i: Truck }
+                ].map(item => (
+                  <button 
+                    key={item.id} 
+                    onClick={() => { 
+                      closeAllDropdowns(); 
+                      setActiveSection(item.id); 
+                    }} 
+                    className={`w-full text-left px-4 py-2.5 text-sm font-medium flex items-center gap-3 transition-colors ${activeSection === item.id ? 'bg-primary-600 text-white' : 'text-slate-700 hover:bg-primary-50 hover:text-primary-700'} navbar-element`} 
+                    data-navbar-element
+                    role="menuitem"
+                  >
+                    <item.i className="w-4 h-4" /> {item.l}
+                  </button>
+                ))}
+              </div>
+            )}
           </div>
 
-          <button ref={navRefs.reportsButton} onClick={() => { setShowTMenu(false); setShowUMenu(false); setShowMMenu(false); setActiveSection('reports'); }} className={`flex items-center gap-2 px-4 h-full text-xs font-semibold transition-all ${activeSection === 'reports' ? 'bg-white text-slate-900' : 'text-slate-300 hover:text-white'} navbar-element`} data-navbar-element>Reports</button>
+          {/* Reports Button - Closes all dropdowns when clicked */}
+          <button 
+            ref={navRefs.reportsButton} 
+            onClick={() => { 
+              closeAllDropdowns(); 
+              setActiveSection('reports'); 
+            }} 
+            className={`flex items-center gap-2 px-4 h-full text-xs font-semibold transition-all ${activeSection === 'reports' ? 'bg-white text-slate-900' : 'text-slate-300 hover:text-white'} navbar-element`} 
+            data-navbar-element
+          >
+            Reports
+          </button>
 
-          <div className="relative h-full flex items-center"><button ref={navRefs.utilityMenu} onClick={() => setShowUMenu(!showUMenu)} className={`flex items-center gap-2 px-4 h-full text-xs font-semibold transition-all ${showUMenu ? 'bg-white text-slate-900 shadow-xl' : 'text-slate-300 hover:text-white'} navbar-element`} data-navbar-element>Utility <ChevronDown className={`w-3.5 h-3.5 ${showUMenu ? 'text-slate-900' : 'text-slate-300'}`} /></button>
-            {showUMenu && <div className="absolute top-12 left-0 w-64 bg-white border border-slate-200 shadow-dropdown py-1 animate-in slide-in-from-top-2 duration-150 rounded-sm overflow-hidden z-[5000]">
-              {[ 
-                { id: 'group-print', l: 'Group Printing', i: Printer },
-                { id: 'group-total', l: 'Group Total Report', i: Layers },
-                { id: 'daily-rate-sales', l: 'Daily Rate Wise Sales', i: FileBarChart },
-                { id: 'new-supplier', l: 'New Supplier', i: UserCheck },
-                { id: 'daily-sale', l: 'Daily Sale', i: Monitor },
-                { id: 'sms-single', l: 'SMS Single', i: Send },
-                { id: 'supply-details', l: 'Supply Details', i: List },
-                { id: 'payment-list', l: 'Payment List', i: WalletCards },
-                { id: 'payment-report', l: 'Payment Report', i: BarChart3 },
-                { id: 'move-data', l: 'Move Data', i: ArrowRight },
-                { id: 'view-data', l: 'View Data', i: Search }
-              ].map(item => (
-                <button key={item.id} onClick={() => {
-                  setShowUMenu(false);
-                  if (item.id === 'group-print') {
-                    // Don't auto-select a group - let user choose
-                    setActiveSection('group-print');
-                    return;
-                  }
-                  if (item.id === 'group-total') {
-                    // Don't auto-select a group - let user choose or leave empty for all groups
-                    setActiveSection('group-total');
-                    return;
-                  }
-
-                  if (item.id === 'daily-rate-sales') {
-                    setItemsDailySaleRateForm(prev => ({
-                      ...prev,
-                      itemName: '',
-                    }));
-                    setItemsDailySaleRateRows([]);
-                    setIsItemsDailySaleRateOpen(true);
-                    return;
-                  }
-                  if (item.id === 'daily-sale') {
-                    setActiveSection('daily-sale');
-                    return;
-                  }
-                  setActiveSection(item.id);
-                }} className={`w-full text-left px-4 py-2.5 text-sm font-medium flex items-center gap-3 transition-colors ${activeSection === item.id ? 'bg-primary-50 text-primary-700' : 'text-slate-700 hover:bg-slate-50'} navbar-element`} data-navbar-element><item.i className="w-4 h-4" /> {item.l}</button>
-              ))}
-            </div>}
+          {/* Utility Dropdown - Controlled by activeDropdown state */}
+          <div className="relative h-full flex items-center">
+            <button 
+              ref={navRefs.utilityMenu} 
+              onClick={() => toggleDropdown('utility')} 
+              className={`flex items-center gap-2 px-4 h-full text-xs font-semibold transition-all ${activeDropdown === 'utility' ? 'bg-white text-slate-900 shadow-xl' : 'text-slate-300 hover:text-white'} navbar-element`} 
+              data-navbar-element
+              aria-expanded={activeDropdown === 'utility'}
+              aria-haspopup="true"
+            >
+              Utility <ChevronDown className={`w-3.5 h-3.5 transition-transform duration-200 ${activeDropdown === 'utility' ? 'text-slate-900 rotate-180' : 'text-slate-300'}`} />
+            </button>
+            {activeDropdown === 'utility' && (
+              <div className="absolute top-12 left-0 w-64 bg-white border border-slate-200 shadow-dropdown py-1 animate-in slide-in-from-top-2 duration-150 rounded-sm overflow-hidden z-[5000]" role="menu">
+                {[ 
+                  { id: 'group-print', l: 'Group Printing', i: Printer },
+                  { id: 'group-total', l: 'Group Total Report', i: Layers },
+                  { id: 'daily-rate-sales', l: 'Daily Rate Wise Sales', i: FileBarChart },
+                  { id: 'new-supplier', l: 'New Supplier', i: UserCheck },
+                  { id: 'daily-sale', l: 'Daily Sale', i: Monitor },
+                  { id: 'sms-single', l: 'SMS Single', i: Send },
+                  { id: 'supply-details', l: 'Supply Details', i: List },
+                  { id: 'payment-list', l: 'Payment List', i: WalletCards },
+                  { id: 'payment-report', l: 'Payment Report', i: BarChart3 },
+                  { id: 'move-data', l: 'Move Data', i: ArrowRight },
+                  { id: 'view-data', l: 'View Data', i: Search }
+                ].map(item => (
+                  <button 
+                    key={item.id} 
+                    onClick={() => {
+                      closeAllDropdowns();
+                      if (item.id === 'group-print') {
+                        setActiveSection('group-print');
+                        return;
+                      }
+                      if (item.id === 'group-total') {
+                        setActiveSection('group-total');
+                        return;
+                      }
+                      if (item.id === 'daily-rate-sales') {
+                        setItemsDailySaleRateForm(prev => ({
+                          ...prev,
+                          itemName: '',
+                        }));
+                        setItemsDailySaleRateRows([]);
+                        setIsItemsDailySaleRateOpen(true);
+                        return;
+                      }
+                      if (item.id === 'daily-sale') {
+                        setActiveSection('daily-sale');
+                        return;
+                      }
+                      setActiveSection(item.id);
+                    }} 
+                    className={`w-full text-left px-4 py-2.5 text-sm font-medium flex items-center gap-3 transition-colors ${activeSection === item.id ? 'bg-primary-50 text-primary-700' : 'text-slate-700 hover:bg-slate-50'} navbar-element`} 
+                    data-navbar-element
+                    role="menuitem"
+                  >
+                    <item.i className="w-4 h-4" /> {item.l}
+                  </button>
+                ))}
+              </div>
+            )}
           </div>
 
-          <div className="relative h-full flex items-center"><button ref={navRefs.moreMenu} onClick={() => setShowMMenu(!showMMenu)} className={`flex items-center gap-2 px-4 h-full text-xs font-semibold transition-all ${showMMenu ? 'bg-white text-slate-900 shadow-xl' : 'text-slate-300 hover:text-white'} navbar-element`} data-navbar-element>More <ChevronDown className={`w-3.5 h-3.5 ${showMMenu ? 'text-slate-900' : 'text-slate-300'}`} /></button>
-            {showMMenu && <div className="absolute top-12 left-0 w-52 bg-white border border-slate-200 shadow-dropdown py-1 animate-in slide-in-from-top-2 duration-150 rounded-sm overflow-hidden z-[5000]">
-              {[ { id: 'advance', l: 'Advance', i: WalletCards }, { id: 'saala', l: 'Saala (Credit)', i: Landmark }, { id: 'silk', l: 'Silk', i: Layers } ].map(item => (
-                <button key={item.id} onClick={() => { setShowMMenu(false); setActiveSection(item.id); }} className={`w-full text-left px-4 py-2.5 text-sm font-medium flex items-center gap-3 transition-colors ${activeSection === item.id ? 'bg-primary-50 text-primary-700' : 'text-slate-700 hover:bg-slate-50'} navbar-element`} data-navbar-element><item.i className="w-4 h-4" /> {item.l}</button>
-              ))}
-            </div>}
+          {/* More Dropdown - Controlled by activeDropdown state */}
+          <div className="relative h-full flex items-center">
+            <button 
+              ref={navRefs.moreMenu} 
+              onClick={() => toggleDropdown('more')} 
+              className={`flex items-center gap-2 px-4 h-full text-xs font-semibold transition-all ${activeDropdown === 'more' ? 'bg-white text-slate-900 shadow-xl' : 'text-slate-300 hover:text-white'} navbar-element`} 
+              data-navbar-element
+              aria-expanded={activeDropdown === 'more'}
+              aria-haspopup="true"
+            >
+              More <ChevronDown className={`w-3.5 h-3.5 transition-transform duration-200 ${activeDropdown === 'more' ? 'text-slate-900 rotate-180' : 'text-slate-300'}`} />
+            </button>
+            {activeDropdown === 'more' && (
+              <div className="absolute top-12 left-0 w-52 bg-white border border-slate-200 shadow-dropdown py-1 animate-in slide-in-from-top-2 duration-150 rounded-sm overflow-hidden z-[5000]" role="menu">
+                {[ { id: 'advance', l: 'Advance', i: WalletCards }, { id: 'saala', l: 'Saala (Credit)', i: Landmark }, { id: 'silk', l: 'Silk', i: Layers } ].map(item => (
+                  <button 
+                    key={item.id} 
+                    onClick={() => { 
+                      closeAllDropdowns(); 
+                      setActiveSection(item.id); 
+                    }} 
+                    className={`w-full text-left px-4 py-2.5 text-sm font-medium flex items-center gap-3 transition-colors ${activeSection === item.id ? 'bg-primary-50 text-primary-700' : 'text-slate-700 hover:bg-slate-50'} navbar-element`} 
+                    data-navbar-element
+                    role="menuitem"
+                  >
+                    <item.i className="w-4 h-4" /> {item.l}
+                  </button>
+                ))}
+              </div>
+            )}
           </div>
         </div>
         <div className="ml-auto flex items-center">
