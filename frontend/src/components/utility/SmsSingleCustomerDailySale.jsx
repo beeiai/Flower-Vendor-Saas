@@ -6,6 +6,7 @@ import {
   RefreshCw,
   MessageSquare
 } from 'lucide-react';
+import { EnhancedSearchableSelect } from '../shared/EnhancedSearchableSelect';
 import { api } from '../../utils/api';
 
 const SmsSingleCustomerDailySale = ({ onCancel, showNotify }) => {
@@ -233,31 +234,27 @@ Thank you for your business!`;
           <div className="flex flex-wrap items-end gap-6">
             <div className="flex-1 min-w-[200px]">
               <label className="text-[11px] font-bold text-slate-500 uppercase mb-2 block tracking-wider">Select Group</label>
-              <select 
+              <EnhancedSearchableSelect
+                label={null}
+                options={groups}
                 value={selectedGroup}
-                onChange={(e) => setState(prev => ({ ...prev, selectedGroup: e.target.value }))}
-                className="w-full border border-slate-200 rounded-xl px-4 py-2.5 bg-slate-50 focus:ring-2 focus:ring-indigo-100 outline-none transition-all appearance-none"
-              >
-                <option value="">-- Select Group --</option>
-                {groups.map((groupName, idx) => (
-                  <option key={idx} value={groupName}>{groupName}</option>
-                ))}
-              </select>
+                onChange={(value) => setState(prev => ({ ...prev, selectedGroup: value }))}
+                placeholder="Select a group"
+                className="w-full border border-slate-200 rounded-xl focus:ring-2 focus:ring-indigo-100 outline-none transition-all"
+              />
             </div>
 
             <div className="flex-1 min-w-[200px]">
               <label className="text-[11px] font-bold text-slate-500 uppercase mb-2 block tracking-wider">Customer Name</label>
-              <select 
+              <EnhancedSearchableSelect
+                label={null}
+                options={filteredCustomers.map(c => c.name)}
                 value={selectedCustomer}
-                onChange={(e) => setState(prev => ({ ...prev, selectedCustomer: e.target.value }))}
-                className="w-full border border-slate-200 rounded-xl px-4 py-2.5 bg-slate-50 focus:ring-2 focus:ring-indigo-100 outline-none transition-all appearance-none"
+                onChange={(value) => setState(prev => ({ ...prev, selectedCustomer: value }))}
+                placeholder={!selectedGroup ? "Select a group first" : "Select a customer"}
                 disabled={!selectedGroup}
-              >
-                <option value="">-- Select Customer --</option>
-                {filteredCustomers.map((customer) => (
-                  <option key={customer.id} value={customer.name}>{customer.name}</option>
-                ))}
-              </select>
+                className="w-full border border-slate-200 rounded-xl focus:ring-2 focus:ring-indigo-100 outline-none transition-all"
+              />
             </div>
 
             <div className="flex-1 min-w-[150px]">

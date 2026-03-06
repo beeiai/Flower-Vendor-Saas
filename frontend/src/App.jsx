@@ -780,7 +780,24 @@ function VehicleView({ vehicles, setVehicles, onCancel, showNotify }) {
                 <tr key={v.id} className="border-b border-black/10 hover:bg-slate-50 transition-colors group">
                   <td className="px-5 py-4 font-semibold text-slate-800 border-r border-black/5">{String(v.name)}</td>
                   <td className="px-5 py-4 text-right">
-                    <button onClick={async () => { await api.deleteVehicle(v.id); setVehicles(vehicles.filter(x => x.id !== v.id)); }} className="text-slate-400 hover:text-red-500 opacity-0 group-hover:opacity-100 transition-all p-1.5 rounded-lg hover:bg-red-50" data-enter-index={3 + v.id}><Trash2 className="w-4 h-4"/></button>
+                    <button 
+                      onClick={async () => {
+                        const confirmed = window.confirm('Are you sure you want to delete this vehicle?');
+                        if (!confirmed) return;
+                        try {
+                          await api.deleteVehicle(v.id);
+                          setVehicles(vehicles.filter(x => x.id !== v.id));
+                          showNotify?.('Vehicle deleted successfully', 'success');
+                        } catch (error) {
+                          showNotify?.(`Failed to delete vehicle: ${error.message}`, 'error');
+                        }
+                      }} 
+                      className="text-slate-400 hover:text-red-500 opacity-0 group-hover:opacity-100 transition-all p-1.5 rounded-lg hover:bg-red-50" 
+                      data-enter-index={3 + v.id}
+                      title="Delete Vehicle"
+                    >
+                      <Trash2 className="w-4 h-4"/>
+                    </button>
                   </td>
                 </tr>
               ))}</tbody>

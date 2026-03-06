@@ -1,5 +1,6 @@
 import React, { useState, useMemo, useEffect, useCallback } from 'react';
 import { Search, Printer, X, Send, Package, ChevronDown, AlertTriangle, CheckCircle, Clock, RefreshCw } from 'lucide-react';
+import { EnhancedSearchableSelect } from '../shared/EnhancedSearchableSelect';
 import { api } from '../../utils/api';
 import { printBlob } from '../../utils/printService';
 import { DEFAULT_STATES } from '../../utils/stateManager';
@@ -296,18 +297,23 @@ const DailySaleReport = ({ onCancel }) => {
             {/* Group Filter */}
             <div className="col-span-4">
               <label className="text-[10px] font-black uppercase text-slate-600 mb-1.5 block tracking-wider">Select Group</label>
-              <div className="relative">
-                <select 
-                  value={selectedGroup}
-                  onChange={(e) => setSelectedGroup(e.target.value)}
-                  className="w-full bg-rose-50 border-2 border-rose-200 rounded-lg p-2.5 text-sm font-bold text-slate-800 outline-none transition-all duration-200 hover:border-rose-300 focus:border-rose-400 focus:ring-2 focus:ring-rose-100 appearance-none"
-                  data-enter-index="1"
-                >
-                  <option value="">-- Select Group --</option>
-                  {groups.map(group => <option key={group.id} value={group.name}>{group.name}</option>)}
-                </select>
-                <ChevronDown className="absolute right-3 top-1/2 -translate-y-1/2 w-4 h-4 text-rose-400 pointer-events-none" />
-              </div>
+              <EnhancedSearchableSelect
+                label={null}
+                options={groups.map(g => g.name)}
+                value={selectedGroup}
+                onChange={setSelectedGroup}
+                placeholder="Select a group"
+                onSelectionComplete={() => {
+                  // Auto-fetch data when group is selected
+                  setTimeout(() => {
+                    if (selectedGroup) {
+                      // Data will auto-fetch via useEffect
+                    }
+                  }, 50);
+                }}
+                className="w-full bg-rose-50 border-2 border-rose-200 rounded-lg focus:border-rose-400 focus:ring-2 focus:ring-rose-100 transition-all duration-200 hover:border-rose-300"
+                data-enter-index="1"
+              />
             </div>
 
             {/* Date Selection */}
