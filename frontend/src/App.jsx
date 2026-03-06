@@ -330,7 +330,19 @@ function DeleteGroupCustomer({ groups, setGroups, customers, setCustomers, onCan
       setSelectedCustomer('');
       showNotify?.('Customer deleted successfully.', 'success');
     } catch (e) {
-      showNotify?.(`Failed to delete customer: ${e.message}`, 'error');
+      // Handle specific error messages from backend
+      let errorMsg = 'Unable to delete customer. Please try again.';
+      
+      if (e.message && e.message.includes('transaction history')) {
+        errorMsg = 'Cannot delete customer - has transaction history.';
+      } else if (e.message && e.message.includes('not found')) {
+        errorMsg = 'Customer not found in database.';
+      } else if (e.status === 404) {
+        errorMsg = 'Customer not found.';
+      }
+      
+      showNotify?.(errorMsg, 'error');
+      console.error('Delete customer error:', e);
     }
   };
 
@@ -367,6 +379,10 @@ function DeleteGroupCustomer({ groups, setGroups, customers, setCustomers, onCan
             await api.deleteCustomer(customer.id);
           } catch (err) {
             console.error('Failed to delete customer:', err);
+            // If customer has transactions, skip and continue with others
+            if (err.message && err.message.includes('transaction')) {
+              console.warn(`Skipping customer ${customer.name} - has transactions`);
+            }
           }
         }
         setCustomers(prev => prev.filter(c => c.group !== selectedGroup));
@@ -379,7 +395,19 @@ function DeleteGroupCustomer({ groups, setGroups, customers, setCustomers, onCan
       setSelectedCustomer('');
       showNotify?.('Group and all its customers deleted successfully.', 'success');
     } catch (e) {
-      showNotify?.(`Failed to delete group: ${e.message}`, 'error');
+      // Handle specific error messages from backend
+      let errorMsg = 'Unable to delete group. Please try again.';
+      
+      if (e.message && e.message.includes('transaction history')) {
+        errorMsg = 'Cannot delete group - contains customers with transaction history.';
+      } else if (e.message && e.message.includes('not found')) {
+        errorMsg = 'Group not found in database.';
+      } else if (e.status === 404) {
+        errorMsg = 'Group not found.';
+      }
+      
+      showNotify?.(errorMsg, 'error');
+      console.error('Delete group error:', e);
     }
   };
 

@@ -130,29 +130,44 @@ def delete_farmer_group(
 ):
     require_admin(user)
 
-    group = db.query(FarmerGroup).filter(
-        FarmerGroup.id == group_id,
-        FarmerGroup.vendor_id == user.vendor_id
-    ).first()
+    try:
+        group = db.query(FarmerGroup).filter(
+            FarmerGroup.id == group_id,
+            FarmerGroup.vendor_id == user.vendor_id
+        ).first()
 
-    if not group:
-        raise HTTPException(404, "Farmer group not found")
+        if not group:
+            raise HTTPException(404, "Farmer group not found")
 
-    # ❗ HARD RULE: cannot delete if farmers exist
-    has_farmers = db.query(Farmer).filter(
-        Farmer.group_id == group_id
-    ).first()
+        # Get all farmers in this group
+        farmers = db.query(Farmer).filter(
+            Farmer.group_id == group_id
+        ).all()
 
-    if has_farmers:
+        # Delete all farmers in the group first (cascade deletion)
+        for farmer in farmers:
+            # Check if farmer has transactions
+            if farmer.collections and len(farmer.collections) > 0:
+                raise HTTPException(
+                    status_code=400,
+                    detail=f"Cannot delete: {farmer.name} has transaction history"
+                )
+            db.delete(farmer)
+
+        # Then delete the group
+        db.delete(group)
+        db.commit()
+
+        return {"message": "Farmer group and all its members deleted"}
+    except HTTPException:
+        raise
+    except Exception as e:
+        # Log the actual error for debugging
+        print(f"Error deleting group {group_id}: {str(e)}")
         raise HTTPException(
-            status_code=400,
-            detail="Cannot delete group with farmers"
+            status_code=500,
+            detail=f"Failed to delete group: {str(e)}"
         )
-
-    db.delete(group)
-    db.commit()
-
-    return {"message": "Farmer group deleted"}
 
 
 # ---------- MEMBERS (for dropdown/search) ----------

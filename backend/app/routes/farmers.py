@@ -398,25 +398,36 @@ def delete_customer_compat(
     user=Depends(get_current_user),
 ):
     """Delete a farmer via /customers/{id}/ compatibility endpoint."""
+    
+    try:
+        farmer = db.query(Farmer).filter(
+            Farmer.id == customer_id,
+            Farmer.vendor_id == user.vendor_id,
+        ).first()
 
-    farmer = db.query(Farmer).filter(
-        Farmer.id == customer_id,
-        Farmer.vendor_id == user.vendor_id,
-    ).first()
+        if not farmer:
+            raise HTTPException(status_code=404, detail="Customer not found")
 
-    if not farmer:
-        raise HTTPException(status_code=404, detail="Customer not found")
+        # Check for transactions and allow deletion if none exist
+        if farmer.collections and len(farmer.collections) > 0:
+            raise HTTPException(
+                status_code=400,
+                detail="Cannot delete customer with transaction history",
+            )
 
-    if farmer.collections:
+        db.delete(farmer)
+        db.commit()
+
+        return {"message": "Customer deleted"}
+    except HTTPException:
+        raise
+    except Exception as e:
+        # Log the actual error for debugging
+        print(f"Error deleting customer {customer_id}: {str(e)}")
         raise HTTPException(
-            status_code=400,
-            detail="Cannot delete customer with transaction history",
+            status_code=500,
+            detail=f"Failed to delete customer: {str(e)}"
         )
-
-    db.delete(farmer)
-    db.commit()
-
-    return {"message": "Customer deleted"}
 
 # ---------- READ (ONE) ----------
 @router.get("/{farmer_id}")
