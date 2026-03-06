@@ -408,8 +408,12 @@ def delete_customer_compat(
         if not farmer:
             raise HTTPException(status_code=404, detail="Customer not found")
 
-        # Check for transactions and allow deletion if none exist
-        if farmer.collections and len(farmer.collections) > 0:
+        # Check for transaction history using collection_items relationship
+        has_transactions = db.query(CollectionItem).filter(
+            CollectionItem.farmer_id == customer_id
+        ).first()
+
+        if has_transactions:
             raise HTTPException(
                 status_code=400,
                 detail="Cannot delete customer with transaction history",

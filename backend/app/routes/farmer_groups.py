@@ -5,6 +5,7 @@ from sqlalchemy import or_
 from app.core.db import get_db
 from app.models.farmer_group import FarmerGroup
 from app.models.farmer import Farmer
+from app.models.collection_item import CollectionItem
 from app.schemas.farmer_group import FarmerGroupCreate, FarmerGroupUpdate
 from app.dependencies import get_current_user
 
@@ -146,8 +147,12 @@ def delete_farmer_group(
 
         # Delete all farmers in the group first (cascade deletion)
         for farmer in farmers:
-            # Check if farmer has transactions
-            if farmer.collections and len(farmer.collections) > 0:
+            # Check if farmer has transactions using collection_items relationship
+            has_transactions = db.query(CollectionItem).filter(
+                CollectionItem.farmer_id == farmer.id
+            ).first()
+            
+            if has_transactions:
                 raise HTTPException(
                     status_code=400,
                     detail=f"Cannot delete: {farmer.name} has transaction history"
