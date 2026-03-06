@@ -602,9 +602,7 @@ export default function App() {
     const handleClickOutside = (event) => {
       const navElement = document.querySelector('nav');
       if (navElement && !navElement.contains(event.target)) {
-        setShowTMenu(false);
-        setShowUMenu(false);
-        setShowMMenu(false);
+        setActiveDropdown(null);
       }
     };
 
@@ -695,9 +693,7 @@ export default function App() {
 
   // Close dropdowns when navigating to a new section
   useEffect(() => {
-    setShowTMenu(false);
-    setShowUMenu(false);
-    setShowMMenu(false);
+    setActiveDropdown(null);
   }, [activeSection]);
 
   const loadItemsDailySaleRate = async () => {
