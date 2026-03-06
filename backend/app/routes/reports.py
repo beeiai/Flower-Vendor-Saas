@@ -55,7 +55,19 @@ def render_template(template_name: str, data: dict, template_dir: str = "templat
             template_content = f.read()
         
         template = Template(template_content)
-        html = template.render(**data)
+
+        # Provide a minimal `url_for` implementation for templates rendered
+        # outside of Flask. This supports usage like:
+        #   {{ url_for('static', filename='images/SKFS_logo.png') }}
+        def url_for(endpoint, **values):
+            if endpoint == 'static':
+                filename = values.get('filename', '')
+                # Ensure web-style path separators
+                return '/' + os.path.join('static', filename).replace('\\', '/')
+            # Fallback: return root for unknown endpoints
+            return '/'
+
+        html = template.render(**data, url_for=url_for)
     except Exception as e:
         print(f"Template rendering error: {e}")
         return f"<h1>Template rendering error: {str(e)}</h1>"
