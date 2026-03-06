@@ -2,6 +2,7 @@ import React, { useState, useRef } from 'react';
 import { EnhancedSearchableSelect } from '../shared/EnhancedSearchableSelect';
 import { useKeyboardListNavigation } from '../../hooks/useKeyboardListNavigation';
 import { api } from '../../utils/api';
+import { printHtmlString } from '../../utils/printService';
 
 /**
  * Group Patti Printing View Component
@@ -74,13 +75,10 @@ export function GroupPattiView({ groups, customers, onCancel, setActiveSection }
         form.commissionPct
       );
       
-      // Open preview in new tab
-      const previewWindow = window.open('about:blank', '_blank');
-      if (previewWindow) {
-        previewWindow.document.write(response.data);
-        previewWindow.document.close();
-        previewWindow.focus();
-      }
+      // Print using hidden iframe (avoids opening a new tab)
+      const htmlContent = response?.data || response || '';
+      if (!htmlContent) throw new Error('Empty print response');
+      await printHtmlString(htmlContent);
     } catch (error) {
       console.error('Print error:', error);
       alert(`Print failed: ${error.message}`);

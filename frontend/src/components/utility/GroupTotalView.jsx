@@ -2,6 +2,7 @@ import React, { useState, useRef, useMemo } from 'react';
 import { EnhancedSearchableSelect } from '../shared/EnhancedSearchableSelect';
 import { useKeyboardListNavigation } from '../../hooks/useKeyboardListNavigation';
 import { api } from '../../utils/api';
+import { printHtmlString } from '../../utils/printService';
 
 /**
  * Group Total Report View Component
@@ -125,19 +126,8 @@ export function GroupTotalView({ groups, customers, ledgerStore, onCancel, setAc
         throw new Error('Received empty response from server');
       }
       
-      const previewWindow = window.open('about:blank', '_blank');
-      if (previewWindow) {
-        previewWindow.document.open();
-        previewWindow.document.write(htmlContent);
-        previewWindow.document.close();
-        
-        // Wait for content to load before focusing
-        setTimeout(() => {
-          previewWindow.focus();
-        }, 100);
-      } else {
-        throw new Error('Unable to open preview window. Please check popup blocker settings.');
-      }
+      // Print using hidden iframe (avoids opening a new tab)
+      await printHtmlString(htmlContent);
     } catch (error) {
       console.error('[Group Total Print] Error:', error);
       
