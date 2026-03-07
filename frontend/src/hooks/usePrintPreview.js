@@ -65,21 +65,43 @@ export const usePrintPreview = () => {
       clearInterval(progressInterval);
 
       // Handle different response types
-      if (typeof result === 'string') {
+      // Normalize axios responses that wrap Blob in `data`
+      const payload = result && result.data instanceof Blob ? result.data : result;
+
+      if (typeof payload === 'string') {
         // HTML response
-        setHtmlContent(result);
+        setHtmlContent(payload);
         setPageCount(1);
-      } else if (result.html && result.metadata) {
+      } else if (payload && payload.html && payload.metadata) {
         // JSON response with metadata
         setHtmlContent(result.html);
         setPageCount(result.metadata.page_count || 1);
         
         // Store fallback URL info (in case user wants to open in new tab)
         setFallbackUrl(result.metadata.fallback_url);
-      } else if (result.content) {
+      } else if (payload && payload.content) {
         // Alternative response format
-        setHtmlContent(result.content);
-        setPageCount(result.page_count || 1);
+        setHtmlContent(payload.content);
+        setPageCount(payload.page_count || 1);
+      } else if (payload instanceof Blob) {
+        // Blob response (PDF/HTML/DOCX)
+        const type = String(payload.type || '').toLowerCase();
+        if (type.includes('html') || type.startsWith('text/')) {
+          const txt = await payload.text();
+          setHtmlContent(txt || '');
+          setPageCount(1);
+        } else if (type.includes('pdf')) {
+          const url = URL.createObjectURL(payload);
+          setFallbackUrl(url);
+          setHtmlContent('');
+          setPageCount(1);
+        } else {
+          // Other binary (docx) - expose URL for download/open
+          const url = URL.createObjectURL(payload);
+          setFallbackUrl(url);
+          setHtmlContent('');
+          setPageCount(1);
+        }
       } else {
         throw new Error('Invalid report format returned from server');
       }
@@ -104,6 +126,15 @@ export const usePrintPreview = () => {
    * Close the preview modal
    */
   const closePreview = useCallback(() => {
+    // Revoke any created blob URLs to avoid memory leaks
+    try {
+      if (fallbackUrl && String(fallbackUrl).startsWith('blob:')) {
+        URL.revokeObjectURL(fallbackUrl);
+      }
+    } catch (e) {
+      // ignore
+    }
+    setFallbackUrl(null);
     setIsPreviewOpen(false);
     setHtmlContent('');
     setError(null);
@@ -156,6 +187,7 @@ export const usePrintPreview = () => {
     isLoading,
     error,
     htmlContent,
+    fallbackUrl,
     pageCount,
     currentPage,
     reportTitle,

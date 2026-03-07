@@ -242,54 +242,87 @@ export default function ReportsView({ groups, customers, vehicles, advanceStore 
 				toDate || todayISO(),
 				commissionPct
 			);
+			// Response for print endpoints may be a Blob (axios response with data=Blob)
+			const blob = response?.data && typeof response.data === 'object' && response.data instanceof Blob ? response.data : (response instanceof Blob ? response : null);
+			const headers = response?.headers || {};
+			if (blob instanceof Blob) {
+				const type = String(blob.type || '').toLowerCase();
+				// If server returned HTML as blob/text
+				if (type.includes('html') || type.startsWith('text/')) {
+					const html = await blob.text();
+					if (!html) throw new Error('Empty print response');
+					const printWindow = window.open('', '_blank', 'width=1200,height=800');
+					if (!printWindow) throw new Error('Unable to open print window. Please check your browser popup settings.');
+					printWindow.document.write('<!DOCTYPE html><html><head><title>Ledger Report</title></head><body>');
+					printWindow.document.write(html);
+					printWindow.document.write('</body></html>');
+					printWindow.document.close();
+					printWindow.onload = () => {
+						printWindow.focus();
+						setTimeout(() => {
+							printWindow.print();
+							setTimeout(() => { if (!printWindow.closed) printWindow.close(); }, 1000);
+						}, 300);
+					};
+					setTimeout(() => { if (printWindow && !printWindow.closed) { printWindow.focus(); printWindow.print(); setTimeout(() => { if (!printWindow.closed) printWindow.close(); }, 1000); } }, 2000);
+					return;
+				}
+				// If PDF, open blob URL and print
+				if (type.includes('pdf')) {
+					const url = window.URL.createObjectURL(blob);
+					const printWindow = window.open(url, '_blank');
+					if (!printWindow) {
+						// fallback to download
+						const a = document.createElement('a');
+						a.href = url;
+						a.download = headers['content-disposition'] ? (headers['content-disposition'].match(/filename="?([^\"]+)"?/)?.[1] || `report.pdf`) : `report.pdf`;
+						document.body.appendChild(a);
+						a.click();
+						document.body.removeChild(a);
+						window.URL.revokeObjectURL(url);
+						return;
+					}
+					printWindow.onload = () => { printWindow.focus(); printWindow.print(); setTimeout(() => { if (!printWindow.closed) printWindow.close(); window.URL.revokeObjectURL(url); }, 1000); };
+					// safety revoke
+					setTimeout(() => window.URL.revokeObjectURL(url), 60000);
+					return;
+				}
+				// Otherwise treat as a downloadable blob (e.g., DOCX). Open or download.
+				const url = window.URL.createObjectURL(blob);
+				const filename = headers['content-disposition'] ? (headers['content-disposition'].match(/filename="?([^\"]+)"?/)?.[1] || `report.bin`) : `report.bin`;
+				const newWindow = window.open(url, '_blank');
+				if (!newWindow) {
+					const a = document.createElement('a');
+					a.href = url;
+					a.download = filename;
+					document.body.appendChild(a);
+					a.click();
+					document.body.removeChild(a);
+					window.URL.revokeObjectURL(url);
+					return;
+				}
+				// revoke after some time
+				setTimeout(() => window.URL.revokeObjectURL(url), 60000);
+				return;
+			}
 			
-			// Get HTML content from response
+			// Non-blob response (assume HTML string)
 			const htmlContent = response?.data || response || '';
 			if (!htmlContent) {
 				throw new Error('Empty print response');
 			}
-			
-			// Create a temporary window for printing
 			const printWindow = window.open('', '_blank', 'width=1200,height=800');
 			if (!printWindow) {
 				throw new Error('Unable to open print window. Please check your browser popup settings.');
 			}
-			
-			// Write complete HTML document with explicit DOCTYPE
 			printWindow.document.write('<!DOCTYPE html><html><head><title>Ledger Report</title></head><body>');
 			printWindow.document.write(htmlContent);
 			printWindow.document.write('</body></html>');
 			printWindow.document.close();
-			
-			// Wait for the window to fully load
 			printWindow.onload = () => {
-				// Focus the window first
 				printWindow.focus();
-				// Small delay to ensure styles are applied
-				setTimeout(() => {
-					// Call print - this will open the print dialog
-					printWindow.print();
-					// Close the window after print dialog opens (not after printing completes)
-					setTimeout(() => {
-						if (!printWindow.closed) {
-							printWindow.close();
-						}
-					}, 1000);
-				}, 300);
+				setTimeout(() => { printWindow.print(); setTimeout(() => { if (!printWindow.closed) printWindow.close(); }, 1000); }, 300);
 			};
-			
-			// Fallback: trigger print if onload doesn't fire
-			setTimeout(() => {
-				if (printWindow && !printWindow.closed) {
-					printWindow.focus();
-					printWindow.print();
-					setTimeout(() => {
-						if (!printWindow.closed) {
-							printWindow.close();
-						}
-					}, 1000);
-				}
-			}, 2000);
 			
 			setTimeout(() => groupRef.current?.querySelector('input')?.focus(), 100);
 		} catch (error) {

@@ -36,7 +36,8 @@ export function CustomerLedgerPage({ customerId }) {
     closePreview,
     handlePrint,
     retryPreview,
-    openInNewTab
+    openInNewTab,
+    fallbackUrl
   } = usePrintPreview();
 
   const [fromDate, setFromDate] = React.useState(null);
@@ -135,6 +136,7 @@ export function CustomerLedgerPage({ customerId }) {
       <PrintPreviewModal
         isOpen={isPreviewOpen}
         htmlContent={htmlContent}
+        previewUrl={fallbackUrl}
         pageCount={pageCount}
         title={`Ledger Report (${pageCount} pages)`}
         onPrint={handlePrint}
@@ -164,7 +166,8 @@ export function GroupTotalReportSection() {
     pageCount,
     openPreview,
     closePreview,
-    retryPreview
+    retryPreview,
+    fallbackUrl
   } = usePrintPreview();
 
   const [dateRange, setDateRange] = React.useState(reportService.getDefaultDateRange());
@@ -204,6 +207,7 @@ export function GroupTotalReportSection() {
       <PrintPreviewModal
         isOpen={isPreviewOpen}
         htmlContent={htmlContent}
+        previewUrl={fallbackUrl}
         pageCount={pageCount}
         title="Group Total Report"
         onClose={closePreview}
@@ -231,7 +235,8 @@ export function GroupPattiReportModal({ groupId, isOpen, onClose }) {
     htmlContent,
     pageCount,
     openPreview,
-    closePreview
+    closePreview,
+    fallbackUrl
   } = usePrintPreview();
 
   React.useEffect(() => {
@@ -258,6 +263,7 @@ export function GroupPattiReportModal({ groupId, isOpen, onClose }) {
       <PrintPreviewModal
         isOpen={isPreviewOpen}
         htmlContent={htmlContent}
+        previewUrl={fallbackUrl}
         pageCount={pageCount}
         title={`Group Patti Report - Group #${groupId} (${pageCount} pages)`}
         onClose={handleClose}
@@ -286,7 +292,8 @@ export function DailySalesReportPage() {
     htmlContent,
     pageCount,
     openPreview,
-    closePreview
+    closePreview,
+    fallbackUrl
   } = usePrintPreview();
 
   const [filters, setFilters] = React.useState({
@@ -410,6 +417,7 @@ export function DailySalesReportPage() {
       <PrintPreviewModal
         isOpen={isPreviewOpen}
         htmlContent={htmlContent}
+        previewUrl={fallbackUrl}
         pageCount={pageCount}
         title={`Daily Sales Report (${pageCount} pages)`}
         onClose={closePreview}
@@ -446,7 +454,8 @@ export function ReportButton({
     pageCount,
     openPreview,
     closePreview,
-    error
+    error,
+    fallbackUrl
   } = usePrintPreview();
 
   const handleClick = async () => {
@@ -494,6 +503,7 @@ export function ReportButton({
       <PrintPreviewModal
         isOpen={isPreviewOpen}
         htmlContent={htmlContent}
+        previewUrl={fallbackUrl}
         pageCount={pageCount}
         title={title}
         onClose={closePreview}

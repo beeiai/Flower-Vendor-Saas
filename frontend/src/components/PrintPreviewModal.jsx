@@ -31,6 +31,7 @@ const PrintPreviewModal = ({
   pageCount = 1,
   onPrint = null,
   onClose = null,
+  previewUrl = null,
   title = 'Print Preview'
 }) => {
   const [zoomLevel, setZoomLevel] = useState(100);
@@ -62,11 +63,15 @@ const PrintPreviewModal = ({
 
     try {
       const iframe = iframeRef.current;
-      const doc = iframe.contentDocument || iframe.contentWindow.document;
-      
-      doc.open();
-      doc.write(htmlContent);
-      doc.close();
+      // If previewUrl provided, set iframe src to that URL (used for PDF/blob previews)
+      if (previewUrl) {
+        iframe.src = previewUrl;
+      } else {
+        const doc = iframe.contentDocument || iframe.contentWindow.document;
+        doc.open();
+        doc.write(htmlContent);
+        doc.close();
+      }
 
       // Apply print styles to iframe
       const styleContent = `
@@ -90,7 +95,7 @@ const PrintPreviewModal = ({
     } catch (error) {
       console.error('Error loading content into iframe:', error);
     }
-  }, [htmlContent, isOpen]);
+  }, [htmlContent, isOpen, previewUrl]);
 
   /**
    * Estimate current page based on scroll position
