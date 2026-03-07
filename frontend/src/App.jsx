@@ -1134,10 +1134,52 @@ export default function App() {
         groupPattiForm.commissionPct
       );
       
-      // Print HTML directly via hidden iframe (no new tab)
+      // Get HTML content
       const htmlContent = response || '';
-      const { printHtmlString } = await import('./utils/printService');
-      await printHtmlString(htmlContent);
+      if (!htmlContent) throw new Error('Empty print response');
+      
+      // Create a temporary window for printing
+      const printWindow = window.open('', '_blank', 'width=1200,height=800');
+      if (!printWindow) {
+        throw new Error('Unable to open print window. Please check your browser popup settings.');
+      }
+      
+      // Write complete HTML document with explicit DOCTYPE
+      printWindow.document.write('<!DOCTYPE html><html><head><title>Group Patti Report</title></head><body>');
+      printWindow.document.write(htmlContent);
+      printWindow.document.write('</body></html>');
+      printWindow.document.close();
+      
+      // Wait for the window to fully load
+      printWindow.onload = () => {
+        // Focus the window first
+        printWindow.focus();
+        // Small delay to ensure styles are applied
+        setTimeout(() => {
+          // Call print - this will open the print dialog
+          printWindow.print();
+          // Close the window after print dialog opens (not after printing completes)
+          setTimeout(() => {
+            if (!printWindow.closed) {
+              printWindow.close();
+            }
+          }, 1000);
+        }, 300);
+      };
+      
+      // Fallback: trigger print if onload doesn't fire
+      setTimeout(() => {
+        if (printWindow && !printWindow.closed) {
+          printWindow.focus();
+          printWindow.print();
+          setTimeout(() => {
+            if (!printWindow.closed) {
+              printWindow.close();
+            }
+          }, 1000);
+        }
+      }, 2000);
+      
     } catch (error) {
       console.error('Group Patti Print error:', error);
       let errorMessage = error.message;
@@ -1176,10 +1218,51 @@ export default function App() {
         );
       }
       
-      // Print HTML directly via hidden iframe (no new tab)
+      // Get HTML content
       const htmlContent = response || '';
-      const { printHtmlString } = await import('./utils/printService');
-      await printHtmlString(htmlContent);
+      if (!htmlContent) throw new Error('Empty print response');
+      
+      // Create a temporary window for printing
+      const printWindow = window.open('', '_blank', 'width=1200,height=800');
+      if (!printWindow) {
+        throw new Error('Unable to open print window. Please check your browser popup settings.');
+      }
+      
+      // Write complete HTML document with explicit DOCTYPE
+      printWindow.document.write('<!DOCTYPE html><html><head><title>Group Total Report</title></head><body>');
+      printWindow.document.write(htmlContent);
+      printWindow.document.write('</body></html>');
+      printWindow.document.close();
+      
+      // Wait for the window to fully load
+      printWindow.onload = () => {
+        // Focus the window first
+        printWindow.focus();
+        // Small delay to ensure styles are applied
+        setTimeout(() => {
+          // Call print - this will open the print dialog
+          printWindow.print();
+          // Close the window after print dialog opens (not after printing completes)
+          setTimeout(() => {
+            if (!printWindow.closed) {
+              printWindow.close();
+            }
+          }, 1000);
+        }, 300);
+      };
+      
+      // Fallback: trigger print if onload doesn't fire
+      setTimeout(() => {
+        if (printWindow && !printWindow.closed) {
+          printWindow.focus();
+          printWindow.print();
+          setTimeout(() => {
+            if (!printWindow.closed) {
+              printWindow.close();
+            }
+          }, 1000);
+        }
+      }, 2000);
     } catch (error) {
       console.error('Group Total Print error:', error);
       let errorMessage = error.message;

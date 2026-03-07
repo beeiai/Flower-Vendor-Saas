@@ -2,7 +2,6 @@ import React, { useState, useRef } from 'react';
 import { EnhancedSearchableSelect } from '../shared/EnhancedSearchableSelect';
 import { useKeyboardListNavigation } from '../../hooks/useKeyboardListNavigation';
 import { api } from '../../utils/api';
-import { printHtmlString } from '../../utils/printService';
 
 /**
  * Group Patti Printing View Component
@@ -76,14 +75,61 @@ export function GroupPattiView({ groups, customers, onCancel, setActiveSection }
         form.commissionPct
       );
       
-      // Print using hidden iframe (avoids opening a new tab)
+      // Get HTML content from response
       const htmlContent = response?.data || response || '';
       if (!htmlContent) throw new Error('Empty print response');
-      await printHtmlString(htmlContent);
+      
+      // Create a temporary window for printing
+      const printWindow = window.open('', '_blank', 'width=1200,height=800');
+      if (!printWindow) {
+        throw new Error('Unable to open print window. Please check your browser popup settings.');
+      }
+      
+      // Write complete HTML document with explicit DOCTYPE
+      printWindow.document.write('<!DOCTYPE html><html><head><title>Group Patti Report</title></head><body>');
+      printWindow.document.write(htmlContent);
+      printWindow.document.write('</body></html>');
+      printWindow.document.close();
+      
+      // Wait for the window to fully load
+      printWindow.onload = () => {
+        // Focus the window first
+        printWindow.focus();
+        // Small delay to ensure styles are applied
+        setTimeout(() => {
+          // Call print - this will open the print dialog
+          printWindow.print();
+          // Close the window after print dialog opens (not after printing completes)
+          setTimeout(() => {
+            if (!printWindow.closed) {
+              printWindow.close();
+            }
+          }, 1000);
+        }, 300);
+      };
+      
+      // Fallback: trigger print if onload doesn't fire
+      setTimeout(() => {
+        if (printWindow && !printWindow.closed) {
+          printWindow.focus();
+          printWindow.print();
+          setTimeout(() => {
+            if (!printWindow.closed) {
+              printWindow.close();
+            }
+          }, 1000);
+        }
+      }, 2000);
+      
     } catch (error) {
       console.error('Print error:', error);
-      alert(`Print failed: ${error.message}`);
-      // Return focus to group selection on error
+      let errorMessage = error.message;
+      if (error.response?.status === 401) {
+        errorMessage = 'Authentication failed. Please log in again.';
+      } else if (error.response?.status === 500) {
+        errorMessage = 'Server error. Please try again later.';
+      }
+      alert(`Print failed: ${errorMessage}`);
       setTimeout(() => groupRef.current?.focus(), 100);
     } finally {
       setIsPrinting(false);

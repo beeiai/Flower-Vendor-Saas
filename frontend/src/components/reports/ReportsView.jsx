@@ -242,30 +242,55 @@ export default function ReportsView({ groups, customers, vehicles, advanceStore 
 				toDate || todayISO(),
 				commissionPct
 			);
-			const blob = response.data;
-			const url = window.URL.createObjectURL(blob);
-			const previewWindow = window.open(url, '_blank');
-			if (!previewWindow) {
-				const a = document.createElement('a');
-				a.href = url;
-				a.download = `ledger_report_${selectedCustomer.name}_${new Date().toISOString().slice(0, 10)}.pdf`;
-				document.body.appendChild(a);
-				a.click();
-				document.body.removeChild(a);
-				// Revoke URL after download starts
-				setTimeout(() => window.URL.revokeObjectURL(url), 100);
-			} else {
-				// Automatically trigger print dialog when page loads
-				previewWindow.onload = () => {
-					// Give the page a moment to fully render
-					setTimeout(() => {
-						previewWindow.focus();
-						previewWindow.print();
-					}, 250);
-				};
-				// Revoke URL after print window loads (delayed to allow page to load)
-				setTimeout(() => window.URL.revokeObjectURL(url), 5000);
+			
+			// Get HTML content from response
+			const htmlContent = response?.data || response || '';
+			if (!htmlContent) {
+				throw new Error('Empty print response');
 			}
+			
+			// Create a temporary window for printing
+			const printWindow = window.open('', '_blank', 'width=1200,height=800');
+			if (!printWindow) {
+				throw new Error('Unable to open print window. Please check your browser popup settings.');
+			}
+			
+			// Write complete HTML document with explicit DOCTYPE
+			printWindow.document.write('<!DOCTYPE html><html><head><title>Ledger Report</title></head><body>');
+			printWindow.document.write(htmlContent);
+			printWindow.document.write('</body></html>');
+			printWindow.document.close();
+			
+			// Wait for the window to fully load
+			printWindow.onload = () => {
+				// Focus the window first
+				printWindow.focus();
+				// Small delay to ensure styles are applied
+				setTimeout(() => {
+					// Call print - this will open the print dialog
+					printWindow.print();
+					// Close the window after print dialog opens (not after printing completes)
+					setTimeout(() => {
+						if (!printWindow.closed) {
+							printWindow.close();
+						}
+					}, 1000);
+				}, 300);
+			};
+			
+			// Fallback: trigger print if onload doesn't fire
+			setTimeout(() => {
+				if (printWindow && !printWindow.closed) {
+					printWindow.focus();
+					printWindow.print();
+					setTimeout(() => {
+						if (!printWindow.closed) {
+							printWindow.close();
+						}
+					}, 1000);
+				}
+			}, 2000);
+			
 			setTimeout(() => groupRef.current?.querySelector('input')?.focus(), 100);
 		} catch (error) {
 			console.error('Print error:', error);

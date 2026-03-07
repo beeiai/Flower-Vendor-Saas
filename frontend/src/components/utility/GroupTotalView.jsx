@@ -2,7 +2,6 @@ import React, { useState, useRef, useMemo } from 'react';
 import { EnhancedSearchableSelect } from '../shared/EnhancedSearchableSelect';
 import { useKeyboardListNavigation } from '../../hooks/useKeyboardListNavigation';
 import { api } from '../../utils/api';
-import { printHtmlString } from '../../utils/printService';
 
 /**
  * Group Total Report View Component
@@ -118,16 +117,54 @@ export function GroupTotalView({ groups, customers, ledgerStore, onCancel, setAc
       
       console.log('[Group Total Print] Response received:', response);
       
-      // Handle response - open preview in new tab
-      // The response is already an HTML string
+      // Handle response - the response is already an HTML string
       const htmlContent = typeof response === 'string' ? response : (response?.data || '');
       
       if (!htmlContent) {
         throw new Error('Received empty response from server');
       }
       
-      // Print using hidden iframe (avoids opening a new tab)
-      await printHtmlString(htmlContent);
+      // Create a temporary window for printing
+      const printWindow = window.open('', '_blank', 'width=1200,height=800');
+      if (!printWindow) {
+        throw new Error('Unable to open print window. Please check your browser popup settings.');
+      }
+      
+      // Write complete HTML document with explicit DOCTYPE
+      printWindow.document.write('<!DOCTYPE html><html><head><title>Group Total Report</title></head><body>');
+      printWindow.document.write(htmlContent);
+      printWindow.document.write('</body></html>');
+      printWindow.document.close();
+      
+      // Wait for the window to fully load
+      printWindow.onload = () => {
+        // Focus the window first
+        printWindow.focus();
+        // Small delay to ensure styles are applied
+        setTimeout(() => {
+          // Call print - this will open the print dialog
+          printWindow.print();
+          // Close the window after print dialog opens (not after printing completes)
+          setTimeout(() => {
+            if (!printWindow.closed) {
+              printWindow.close();
+            }
+          }, 1000);
+        }, 300);
+      };
+      
+      // Fallback: trigger print if onload doesn't fire
+      setTimeout(() => {
+        if (printWindow && !printWindow.closed) {
+          printWindow.focus();
+          printWindow.print();
+          setTimeout(() => {
+            if (!printWindow.closed) {
+              printWindow.close();
+            }
+          }, 1000);
+        }
+      }, 2000);
     } catch (error) {
       console.error('[Group Total Print] Error:', error);
       
