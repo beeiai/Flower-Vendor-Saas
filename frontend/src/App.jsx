@@ -893,6 +893,10 @@ export default function App() {
   const [commissionPct, setCommissionPct] = useState(12);
   const groupRef = useRef(null);
   const prevAuthenticatedRef = useRef(auth.authenticated);
+  // Navbar dropdown state and refs
+  const [activeDropdown, setActiveDropdown] = useState(null);
+  const [focusedMenuItem, setFocusedMenuItem] = useState(-1);
+  const dropdownMenuRefs = useRef({});
   const navRefs = {
     logo: useRef(null),
     transactionMenu: useRef(null),
