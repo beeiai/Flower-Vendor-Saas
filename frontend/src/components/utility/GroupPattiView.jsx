@@ -34,6 +34,14 @@ import { api } from '../../utils/api';
  * }
  */
 export function GroupPattiView({ groups, customers, onCancel, setActiveSection }) {
+    // Fallback UI for missing or empty groups
+    if (!groups || groups.length === 0) {
+      return (
+        <div className="p-6 text-center text-lg text-amber-600">
+          No groups available for printing.
+        </div>
+      );
+    }
   const [form, setForm] = useState({
     fromDate: new Date().toISOString().split('T')[0],
     toDate:   new Date().toISOString().split('T')[0],
