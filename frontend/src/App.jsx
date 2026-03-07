@@ -893,6 +893,13 @@ export default function App() {
   const [commissionPct, setCommissionPct] = useState(12);
   const groupRef = useRef(null);
   const prevAuthenticatedRef = useRef(auth.authenticated);
+  const navRefs = {
+    logo: useRef(null),
+    transactionMenu: useRef(null),
+    reportsMenu: useRef(null),
+    utilityMenu: useRef(null),
+    moreMenu: useRef(null)
+  };
 
   // Redirect to daily section after login
   useEffect(() => {
@@ -937,7 +944,7 @@ export default function App() {
     // Register main navigation buttons
     if (navRefs.logo.current) registerElement('nav-logo', navRefs.logo.current, { order: 0 });
     if (navRefs.transactionMenu.current) registerElement('nav-transaction', navRefs.transactionMenu.current, { order: 1 });
-    if (navRefs.reportsButton.current) registerElement('nav-reports', navRefs.reportsButton.current, { order: 2 });
+    if (navRefs.reportsMenu.current) registerElement('nav-reports', navRefs.reportsMenu.current, { order: 2 });
     if (navRefs.utilityMenu.current) registerElement('nav-utility', navRefs.utilityMenu.current, { order: 3 });
     if (navRefs.moreMenu.current) registerElement('nav-more', navRefs.moreMenu.current, { order: 4 });
     
@@ -1381,17 +1388,11 @@ export default function App() {
       
       return true;
     } catch (j) {
-      showNotify(`Transaction save failed: ${error.message}`, "error");
+      showNotify(`Transaction save failed: ${j?.message || j}`, "error");
+      return false;
     } finally {
       setIsAddingItem(false);
-      return false;
-      
-    logo: useRef(null),
-    transactionMenu: useRef(null),
-    reportsButton: useRef(null),
-    utilityMenu: useRef(null),
-    moreMenu: useRef(null)
-  };
+    }
 
   // Click-outside-to-close handler for dropdowns
   useEffect(() => {
@@ -1514,12 +1515,12 @@ export default function App() {
         e.preventDefault();
         closeAllDropdowns();
         // Return focus to the dropdown button that opened this menu
-        if (activeDropdown === 'transaction' && navRefs.current.transactionMenu) {
-          navRefs.current.transactionMenu.focus();
-        } else if (activeDropdown === 'utility' && navRefs.current.utilityMenu) {
-          navRefs.current.utilityMenu.focus();
-        } else if (activeDropdown === 'more' && navRefs.current.moreMenu) {
-          navRefs.current.moreMenu.focus();
+        if (activeDropdown === 'transaction' && navRefs.transactionMenu.current) {
+          navRefs.transactionMenu.current.focus();
+        } else if (activeDropdown === 'utility' && navRefs.utilityMenu.current) {
+          navRefs.utilityMenu.current.focus();
+        } else if (activeDropdown === 'more' && navRefs.moreMenu.current) {
+          navRefs.moreMenu.current.focus();
         }
         break;
         
