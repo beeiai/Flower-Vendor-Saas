@@ -1687,9 +1687,16 @@ export default function App() {
               ref={navRefs.transactionMenu} 
               onClick={() => toggleDropdown('transaction')} 
               onKeyDown={(e) => {
-                if (e.key === 'ArrowDown' || e.key === 'Enter' || e.key === ' ') {
+                if (e.key === 'Enter' || e.key === ' ') {
                   e.preventDefault();
+                  console.log('Transaction button Enter pressed, toggling dropdown');
                   toggleDropdown('transaction');
+                } else if (e.key === 'ArrowDown') {
+                  e.preventDefault();
+                  // Open dropdown and focus first item
+                  if (activeDropdown !== 'transaction') {
+                    toggleDropdown('transaction');
+                  }
                 }
               }}
               className={`flex items-center gap-2 px-4 h-[40px] text-xs font-semibold rounded-lg transition-all duration-200 ${
@@ -1701,6 +1708,7 @@ export default function App() {
               aria-expanded={activeDropdown === 'transaction'}
               aria-haspopup="true"
               aria-controls="transaction-menu"
+              tabIndex={0}
             >
               Transaction 
               <ChevronDown className={`w-3.5 h-3.5 transition-transform duration-200 ${activeDropdown === 'transaction' ? 'rotate-180' : ''}`} />
@@ -1786,9 +1794,16 @@ export default function App() {
               ref={navRefs.utilityMenu} 
               onClick={() => toggleDropdown('utility')} 
               onKeyDown={(e) => {
-                if (e.key === 'ArrowDown' || e.key === 'Enter' || e.key === ' ') {
+                if (e.key === 'Enter' || e.key === ' ') {
                   e.preventDefault();
+                  console.log('Utility button Enter pressed, toggling dropdown');
                   toggleDropdown('utility');
+                } else if (e.key === 'ArrowDown') {
+                  e.preventDefault();
+                  // Open dropdown and focus first item
+                  if (activeDropdown !== 'utility') {
+                    toggleDropdown('utility');
+                  }
                 }
               }}
               className={`flex items-center gap-2 px-4 h-[40px] text-xs font-semibold rounded-lg transition-all duration-200 ${
@@ -1800,6 +1815,7 @@ export default function App() {
               aria-expanded={activeDropdown === 'utility'}
               aria-haspopup="true"
               aria-controls="utility-menu"
+              tabIndex={0}
             >
               Utility 
               <ChevronDown className={`w-3.5 h-3.5 transition-transform duration-200 ${activeDropdown === 'utility' ? 'rotate-180' : ''}`} />
@@ -1879,9 +1895,16 @@ export default function App() {
               ref={navRefs.moreMenu} 
               onClick={() => toggleDropdown('more')} 
               onKeyDown={(e) => {
-                if (e.key === 'ArrowDown' || e.key === 'Enter' || e.key === ' ') {
+                if (e.key === 'Enter' || e.key === ' ') {
                   e.preventDefault();
+                  console.log('More button Enter pressed, toggling dropdown');
                   toggleDropdown('more');
+                } else if (e.key === 'ArrowDown') {
+                  e.preventDefault();
+                  // Open dropdown and focus first item
+                  if (activeDropdown !== 'more') {
+                    toggleDropdown('more');
+                  }
                 }
               }}
               className={`flex items-center gap-2 px-4 h-[40px] text-xs font-semibold rounded-lg transition-all duration-200 ${
@@ -1893,6 +1916,7 @@ export default function App() {
               aria-expanded={activeDropdown === 'more'}
               aria-haspopup="true"
               aria-controls="more-menu"
+              tabIndex={0}
             >
               More 
               <ChevronDown className={`w-3.5 h-3.5 transition-transform duration-200 ${activeDropdown === 'more' ? 'rotate-180' : ''}`} />
