@@ -98,6 +98,8 @@ def get_ledger_report_pdf(
         
         # Transform rows to match template structure
         transformed_rows = []
+        total_luggage_sum = 0
+        total_coolie_sum = 0
         for item in items:  # Use the original items to get date and vehicle
             qty = float(item.qty_kg or 0)
             rate = float(item.rate_per_kg or 0)
@@ -138,18 +140,25 @@ def get_ledger_report_pdf(
                 "net": f"{row_net:.2f}",
                 "balance": f"{row_balance:.2f}"
             })
+            total_luggage_sum += luggage_total
+            total_coolie_sum += coolie
         
-        # Prepare template data
+        # Prepare template data (include farmer name/address and luggage/coolie totals)
         template_data = {
             "rows": transformed_rows,
+            "name": farmer.name,
+            "address": farmer.address or "N/A",
+            "rem_advance": str(farmer.advance_total or 0),
             "totals": {
                 "gross_total": f"{total_amount:.2f}",
                 "commission_total": f"{commission:.2f}",
                 "net_total": f"{net_amount:.2f}",
                 "paid_total": f"{total_paid:.2f}",
                 "balance_total": f"{final_total:.2f}",
-                "luggage_total": f"{total_luggage:.2f}",
-                "coolie_total": "0.00"  # Would need to be calculated if needed
+                "luggage": f"{total_luggage_sum:.2f}",
+                "coolie": f"{total_coolie_sum:.2f}",
+                "luggage_total": f"{total_luggage_sum:.2f}",
+                "coolie_total": f"{total_coolie_sum:.2f}"
             },
             "group_name": group_name,
             "commission_pct": commission_pct,
@@ -246,6 +255,8 @@ def get_ledger_report_docx(
         
         # Transform rows to match template structure
         transformed_rows = []
+        total_luggage_sum = 0
+        total_coolie_sum = 0
         for item in items:  # Use the original items to get date and vehicle
             qty = float(item.qty_kg or 0)
             rate = float(item.rate_per_kg or 0)
@@ -278,6 +289,15 @@ def get_ledger_report_docx(
                 "paid": f"{paid:.2f}",
                 "balance": f"{row_balance:.2f}"
             })
+            # accumulate luggage (per row as transport_cost * qty) and coolie
+            try:
+                total_luggage_sum += (float(item.transport_cost or 0) * float(item.qty_kg or 0))
+            except Exception:
+                pass
+            try:
+                total_coolie_sum += float(item.coolie_cost or 0)
+            except Exception:
+                pass
         
         # Load and render HTML template
         template_path = os.path.join("templates", "ledger_report.html")
@@ -311,6 +331,9 @@ def get_ledger_report_docx(
         
         template = Template(template_content)
         html_content = template.render(
+            name=farmer.name,
+            address=farmer.address or "N/A",
+            rem_advance=str(farmer.advance_total or 0),
             group_name=group_name,
             commission_pct=commission_pct,
             from_date=from_date.strftime("%d-%m-%Y"),
@@ -322,7 +345,11 @@ def get_ledger_report_docx(
                 "commission_total": f"{commission:.2f}",
                 "net_total": f"{net_amount:.2f}",
                 "paid_total": f"{total_paid:.2f}",
-                "balance_total": f"{final_total:.2f}"
+                "balance_total": f"{final_total:.2f}",
+                "luggage": f"{total_luggage_sum:.2f}",
+                "coolie": f"{total_coolie_sum:.2f}",
+                "luggage_total": f"{total_luggage_sum:.2f}",
+                "coolie_total": f"{total_coolie_sum:.2f}"
             },
             generated_at=__import__('datetime').datetime.now().isoformat()
         )

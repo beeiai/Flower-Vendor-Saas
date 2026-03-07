@@ -260,11 +260,18 @@ export default function ReportsView({ groups, customers, vehicles, advanceStore 
 					printWindow.onload = () => {
 						printWindow.focus();
 						setTimeout(() => {
-							printWindow.print();
+							if (!printWindow.__printed) { printWindow.__printed = true; printWindow.print(); }
 							setTimeout(() => { if (!printWindow.closed) printWindow.close(); }, 1000);
 						}, 300);
 					};
-					setTimeout(() => { if (printWindow && !printWindow.closed) { printWindow.focus(); printWindow.print(); setTimeout(() => { if (!printWindow.closed) printWindow.close(); }, 1000); } }, 2000);
+					setTimeout(() => {
+						if (printWindow && !printWindow.closed && !printWindow.__printed) {
+							printWindow.focus();
+							printWindow.__printed = true;
+							printWindow.print();
+							setTimeout(() => { if (!printWindow.closed) printWindow.close(); }, 1000);
+						}
+					}, 2000);
 					return;
 				}
 				// If PDF, open blob URL and print
@@ -282,7 +289,7 @@ export default function ReportsView({ groups, customers, vehicles, advanceStore 
 						window.URL.revokeObjectURL(url);
 						return;
 					}
-					printWindow.onload = () => { printWindow.focus(); printWindow.print(); setTimeout(() => { if (!printWindow.closed) printWindow.close(); window.URL.revokeObjectURL(url); }, 1000); };
+					printWindow.onload = () => { printWindow.focus(); if (!printWindow.__printed) { printWindow.__printed = true; printWindow.print(); } setTimeout(() => { if (!printWindow.closed) printWindow.close(); window.URL.revokeObjectURL(url); }, 1000); };
 					// safety revoke
 					setTimeout(() => window.URL.revokeObjectURL(url), 60000);
 					return;
@@ -319,12 +326,12 @@ export default function ReportsView({ groups, customers, vehicles, advanceStore 
 			printWindow.document.write(htmlContent);
 			printWindow.document.write('</body></html>');
 			printWindow.document.close();
-			printWindow.onload = () => {
-				printWindow.focus();
-				setTimeout(() => { printWindow.print(); setTimeout(() => { if (!printWindow.closed) printWindow.close(); }, 1000); }, 300);
-			};
-			
-			setTimeout(() => groupRef.current?.querySelector('input')?.focus(), 100);
+					printWindow.onload = () => {
+						printWindow.focus();
+						setTimeout(() => { if (!printWindow.__printed) { printWindow.__printed = true; printWindow.print(); setTimeout(() => { if (!printWindow.closed) printWindow.close(); }, 1000); } }, 300);
+					};
+
+					setTimeout(() => groupRef.current?.querySelector('input')?.focus(), 100);
 		} catch (error) {
 			console.error('Print error:', error);
 			alert(`Print failed: ${error.message}`);

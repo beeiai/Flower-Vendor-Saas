@@ -142,9 +142,9 @@ export function GroupTotalView({ groups, customers, ledgerStore, onCancel, setAc
         printWindow.focus();
         // Small delay to ensure styles are applied
         setTimeout(() => {
-          // Call print - this will open the print dialog
-          printWindow.print();
-          // Close the window after print dialog opens (not after printing completes)
+          // Call print - guard with __printed to avoid duplicates
+          if (!printWindow.__printed) { printWindow.__printed = true; printWindow.print(); }
+          // Close the window after print dialog opens
           setTimeout(() => {
             if (!printWindow.closed) {
               printWindow.close();
@@ -152,11 +152,12 @@ export function GroupTotalView({ groups, customers, ledgerStore, onCancel, setAc
           }, 1000);
         }, 300);
       };
-      
+
       // Fallback: trigger print if onload doesn't fire
       setTimeout(() => {
-        if (printWindow && !printWindow.closed) {
+        if (printWindow && !printWindow.closed && !printWindow.__printed) {
           printWindow.focus();
+          printWindow.__printed = true;
           printWindow.print();
           setTimeout(() => {
             if (!printWindow.closed) {
