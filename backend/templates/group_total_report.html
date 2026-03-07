@@ -184,7 +184,7 @@
       <tr>
         <td style="text-align:left;">{{ row.farmer_name }}</td>
         <td style="text-align:right;">{{ row.total_net_amount }}</td>
-        <td style="text-align:right;">{{ row.paid_amount }}</td>
+        <td style="text-align:right;">{{ row.paid_amount | default(row.paid) | default('0.00') }}</td>
         <td style="text-align:center;">{{ row.ledger_no }}</td>
       </tr>
       {% endfor %}
@@ -199,7 +199,7 @@
     </div>
     <div class="totals-line">
       <span class="totals-label">Paid Amount :</span>
-      <span class="totals-value">{{ overall_paid|default(0) }}</span>
+      <span class="totals-value">{{ overall_paid | default('0.00') }}</span>
     </div>
   </div>
 
