@@ -107,7 +107,11 @@ def get_silk_ledger_aggregation(
     - Group-wise aggregation (kg, amount)
     - Grand totals across all groups
     """
-    # (function continues below)
+    # Validate and parse the incoming date string into a date object
+    try:
+        target_date = datetime.strptime(date, "%Y-%m-%d").date()
+    except ValueError:
+        raise HTTPException(status_code=400, detail="Invalid date format. Use YYYY-MM-DD")
 
     # Query regular transactions (collection_items) for the target date
     # Join with Farmer and FarmerGroup to get names
