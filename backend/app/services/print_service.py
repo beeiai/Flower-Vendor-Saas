@@ -46,22 +46,63 @@ class PrintService:
 
         # Map incoming rows (which may use different keys) to template expected keys
         mapped_rows = []
+        def _num(x):
+            try:
+                return float(x)
+            except Exception:
+                return 0.0
+
         for r in rows:
+            date_val = r.get("date") or r.get("date_str") or "N/A"
+            vehicle_val = r.get("vehicle") or r.get("vehicle_name") or "N/A"
+            qty_val = _num(r.get("qty") or r.get("quantity") or r.get("qty_kg") or 0)
+
+            # Determine luggage per-row:
+            # - Prefer explicit 'luggage' if present (assumed to be total for the row)
+            # - Else, if frontend uses the misspelled 'laguage' (per-unit), multiply by qty
+            # - Else, use 'transport_cost' (may be per-unit or total); fall back to as-is
+            luggage_val = None
+            if r.get("luggage") is not None:
+                luggage_val = _num(r.get("luggage"))
+            else:
+                per_unit_lag = _num(r.get("laguage") or r.get("labour_per_kg") or r.get("labour") or 0)
+                transport_cost = r.get("transport_cost")
+                if per_unit_lag > 0:
+                    luggage_val = per_unit_lag * qty_val
+                elif transport_cost is not None:
+                    # If transport_cost looks like a per-unit value, multiply; otherwise use as-is
+                    transport_num = _num(transport_cost)
+                    if transport_num != 0:
+                        # Heuristic: if transport_cost is small (<10) treat as per-unit, else assume total
+                        if abs(transport_num) < 10:
+                            luggage_val = transport_num * qty_val
+                        else:
+                            luggage_val = transport_num
+                    else:
+                        luggage_val = 0.0
+
             mapped_rows.append({
-                "date": r.get("date") or r.get("date_str") or "N/A",
-                "vehicle": r.get("vehicle") or r.get("vehicle_name") or "N/A",
+                "date": date_val,
+                "vehicle": vehicle_val,
                 "product_name": r.get("product_name") or r.get("item_name") or r.get("ledger_name") or "",
-                "qty": r.get("qty") or r.get("qty") or "0",
+                "qty": f"{qty_val:.2f}",
                 "rate": r.get("price") or r.get("rate") or r.get("rate_per_kg") or "0",
-                "luggage": r.get("luggage") or r.get("transport_cost") or "0",
+                "luggage": f"{luggage_val:.2f}" if luggage_val is not None else "0.00",
                 "gross": r.get("total") or r.get("amount") or "0",
                 "paid": r.get("paid") or r.get("paid_amount") or "0",
             })
 
         # Prepare totals dictionary matching ledger template expectations
+        # If totals not supplied, compute from mapped_rows
+        computed_qty = 0.0
+        computed_luggage = 0.0
+        for mr in mapped_rows:
+            computed_qty += _num(mr.get("qty") or 0)
+            computed_luggage += _num(mr.get("luggage") or 0)
+
         totals = {
-            "qty": f"{float(total_qty):.2f}" if total_qty is not None else "0.00",
-            "luggage": f"{float(luggage_total):.2f}" if luggage_total is not None else "0.00",
+            "qty": f"{float(total_qty):.2f}" if total_qty is not None else f"{computed_qty:.2f}",
+            "luggage": f"{float(luggage_total):.2f}" if luggage_total is not None else f"{computed_luggage:.2f}",
             "coolie": f"{float(coolie):.2f}" if coolie is not None else "0.00",
             "gross_total": f"{float(total_amount):.2f}" if total_amount is not None else "0.00",
             "commission_total": f"{float(commission):.2f}" if commission is not None else "0.00",
