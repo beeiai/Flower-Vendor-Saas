@@ -15,7 +15,7 @@ export default function TopNavbar({ activeSection, setActiveSection, setShowTMen
 							{ id: 'party', l: 'Party Details', i: Users }, 
 							{ id: 'vehicle', l: 'Extra Vehicle', i: Truck } 
 						].map(item => (
-							<button key={item.id} onClick={() => { setShowTMenu(false); if (['group-reg', 'item-reg', 'party'].includes(item.id)) { setModalMode(item.id === 'party' ? 'customer' : item.id === 'item-reg' ? 'item' : 'group'); setIsModalOpen(true); } else setActiveSection(item.id); }} className={`w-full text-left px-4 py-2.5 text-sm font-medium flex items-center gap-3 transition-colors ${activeSection === item.id ? 'bg-primary-600 text-white' : 'text-slate-700 hover:bg-primary-50 hover:text-primary-700'}`}><item.i className="w-4 h-4" /> {item.l}</button>
+							<button key={item.id} onClick={() => { setShowTMenu(false); if (['group-reg', 'party'].includes(item.id)) { setModalMode(item.id === 'party' ? 'customer' : 'group'); setIsModalOpen(true); } else if (item.id === 'item-reg') { setActiveSection('item-reg'); } else { setActiveSection(item.id); } }} className={`w-full text-left px-4 py-2.5 text-sm font-medium flex items-center gap-3 transition-colors ${activeSection === item.id ? 'bg-primary-600 text-white' : 'text-slate-700 hover:bg-primary-50 hover:text-primary-700'}`}><item.i className="w-4 h-4" /> {item.l}</button>
 						))}
 					</div>}
 				</div>
