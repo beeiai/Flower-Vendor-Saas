@@ -5,6 +5,7 @@ from datetime import date, datetime
 from decimal import Decimal
 from typing import Optional
 import logging
+from sqlalchemy.exc import IntegrityError
 
 from app.core.db import get_db
 from app.dependencies import get_current_user
@@ -106,10 +107,7 @@ def get_silk_ledger_aggregation(
     - Group-wise aggregation (kg, amount)
     - Grand totals across all groups
     """
-    try:
-        target_date = datetime.strptime(date, "%Y-%m-%d").date()
-    except ValueError:
-        raise HTTPException(status_code=400, detail="Invalid date format. Use YYYY-MM-DD")
+    # (function continues below)
 
     # Query regular transactions (collection_items) for the target date
     # Join with Farmer and FarmerGroup to get names
@@ -719,9 +717,33 @@ def save_daily_collection(
             upi=data.upi
         )
         db.add(new_collection)
-        db.commit()
-        db.refresh(new_collection)
-        return new_collection
+        try:
+            db.commit()
+            db.refresh(new_collection)
+            return new_collection
+        except IntegrityError as ie:
+            db.rollback()
+            logger.exception("IntegrityError saving SilkDailyCollection")
+            # If a collection for this vendor/date now exists (race), update and return it
+            conflict = db.query(SilkDailyCollection).filter(
+                SilkDailyCollection.vendor_id == user.vendor_id,
+                SilkDailyCollection.date == target_date
+            ).first()
+            if conflict:
+                conflict.cash = data.cash
+                conflict.upi = data.upi
+                conflict.updated_at = func.now()
+                db.commit()
+                db.refresh(conflict)
+                return conflict
+
+            # If another vendor holds this date due to a global unique constraint, return 409
+            other = db.query(SilkDailyCollection).filter(SilkDailyCollection.date == target_date).first()
+            if other:
+                raise HTTPException(status_code=409, detail=f"A collection for date {target_date} already exists (vendor_id={other.vendor_id}). Database enforces unique date globally.")
+
+            # Unknown integrity error, propagate as server error
+            raise HTTPException(status_code=500, detail=f"Failed to save collection due to integrity error: {str(ie)}")
 
 
 @router.get("/daily-collections", response_model=SilkDailyCollectionListResponse)
