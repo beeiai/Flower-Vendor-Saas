@@ -11,6 +11,7 @@ from app.core.db import get_db
 from app.dependencies import get_current_user
 from app.models.collection_item import CollectionItem
 from app.models.farmer import Farmer
+from app.models.advance import Advance
 from app.models.farmer_group import FarmerGroup
 from app.routes.reports import render_template  # Use shared render_template function
 
@@ -70,24 +71,26 @@ def get_ledger_report_pdf(
         for item in items:
             qty = float(item.qty_kg or 0)
             rate = float(item.rate_per_kg or 0)
-            luggage = float(item.transport_cost or 0)
+            # Prefer labour_per_kg as per-unit luggage; fall back to transport_cost
+            per_unit_luggage = float(getattr(item, 'labour_per_kg', None) or item.transport_cost or 0)
+            luggage_total_per_row = per_unit_luggage * qty
             paid = float(item.paid_amount or 0)
             total = qty * rate
-            
+
             rows.append({
                 "date": item.date.strftime("%d-%m-%Y") if item.date else "N/A",
                 "vehicle": getattr(item, 'vehicle', 'N/A') if hasattr(item, 'vehicle') else "N/A",
                 "qty": f"{qty:.2f}",
                 "price": f"{rate:.2f}",
                 "total": f"{total:.2f}",
-                "luggage": f"{luggage:.2f}",
+                "luggage": f"{luggage_total_per_row:.2f}",
                 "paid_amount": f"{paid:.2f}",
-                "amount": f"{(total + luggage - paid):.2f}"
+                "amount": f"{(total + luggage_total_per_row - paid):.2f}"
             })
-            
+
             total_qty += qty
             total_amount += total
-            total_luggage += luggage
+            total_luggage += luggage_total_per_row
             total_paid += paid
         
         # Calculate summary
@@ -103,7 +106,8 @@ def get_ledger_report_pdf(
         for item in items:  # Use the original items to get date and vehicle
             qty = float(item.qty_kg or 0)
             rate = float(item.rate_per_kg or 0)
-            luggage_per_unit = float(item.transport_cost or 0)  # Luggage per unit
+            # Prefer labour_per_kg (per-unit luggage) if present, else fallback to transport_cost
+            luggage_per_unit = float(getattr(item, 'labour_per_kg', None) or item.transport_cost or 0)
             luggage_total = luggage_per_unit * qty  # Total luggage = luggage * qty
             coolie = float(item.coolie_cost or 0)  # Add coolie from item
             paid = float(item.paid_amount or 0)
@@ -144,11 +148,17 @@ def get_ledger_report_pdf(
             total_coolie_sum += coolie
         
         # Prepare template data (include farmer name/address and luggage/coolie totals)
+        # Compute rem_advance (sum of advances) for accurate remaining advance
+        adv_sum = db.query(func.coalesce(func.sum(Advance.amount), 0)).filter(
+            Advance.vendor_id == user.vendor_id,
+            Advance.farmer_id == farmer_id
+        ).scalar() or 0
+
         template_data = {
             "rows": transformed_rows,
             "name": farmer.name,
             "address": farmer.address or "N/A",
-            "rem_advance": str(farmer.advance_total or 0),
+            "rem_advance": str(adv_sum),
             "totals": {
                 "gross_total": f"{total_amount:.2f}",
                 "commission_total": f"{commission:.2f}",
@@ -232,7 +242,8 @@ def get_ledger_report_docx(
         for item in items:
             qty = float(item.qty_kg or 0)
             rate = float(item.rate_per_kg or 0)
-            luggage = float(item.transport_cost or 0)
+            per_unit_luggage = float(getattr(item, 'labour_per_kg', None) or item.transport_cost or 0)
+            luggage = per_unit_luggage * qty
             paid = float(item.paid_amount or 0)
             total = qty * rate
             
@@ -265,7 +276,8 @@ def get_ledger_report_docx(
         for item in items:  # Use the original items to get date and vehicle
             qty = float(item.qty_kg or 0)
             rate = float(item.rate_per_kg or 0)
-            luggage = float(item.transport_cost or 0)
+            per_unit_luggage = float(getattr(item, 'labour_per_kg', None) or item.transport_cost or 0)
+            luggage = per_unit_luggage * qty
             paid = float(item.paid_amount or 0)
             total = qty * rate
             
@@ -296,7 +308,8 @@ def get_ledger_report_docx(
             })
             # accumulate luggage (per row as transport_cost * qty) and coolie
             try:
-                total_luggage_sum += (float(item.transport_cost or 0) * float(item.qty_kg or 0))
+                per_unit_luggage = float(getattr(item, 'labour_per_kg', None) or item.transport_cost or 0)
+                total_luggage_sum += (per_unit_luggage * float(item.qty_kg or 0))
             except Exception:
                 pass
             try:
@@ -500,7 +513,8 @@ def get_group_patti_report_docx(
                 qty = float(item.qty_kg or 0)
                 rate = float(item.rate_per_kg or 0)
                 paid = float(item.paid_amount or 0)
-                luggage = float(item.transport_cost or 0)
+                per_unit_luggage = float(getattr(item, 'labour_per_kg', None) or item.transport_cost or 0)
+                luggage = per_unit_luggage * qty
                 
                 farmer_gross += qty * rate
                 farmer_paid += paid
@@ -731,7 +745,8 @@ def get_group_total_report_docx(
                 rate = float(item.rate_per_kg or 0)
                 total = qty * rate
                 paid = float(item.paid_amount or 0)
-                luggage = float(item.transport_cost or 0)
+                per_unit_luggage = float(getattr(item, 'labour_per_kg', None) or item.transport_cost or 0)
+                luggage = per_unit_luggage * qty
                 
                 total_qty += qty
                 total_amount += total
@@ -803,7 +818,8 @@ def get_group_total_report_docx(
                     rate = float(item.rate_per_kg or 0)
                     total = qty * rate
                     paid = float(item.paid_amount or 0)
-                    luggage = float(item.transport_cost or 0)
+                    per_unit_luggage = float(getattr(item, 'labour_per_kg', None) or item.transport_cost or 0)
+                    luggage = per_unit_luggage * qty
                     
                     group_qty += qty
                     group_amount += total

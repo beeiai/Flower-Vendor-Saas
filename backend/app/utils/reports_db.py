@@ -14,6 +14,7 @@ from app.models.farmer import Farmer
 from app.models.farmer_group import FarmerGroup
 from app.models.collection_item import CollectionItem
 from app.models.saala_customer import SaalaCustomer, SaalaTransaction
+from app.models.advance import Advance
 
 
 def get_default_date_range() -> tuple:
@@ -181,13 +182,19 @@ def get_ledger_data(
             "remarks": entry.remarks or "N/A"
         })
     
+    # Compute rem advance from advances table (given - deducted)
+    adv_sum = db.query(func.coalesce(func.sum(Advance.amount), 0)).filter(
+        Advance.vendor_id == vendor_id,
+        Advance.farmer_id == customer_id
+    ).scalar() or 0
+
     return {
         "customer": {
             "id": customer.id,
             "name": customer.name,
             "code": customer.farmer_code,
             "address": customer.address or "N/A",
-            "advance_total": str(customer.advance_total or 0),
+            "advance_total": str(adv_sum),
             "group_name": group_name
         },
         "entries": entries_list,
@@ -236,7 +243,8 @@ def get_group_total_data(
         CollectionItem.item_name,
         CollectionItem.qty_kg,
         CollectionItem.rate_per_kg,
-        CollectionItem.transport_cost.label("luggage"),
+        CollectionItem.labour_per_kg.label("labour_per_kg"),
+        CollectionItem.transport_cost.label("transport_cost"),
         CollectionItem.coolie_cost.label("coolie"),
         CollectionItem.paid_amount,
         CollectionItem.remarks
@@ -267,7 +275,9 @@ def get_group_total_data(
         rate = Decimal(str(row.rate_per_kg or 0))
         amount = qty * rate
         paid = Decimal(str(row.paid_amount or 0))
-        luggage = Decimal(str(row.luggage or 0))
+        labour_per_kg = Decimal(str(row.labour_per_kg)) if getattr(row, 'labour_per_kg', None) is not None else Decimal("0")
+        transport_cost = Decimal(str(row.transport_cost)) if getattr(row, 'transport_cost', None) is not None else Decimal("0")
+        luggage = (qty * labour_per_kg) + transport_cost
         coolie = Decimal(str(row.coolie or 0))
         
         # Format date as DD-MM-YYYY
@@ -418,7 +428,8 @@ def get_group_patti_data(
             CollectionItem.item_name,
             CollectionItem.qty_kg,
             CollectionItem.rate_per_kg,
-            CollectionItem.transport_cost.label("luggage"),
+            CollectionItem.labour_per_kg.label("labour_per_kg"),
+            CollectionItem.transport_cost.label("transport_cost"),
             CollectionItem.coolie_cost.label("coolie"),
             CollectionItem.paid_amount,
             CollectionItem.remarks
@@ -441,7 +452,9 @@ def get_group_patti_data(
             rate = Decimal(str(entry.rate_per_kg)) if entry.rate_per_kg is not None else Decimal("0")
             amount = qty * rate
             paid = Decimal(str(entry.paid_amount)) if entry.paid_amount is not None else Decimal("0")
-            luggage = Decimal(str(entry.luggage)) if entry.luggage is not None else Decimal("0")
+            labour_per_kg = Decimal(str(entry.labour_per_kg)) if getattr(entry, 'labour_per_kg', None) is not None else Decimal("0")
+            transport_cost = Decimal(str(entry.transport_cost)) if getattr(entry, 'transport_cost', None) is not None else Decimal("0")
+            luggage = (qty * labour_per_kg) + transport_cost
             coolie = Decimal(str(entry.coolie)) if entry.coolie is not None else Decimal("0")
                     
             farmer_total_qty += qty
@@ -570,7 +583,8 @@ def get_daily_sales_data(
             CollectionItem.item_name,
             CollectionItem.qty_kg,
             CollectionItem.rate_per_kg,
-            CollectionItem.transport_cost.label("luggage"),
+            CollectionItem.labour_per_kg.label("labour_per_kg"),
+            CollectionItem.transport_cost.label("transport_cost"),
             CollectionItem.coolie_cost.label("coolie"),
             CollectionItem.paid_amount,
             CollectionItem.remarks
@@ -654,9 +668,12 @@ def get_daily_sales_data(
                     paid = Decimal("0")
                 
                 try:
-                    luggage = Decimal(str(row.luggage)) if row.luggage is not None else Decimal("0")
+                    # Prefer computing luggage from labour_per_kg * qty + transport_cost when available
+                    labour_per_kg = Decimal(str(row.labour_per_kg)) if getattr(row, 'labour_per_kg', None) is not None else Decimal("0")
+                    transport_cost = Decimal(str(row.transport_cost)) if getattr(row, 'transport_cost', None) is not None else Decimal("0")
+                    luggage = (qty * labour_per_kg) + transport_cost
                 except (ValueError, TypeError, Exception) as e:
-                    logger.warning(f"Invalid luggage at index {idx}: {row.luggage}, error: {e}")
+                    logger.warning(f"Invalid luggage at index {idx}: labour_per_kg={getattr(row, 'labour_per_kg', None)}, transport_cost={getattr(row, 'transport_cost', None)}, error: {e}")
                     luggage = Decimal("0")
                 
                 try:

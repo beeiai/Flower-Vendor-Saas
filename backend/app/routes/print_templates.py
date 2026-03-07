@@ -9,6 +9,7 @@ from app.dependencies import get_current_user
 from app.models.collection_item import CollectionItem
 from app.models.farmer import Farmer
 from app.models.farmer_group import FarmerGroup
+from app.models.advance import Advance
 from app.services.print_service import PrintService
 
 router = APIRouter(
@@ -59,9 +60,9 @@ def get_ledger_report(
     for item in items:
         qty = float(item.qty_kg or 0)
         rate = float(item.rate_per_kg or 0)
-        # transport_cost may be stored as per-unit or total; assume per-unit and multiply by qty
-        transport_cost = float(item.transport_cost or 0)
-        luggage_total_per_row = transport_cost * qty
+        # Prefer labour_per_kg as per-unit luggage; fall back to transport_cost
+        per_unit_luggage = float(getattr(item, 'labour_per_kg', None) or item.transport_cost or 0)
+        luggage_total_per_row = per_unit_luggage * qty
         paid = float(item.paid_amount or 0)
         total = qty * rate
 
@@ -86,6 +87,12 @@ def get_ledger_report(
     net_amount = total_amount - commission
     final_total = net_amount + total_luggage - total_paid
     
+    # Compute rem_advance from advances table
+    adv_sum = db.query(func.coalesce(func.sum(Advance.amount), 0)).filter(
+        Advance.vendor_id == user.vendor_id,
+        Advance.farmer_id == farmer_id
+    ).scalar() or 0
+
     return PrintService.render_ledger_report(
         farmer_name=farmer.name,
         ledger_name=farmer.farmer_code or "N/A",
@@ -104,7 +111,7 @@ def get_ledger_report(
         net_amount=net_amount,
         paid_amount=total_paid,
         final_total=final_total,
-        rem_advance=str(farmer.advance_total or 0),
+        rem_advance=str(adv_sum),
     )
 
 
@@ -177,7 +184,8 @@ def get_group_patti_report(
         for item in items:
             qty = float(item.qty_kg or 0)
             rate = float(item.rate_per_kg or 0)
-            luggage = float(item.transport_cost or 0)
+            per_unit_luggage = float(getattr(item, 'labour_per_kg', None) or item.transport_cost or 0)
+            luggage = per_unit_luggage * qty
             paid = float(item.paid_amount or 0)
             total = qty * rate
             
@@ -299,7 +307,8 @@ def get_group_total_report(
             qty = float(item.qty_kg or 0)
             rate = float(item.rate_per_kg or 0)
             paid = float(item.paid_amount or 0)
-            luggage = float(item.transport_cost or 0)
+            per_unit_luggage = float(getattr(item, 'labour_per_kg', None) or item.transport_cost or 0)
+            luggage = per_unit_luggage * qty
             
             farmer_qty += qty
             farmer_amount += qty * rate
