@@ -1,4 +1,4 @@
-from sqlalchemy import Column, Integer, Numeric, Date, DateTime, func
+from sqlalchemy import Column, Integer, Numeric, Date, DateTime, func, UniqueConstraint
 from app.core.db import Base
 
 
@@ -16,7 +16,10 @@ class SilkDailyCollection(Base):
     __tablename__ = "silk_daily_collections"
 
     id = Column(Integer, primary_key=True, index=True)
-    date = Column(Date, nullable=False, unique=True, index=True)
+    date = Column(Date, nullable=False, index=True)
+
+    # Scope to vendor
+    vendor_id = Column(Integer, nullable=False, index=True)
 
     # Payment amounts - must be stored as decimals
     cash = Column(Numeric(12, 2), nullable=False, default=0)
@@ -25,3 +28,7 @@ class SilkDailyCollection(Base):
     # Metadata
     created_at = Column(DateTime(timezone=True), server_default=func.now())
     updated_at = Column(DateTime(timezone=True), onupdate=func.now())
+    
+    __table_args__ = (
+        UniqueConstraint('vendor_id', 'date', name='uq_silk_daily_collections_vendor_date'),
+    )
