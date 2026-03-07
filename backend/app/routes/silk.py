@@ -801,6 +801,16 @@ def get_daily_collection_by_date(
     return collection
 
 
+# Accept trailing-slash variant for POST daily collection
+@router.post("/daily-collections/", response_model=SilkDailyCollectionResponse)
+def save_daily_collection_slash(
+    data: SilkDailyCollectionCreate,
+    db: Session = Depends(get_db),
+    user = Depends(get_current_user)
+):
+    return save_daily_collection(data=data, db=db, user=user)
+
+
 # Accept trailing-slash variant for single-date daily collection
 @router.get("/daily-collections/{date_str}/", response_model=SilkDailyCollectionResponse)
 def get_daily_collection_by_date_slash(
