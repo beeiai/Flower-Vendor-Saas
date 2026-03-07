@@ -601,7 +601,6 @@ function ItemRegistryForm({ form, setForm, onSave, onCancel, showNotify }) {
           <button 
             data-action="primary" 
             onClick={handleAddItem}
-            disabled={isAddingItem}
             className="w-full bg-gradient-to-r from-[#5B55E6] to-[#4A44D0] text-white py-3 font-bold uppercase text-sm shadow-lg hover:from-[#4A44D0] hover:to-[#3A34C0] rounded-xl transition-all hover:shadow-xl active:translate-y-0.5" 
             style={{height: '48px'}} 
             data-enter-index="3"
