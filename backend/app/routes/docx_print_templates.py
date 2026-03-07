@@ -167,6 +167,11 @@ def get_ledger_report_pdf(
             "current_date": __import__('datetime').datetime.now().strftime("%d-%m-%Y"),
             "generated_at": __import__('datetime').datetime.now().isoformat()
         }
+        # Debug: log key template values for troubleshooting missing fields
+        try:
+            print(f"[DEBUG][ledger-preview] farmer_id={farmer_id} rem_advance={template_data.get('rem_advance')} total_rows={len(transformed_rows)} totals_luggage={template_data.get('totals', {}).get('luggage')} totals_qty_calc={sum(float(r.get('qty') or 0) for r in transformed_rows)}")
+        except Exception as _:
+            pass
         
         # Use shared render_template function (handles logo and no print button)
         html_content = render_template("ledger_report.html", template_data)

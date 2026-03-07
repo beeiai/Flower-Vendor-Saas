@@ -56,27 +56,28 @@ def get_ledger_report(
     total_amount = 0
     total_luggage = 0
     total_paid = 0
-    
     for item in items:
         qty = float(item.qty_kg or 0)
         rate = float(item.rate_per_kg or 0)
-        luggage = float(item.transport_cost or 0)
+        # transport_cost may be stored as per-unit or total; assume per-unit and multiply by qty
+        transport_cost = float(item.transport_cost or 0)
+        luggage_total_per_row = transport_cost * qty
         paid = float(item.paid_amount or 0)
         total = qty * rate
-        
+
         rows.append({
             "date": item.date.strftime("%d-%m-%Y"),
             "qty": f"{qty:.2f}",
             "price": f"{rate:.2f}",
             "total": f"{total:.2f}",
-            "luggage": f"{luggage:.2f}",
+            "luggage": f"{luggage_total_per_row:.2f}",
             "paid": f"{paid:.2f}",
-            "amount": f"{(total + luggage - paid):.2f}"
+            "amount": f"{(total + luggage_total_per_row - paid):.2f}"
         })
-        
+
         total_qty += qty
         total_amount += total
-        total_luggage += luggage
+        total_luggage += luggage_total_per_row
         total_paid += paid
     
     # Calculate summary
@@ -103,7 +104,9 @@ def get_ledger_report(
         net_amount=net_amount,
         paid_amount=total_paid,
         final_total=final_total,
+        rem_advance=str(farmer.advance_total or 0),
     )
+
 
 
 @router.get("/group-patti-report")
