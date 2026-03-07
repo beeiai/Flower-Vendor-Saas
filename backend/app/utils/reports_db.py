@@ -123,7 +123,8 @@ def get_ledger_data(
         CollectionItem.item_name,
         CollectionItem.qty_kg,
         CollectionItem.rate_per_kg,
-        CollectionItem.transport_cost.label("luggage"),
+        CollectionItem.labour_per_kg.label("labour_per_kg"),
+        CollectionItem.transport_cost.label("transport_cost"),
         CollectionItem.coolie_cost.label("coolie"),
         CollectionItem.paid_amount,
         CollectionItem.remarks
@@ -147,7 +148,10 @@ def get_ledger_data(
         rate = Decimal(str(entry.rate_per_kg)) if entry.rate_per_kg is not None else Decimal("0")
         amount = qty * rate
         paid = Decimal(str(entry.paid_amount)) if entry.paid_amount is not None else Decimal("0")
-        luggage = Decimal(str(entry.luggage)) if entry.luggage is not None else Decimal("0")
+        # Compute luggage as total labour (qty * labour_per_kg) plus any transport_cost
+        labour_per_kg = Decimal(str(entry.labour_per_kg)) if getattr(entry, "labour_per_kg", None) is not None else Decimal("0")
+        transport_cost = Decimal(str(entry.transport_cost)) if getattr(entry, "transport_cost", None) is not None else Decimal("0")
+        luggage = (qty * labour_per_kg) + transport_cost
         coolie = Decimal(str(entry.coolie)) if entry.coolie is not None else Decimal("0")
         
         total_qty += qty
