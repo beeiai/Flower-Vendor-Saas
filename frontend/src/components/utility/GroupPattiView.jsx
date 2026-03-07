@@ -48,27 +48,6 @@ export function GroupPattiView({ groups, customers, onCancel, setActiveSection }
   const groupRef       = useRef(null);
   const commissionRef  = useRef(null);
   const printBtnRef    = useRef(null);
-  const cancelBtnRef   = useRef(null);
-
-  const formNav = useKeyboardListNavigation({
-    itemCount: 6,
-    onEnter: (index) => {
-      const actions = [
-        () => toDateRef.current?.focus(),
-        () => groupRef.current?.focus(),
-        () => commissionRef.current?.focus(),
-        () => printBtnRef.current?.focus(),
-        () => handlePrint(),
-        () => setActiveSection('daily'),
-      ];
-      actions[index]?.();
-    },
-    listRef: containerRef,
-  });
-
-  // ─────────────────────────────────────────────
-  //  PRINT HANDLER
-  // ─────────────────────────────────────────────
   const handlePrint = async () => {
     if (!form.groupName) {
       alert('Please select a group first');
@@ -92,7 +71,11 @@ export function GroupPattiView({ groups, customers, onCancel, setActiveSection }
 
       // API returns structured report data (not raw HTML)
       const reportData = response?.data;
-      if (!reportData) throw new Error('Empty response from server');
+      // Check for empty report data or no farmers/entries
+      if (!reportData || !reportData.farmers || reportData.farmers.length === 0 || reportData.entry_count === 0) {
+        alert('No data available for the selected group and date.');
+        return;
+      }
 
       // Open print window
       const printWindow = window.open('', '_blank', 'width=1200,height=900');
@@ -142,7 +125,7 @@ export function GroupPattiView({ groups, customers, onCancel, setActiveSection }
     } finally {
       setIsPrinting(false);
     }
-  };
+  }
 
   // ─────────────────────────────────────────────
   //  RENDER
