@@ -1,6 +1,6 @@
 from fastapi import APIRouter, Depends, HTTPException, Query
 from sqlalchemy.orm import Session
-from sqlalchemy import func
+from sqlalchemy import func, inspect
 from datetime import date, datetime
 from decimal import Decimal
 from typing import Optional
@@ -693,16 +693,31 @@ def save_daily_collection(
     if data.cash < 0 or data.upi < 0:
         raise HTTPException(status_code=400, detail="Payment amounts cannot be negative")
 
-    # Check if record exists for the date for this vendor
-    existing = db.query(SilkDailyCollection).filter(
-        SilkDailyCollection.vendor_id == user.vendor_id,
-        SilkDailyCollection.date == target_date
-    ).first()
+    # Determine whether the DB schema contains `vendor_id` column and adapt accordingly
+    try:
+        inspector = inspect(db.bind)
+        cols = [c["name"] for c in inspector.get_columns(SilkDailyCollection.__tablename__)]
+    except Exception:
+        cols = []
+
+    vendor_col_present = "vendor_id" in cols
+
+    # Check if record exists for the date for this vendor (or legacy global date)
+    if vendor_col_present:
+        existing = db.query(SilkDailyCollection).filter(
+            SilkDailyCollection.vendor_id == user.vendor_id,
+            SilkDailyCollection.date == target_date
+        ).first()
+    else:
+        existing = db.query(SilkDailyCollection).filter(
+            SilkDailyCollection.date == target_date
+        ).first()
 
     logger.debug("Silk collection save", extra={
         "date": target_date,
         "cash": data.cash,
-        "upi": data.upi
+        "upi": data.upi,
+        "vendor_col_present": vendor_col_present
     })
 
     if existing:
@@ -713,13 +728,21 @@ def save_daily_collection(
         db.refresh(existing)
         return existing
     else:
-        # Create new record (associate with vendor)
-        new_collection = SilkDailyCollection(
-            vendor_id=user.vendor_id,
-            date=target_date,
-            cash=data.cash,
-            upi=data.upi
-        )
+        # Create new record. If vendor_id exists in schema, set it; otherwise omit for legacy schema.
+        if vendor_col_present:
+            new_collection = SilkDailyCollection(
+                vendor_id=user.vendor_id,
+                date=target_date,
+                cash=data.cash,
+                upi=data.upi
+            )
+        else:
+            new_collection = SilkDailyCollection(
+                date=target_date,
+                cash=data.cash,
+                upi=data.upi
+            )
+
         db.add(new_collection)
         try:
             db.commit()
@@ -727,24 +750,36 @@ def save_daily_collection(
             return new_collection
         except IntegrityError as ie:
             db.rollback()
-            logger.exception("IntegrityError saving SilkDailyCollection")
-            # If a collection for this vendor/date now exists (race), update and return it
-            conflict = db.query(SilkDailyCollection).filter(
-                SilkDailyCollection.vendor_id == user.vendor_id,
-                SilkDailyCollection.date == target_date
-            ).first()
-            if conflict:
-                conflict.cash = data.cash
-                conflict.upi = data.upi
-                conflict.updated_at = func.now()
-                db.commit()
-                db.refresh(conflict)
-                return conflict
+            logger.exception("IntegrityError saving SilkDailyCollection: %s", str(ie))
 
-            # If another vendor holds this date due to a global unique constraint, return 409
-            other = db.query(SilkDailyCollection).filter(SilkDailyCollection.date == target_date).first()
-            if other:
-                raise HTTPException(status_code=409, detail=f"A collection for date {target_date} already exists (vendor_id={other.vendor_id}). Database enforces unique date globally.")
+            # If vendor column exists, try to resolve race/update as before
+            if vendor_col_present:
+                conflict = db.query(SilkDailyCollection).filter(
+                    SilkDailyCollection.vendor_id == user.vendor_id,
+                    SilkDailyCollection.date == target_date
+                ).first()
+                if conflict:
+                    conflict.cash = data.cash
+                    conflict.upi = data.upi
+                    conflict.updated_at = func.now()
+                    db.commit()
+                    db.refresh(conflict)
+                    return conflict
+
+                # If another vendor holds this date due to global unique constraint, return 409
+                other = db.query(SilkDailyCollection).filter(SilkDailyCollection.date == target_date).first()
+                if other:
+                    raise HTTPException(status_code=409, detail=f"A collection for date {target_date} already exists (vendor_id={getattr(other, 'vendor_id', 'unknown')}). Database enforces unique date.")
+
+            # Legacy schema: another integrity error (e.g., unique date violated). Try to fetch existing row by date and return it.
+            fallback = db.query(SilkDailyCollection).filter(SilkDailyCollection.date == target_date).first()
+            if fallback:
+                fallback.cash = data.cash
+                fallback.upi = data.upi
+                fallback.updated_at = func.now()
+                db.commit()
+                db.refresh(fallback)
+                return fallback
 
             # Unknown integrity error, propagate as server error
             raise HTTPException(status_code=500, detail=f"Failed to save collection due to integrity error: {str(ie)}")
