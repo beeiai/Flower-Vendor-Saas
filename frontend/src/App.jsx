@@ -1393,6 +1393,7 @@ export default function App() {
     } finally {
       setIsAddingItem(false);
     }
+  };
 
   // Click-outside-to-close handler for dropdowns
   useEffect(() => {
