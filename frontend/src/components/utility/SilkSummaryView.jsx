@@ -207,8 +207,8 @@ export function SilkSummaryView({ ledgerStore = {}, customers = [], onCancel }) 
       // Save only cash and upi to the new silk_daily_collections table
       const result = await api.saveSilkDailyCollection({
         date: selectedDate,
-        cash: cashAmount,
-        upi: upiAmount
+        cash: Number(cashAmount) || 0,
+        upi: Number(upiAmount) || 0
       });
       
       console.log('[SAVE COLLECTION] API response:', result);
@@ -236,8 +236,9 @@ export function SilkSummaryView({ ledgerStore = {}, customers = [], onCancel }) 
   
   // Explicit state variables for credit, cash, and UPI
   const [creditAmount, setCreditAmount] = useState(0);
-  const [cashAmount, setCashAmount] = useState(0);
-  const [upiAmount, setUpiAmount] = useState(0);
+  // Use string-backed inputs so user can delete/clear before typing new numbers
+  const [cashAmount, setCashAmount] = useState('');
+  const [upiAmount, setUpiAmount] = useState('');
   
   // Debug effect to log dailyCredit changes
   useEffect(() => {
@@ -458,7 +459,7 @@ export function SilkSummaryView({ ledgerStore = {}, customers = [], onCancel }) 
                 placeholder="0.00"
                 className="w-full bg-rose-50 border-2 border-rose-200 rounded-lg p-2.5 text-sm font-bold text-slate-800 outline-none transition-all duration-200 hover:border-rose-300 focus:border-rose-400 focus:ring-2 focus:ring-rose-100"
                 value={cashAmount}
-                onChange={(e) => setCashAmount(Number(e.target.value) || 0)}
+                onChange={(e) => setCashAmount(e.target.value === '' ? '' : Number(e.target.value))}
                 data-enter-index="4"
               />
             </div>
@@ -472,7 +473,7 @@ export function SilkSummaryView({ ledgerStore = {}, customers = [], onCancel }) 
                 placeholder="0.00"
                 className="w-full bg-rose-50 border-2 border-rose-200 rounded-lg p-2.5 text-sm font-bold text-slate-800 outline-none transition-all duration-200 hover:border-rose-300 focus:border-rose-400 focus:ring-2 focus:ring-rose-100"
                 value={upiAmount}
-                onChange={(e) => setUpiAmount(Number(e.target.value) || 0)}
+                onChange={(e) => setUpiAmount(e.target.value === '' ? '' : Number(e.target.value))}
                 data-enter-index="5"
               />
             </div>
