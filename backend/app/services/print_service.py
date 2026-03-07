@@ -89,20 +89,21 @@ class PrintService:
         # Add print button with JavaScript
         print_button_html = '''
         <div style="position: fixed; top: 10px; right: 10px; z-index: 1000; background: white; padding: 10px; border-radius: 5px; box-shadow: 0 2px 10px rgba(0,0,0,0.2);">
-            <button onclick="window.print()" style="padding: 10px 20px; background-color: #007bff; color: white; border: none; border-radius: 4px; cursor: pointer; font-size: 14px; font-weight: bold;">🖨️ Print</button>
+            <button onclick="window.__printed = true; window.print();" style="padding: 10px 20px; background-color: #007bff; color: white; border: none; border-radius: 4px; cursor: pointer; font-size: 14px; font-weight: bold;">🖨️ Print</button>
         </div>
         '''
         
         # Add script to automatically trigger print when page loads
         auto_print_script = '''
         <script>
-            // Auto-print when page loads
-            window.onload = function() {
-                // Small delay to ensure page is fully loaded
-                setTimeout(function() {
-                    window.print();
-                }, 500);
-            };
+            (function(){
+                if (window.__printed) return;
+                window.addEventListener('load', function() {
+                    setTimeout(function() {
+                        if (!window.__printed) { window.__printed = true; window.print(); }
+                    }, 500);
+                });
+            })();
         </script>
         '''
         
@@ -136,20 +137,21 @@ class PrintService:
         # Add print button with JavaScript
         print_button_html = '''
         <div style="position: fixed; top: 10px; right: 10px; z-index: 1000; background: white; padding: 10px; border-radius: 5px; box-shadow: 0 2px 10px rgba(0,0,0,0.2);">
-            <button onclick="window.print()" style="padding: 10px 20px; background-color: #007bff; color: white; border: none; border-radius: 4px; cursor: pointer; font-size: 14px; font-weight: bold;">🖨️ Print</button>
+            <button onclick="window.__printed = true; window.print();" style="padding: 10px 20px; background-color: #007bff; color: white; border: none; border-radius: 4px; cursor: pointer; font-size: 14px; font-weight: bold;">🖨️ Print</button>
         </div>
         '''
         
         # Add script to automatically trigger print when page loads
         auto_print_script = '''
         <script>
-            // Auto-print when page loads
-            window.onload = function() {
-                // Small delay to ensure page is fully loaded
-                setTimeout(function() {
-                    window.print();
-                }, 500);
-            };
+            (function(){
+                if (window.__printed) return;
+                window.addEventListener('load', function() {
+                    setTimeout(function() {
+                        if (!window.__printed) { window.__printed = true; window.print(); }
+                    }, 500);
+                });
+            })();
         </script>
         '''
         
@@ -188,20 +190,21 @@ class PrintService:
         # Add print button with JavaScript
         print_button_html = '''
         <div style="position: fixed; top: 10px; right: 10px; z-index: 1000; background: white; padding: 10px; border-radius: 5px; box-shadow: 0 2px 10px rgba(0,0,0,0.2);">
-            <button onclick="window.print()" style="padding: 10px 20px; background-color: #007bff; color: white; border: none; border-radius: 4px; cursor: pointer; font-size: 14px; font-weight: bold;">🖨️ Print</button>
+            <button onclick="window.__printed = true; window.print();" style="padding: 10px 20px; background-color: #007bff; color: white; border: none; border-radius: 4px; cursor: pointer; font-size: 14px; font-weight: bold;">🖨️ Print</button>
         </div>
         '''
         
         # Add script to automatically trigger print when page loads
         auto_print_script = '''
         <script>
-            // Auto-print when page loads
-            window.onload = function() {
-                // Small delay to ensure page is fully loaded
-                setTimeout(function() {
-                    window.print();
-                }, 500);
-            };
+            (function(){
+                if (window.__printed) return;
+                window.addEventListener('load', function() {
+                    setTimeout(function() {
+                        if (!window.__printed) { window.__printed = true; window.print(); }
+                    }, 500);
+                });
+            })();
         </script>
         '''
         
@@ -234,20 +237,21 @@ class PrintService:
         # Add print button with JavaScript
         print_button_html = '''
         <div style="position: fixed; top: 10px; right: 10px; z-index: 1000; background: white; padding: 10px; border-radius: 5px; box-shadow: 0 2px 10px rgba(0,0,0,0.2);">
-            <button onclick="window.print()" style="padding: 10px 20px; background-color: #007bff; color: white; border: none; border-radius: 4px; cursor: pointer; font-size: 14px; font-weight: bold;">🖨️ Print</button>
+            <button onclick="window.__printed = true; window.print();" style="padding: 10px 20px; background-color: #007bff; color: white; border: none; border-radius: 4px; cursor: pointer; font-size: 14px; font-weight: bold;">🖨️ Print</button>
         </div>
         '''
         
         # Add script to automatically trigger print when page loads
         auto_print_script = '''
         <script>
-            // Auto-print when page loads
-            window.onload = function() {
-                // Small delay to ensure page is fully loaded
-                setTimeout(function() {
-                    window.print();
-                }, 500);
-            };
+            (function(){
+                if (window.__printed) return;
+                window.addEventListener('load', function() {
+                    setTimeout(function() {
+                        if (!window.__printed) { window.__printed = true; window.print(); }
+                    }, 500);
+                });
+            })();
         </script>
         '''
         

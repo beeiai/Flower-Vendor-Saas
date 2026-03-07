@@ -147,7 +147,7 @@
     </div>
     <div class="shop-info">
       <div class="shop-name">SREE KRISHNA FLOWER STALL</div>
-      <div class="shop-sub">Prop. K.C.N & SONS; <span style="font-size:17px;font-weight:900;">S.K.F.S</span></div>
+      <div class="shop-sub">Prop. K.C.N & SONS; <span style="font-size:17px;font-weight:900;"></span></div>
       <div class="shop-sub"><strong>FLOWER MERCHANTS</strong></div>
       <div class="shop-address">Shop No: B-32, S.K.R Market, Bangalore-560002</div>
     </div>
@@ -220,23 +220,23 @@
       <tr>
         <td style="text-align:center;">{{ row.date }}</td>
         <td style="text-align:center;">{{ row.vehicle }}</td>
-        <td style="text-align:left;">{{ row.product_name }}</td>
-        <td style="text-align:right;">{{ row.qty }}</td>
-        <td style="text-align:right;">{{ row.rate }}</td>
-        <td style="text-align:right;">{{ row.luggage }}</td>
-        <td style="text-align:right;">{{ row.gross }}</td>
-        <td style="text-align:right;">{{ row.paid }}</td>
+        <td style="text-align:left;">{{ row.product_name | default(row.item_name) | default(row.item) }}</td>
+        <td style="text-align:right;">{{ row.qty | default(row.quantity) | default('0') }}</td>
+        <td style="text-align:right;">{{ row.rate | default(row.price) | default('0') }}</td>
+        <td style="text-align:right;">{{ row.luggage | default(row.luggage_total) | default('0.00') }}</td>
+        <td style="text-align:right;">{{ row.gross | default(row.total) | default(row.amount) | default('0.00') }}</td>
+        <td style="text-align:right;">{{ row.paid | default(row.paid_amount) | default('0.00') }}</td>
       </tr>
       {% endfor %}
     </tbody>
     <tfoot>
       <tr>
         <td colspan="3" style="text-align:right;">Total</td>
-        <td style="text-align:right;">{{ totals.qty }}</td>
+        <td style="text-align:right;">{{ totals.qty | default(totals.total_qty) | default('0.00') }}</td>
         <td></td>
-        <td style="text-align:right;">{{ totals.luggage }}</td>
-        <td style="text-align:right;">{{ totals.gross_total }}</td>
-        <td style="text-align:right;">{{ totals.paid_total }}</td>
+        <td style="text-align:right;">{{ totals.luggage | default(totals.luggage_total) | default('0.00') }}</td>
+        <td style="text-align:right;">{{ totals.gross_total | default(totals.total_amount) | default('0.00') }}</td>
+        <td style="text-align:right;">{{ totals.paid_total | default(totals.paid_amount) | default('0.00') }}</td>
       </tr>
     </tfoot>
   </table>
@@ -246,15 +246,15 @@
     <div class="summary-row">
       <div class="summary-cell">
         <span class="s-label">Commission</span>
-        <span class="s-value">{{ totals.commission_total }}</span>
+        <span class="s-value">{{ totals.commission_total | default(totals.commission) | default('0.00') }}</span>
       </div>
       <div class="summary-cell">
         <span class="s-label">Luggage</span>
-        <span class="s-value">{{ totals.luggage }}</span>
+        <span class="s-value">{{ totals.luggage | default(totals.luggage_total) | default('0.00') }}</span>
       </div>
       <div class="summary-cell">
         <span class="s-label">Coolie</span>
-        <span class="s-value">{{ totals.coolie }}</span>
+        <span class="s-value">{{ totals.coolie | default(totals.coolie_total) | default('0.00') }}</span>
       </div>
     </div>
     <div class="summary-row">
@@ -278,15 +278,21 @@
 
 <!-- Print Button (hidden when printing) -->
 <div class="no-print" style="text-align:center; margin:20px 0;">
-  <button onclick="window.print()" style="padding:10px 30px; font-size:14px; background-color:#4CAF50; color:white; border:none; border-radius:5px; cursor:pointer; font-weight:bold;">
+  <button onclick="window.__printed = true; window.print();" style="padding:10px 30px; font-size:14px; background-color:#4CAF50; color:white; border:none; border-radius:5px; cursor:pointer; font-weight:bold;">
     🖨️ Print Report
   </button>
 </div>
 
 <script>
-  window.addEventListener('load', function() {
-    setTimeout(function() { window.print(); }, 500);
-  });
+  (function(){
+    if (window.__ledger_auto_print_installed) return;
+    window.__ledger_auto_print_installed = true;
+    window.addEventListener('load', function() {
+      setTimeout(function() {
+        if (!window.__printed) { window.__printed = true; window.print(); }
+      }, 500);
+    });
+  })();
 </script>
 </body>
 </html>
