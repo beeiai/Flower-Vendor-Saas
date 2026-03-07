@@ -14,6 +14,7 @@ from app.models.farmer import Farmer
 from app.models.advance import Advance
 from app.models.farmer_group import FarmerGroup
 from app.routes.reports import render_template  # Use shared render_template function
+from app.routes import reports as report_routes  # Reuse new HTML report endpoints
 
 
 router = APIRouter(
@@ -951,145 +952,26 @@ def get_daily_sales_report_docx(
     user = Depends(get_current_user)
 ):
     """
-    LEGACY ENDPOINT - Redirects to new HTML-based report system
-    Generate daily sales report and return as HTML (viewable/printable)
-    
-    Note: This endpoint now uses the new HTML template system instead of DOCX.
-    Use /api/reports/daily-sales?format=html for future integrations.
+    LEGACY ENDPOINT - Delegates to the new HTML-based daily sales report.
+    This keeps old `/print-docx/daily-sales-report/` URLs working while using
+    the consolidated `/api/reports/daily-sales` implementation under the hood.
     """
     try:
-        # Base query for collection items with vehicle relationship
-        query = db.query(CollectionItem).options(joinedload(CollectionItem.vehicle)).filter(
-            CollectionItem.date >= from_date,
-            CollectionItem.date <= to_date,
-            CollectionItem.vendor_id == user.vendor_id
+        # Reuse the main reports endpoint implementation so that:
+        # - All calculations come from `get_daily_sales_data`
+        # - The same Jinja template and logo handling are used
+        # - Any future fixes in `get_daily_sales_report` automatically apply here
+        return report_routes.get_daily_sales_report(
+            from_date=from_date,
+            to_date=to_date,
+            item_name=item_name,
+            format="html",
+            db=db,
+            user=user,
         )
-        
-        if item_name:
-            query = query.filter(CollectionItem.item_name.ilike(f"%{item_name}%"))
-        
-        items = query.order_by(CollectionItem.date).all()
-        
-        # Transform data for template - match the template structure
-        rows = []
-        total_qty = 0
-        total_amount = 0
-        
-        for item in items:
-            qty = float(item.qty_kg or 0)
-            rate = float(item.rate_per_kg or 0)
-            total = qty * rate
-            
-            rows.append({
-                "date": item.date.strftime("%d-%m-%Y") if item.date else "N/A",
-                "vehicle": getattr(item, 'vehicle', 'N/A') if hasattr(item, 'vehicle') else (item.vehicle_number if hasattr(item, 'vehicle_number') else "N/A"),
-                "party": item.farmer.name if item.farmer else "N/A",  # Get farmer name as party
-                "itemName": item.item_name or "N/A",
-                "qty": f"{qty:.2f}",
-                "rate": f"{rate:.2f}",
-                "total": f"{total:.2f}"
-            })
-            
-            total_qty += qty
-            total_amount += total
-        
-        # Load and render HTML template
-        template_path = os.path.join("templates", "daily_sales_report.html")
-        
-        if not os.path.exists(template_path):
-            raise HTTPException(status_code=500, detail=f"Template not found: {template_path}")
-        
-        with open(template_path, 'r', encoding='utf-8') as f:
-            template_content = f.read()
-        
-        # Add print button with JavaScript
-        print_button_html = '''
-        <div style="position: fixed; top: 10px; right: 10px; z-index: 1000; background: white; padding: 10px; border-radius: 5px; box-shadow: 0 2px 10px rgba(0,0,0,0.2);">
-            <button onclick="window.print()" style="padding: 10px 20px; background-color: #007bff; color: white; border: none; border-radius: 4px; cursor: pointer; font-size: 14px; font-weight: bold;">🖨️ Print</button>
-        </div>
-        '''
-        
-        # Add script to automatically trigger print when page loads
-        auto_print_script = '''
-        <script>
-            (function(){
-                if (window.__printed) return;
-                window.addEventListener('load', function() {
-                    setTimeout(function() {
-                        if (!window.__printed) { window.__printed = true; window.print(); }
-                    }, 500);
-                });
-            })();
-        </script>
-        '''
-        
-        template = Template(template_content)
-        html_content = template.render(
-            rows=rows,
-            total_qty=f"{total_qty:.2f}",
-            total_amount=f"{total_amount:.2f}",
-            item_filter=item_name or "All Items",
-            from_date=from_date.strftime("%d-%m-%Y"),
-            to_date=to_date.strftime("%d-%m-%Y"),
-            current_date=__import__('datetime').datetime.now().strftime("%d-%m-%Y"),
-            generated_at=__import__('datetime').datetime.now().isoformat(),
-            totals={
-                "record_count": len(rows),
-                "total_qty": f"{total_qty:.2f}",
-                "total_amount": f"{total_amount:.2f}"
-            }
-        )
-        
-        # Insert print button before </body> tag
-        html_content = html_content.replace('</body>', print_button_html + auto_print_script + '</body>')
-        
-        # Convert logo to base64 data URI for reliable display in popup windows
-        import base64
-        logo_path = Path(__file__).resolve().parent.parent / "templates" / "SKFS_logo.png"
-        print(f"[LOGO] Checking logo path: {logo_path}")
-        print(f"[LOGO] Logo exists: {logo_path.exists()}")
-        
-        if logo_path.exists():
-            try:
-                with open(logo_path, 'rb') as img_file:
-                    img_bytes = img_file.read()
-                    img_data = base64.b64encode(img_bytes).decode('utf-8')
-                    data_uri = f'data:image/png;base64,{img_data}'
-                    print(f"[LOGO] Successfully converted logo to base64 (size: {len(img_data)} chars)")
-                    
-                    # Replace ALL possible logo reference patterns
-                    replacements = [
-                        ('src="/static/images/SKFS_logo.png"', f'src="{data_uri}"'),
-                        ('src="SKFS_logo.png"', f'src="{data_uri}"'),
-                        ("src='/static/images/SKFS_logo.png'", f'src="{data_uri}"'),
-                        ("src='SKFS_logo.png'", f'src="{data_uri}"'),
-                        ('href="/static/images/SKFS_logo.png"', f'href="{data_uri}"'),
-                        ('href="SKFS_logo.png"', f'href="{data_uri}"'),
-                    ]
-                    
-                    for old, new in replacements:
-                        count = html_content.count(old)
-                        if count > 0:
-                            html_content = html_content.replace(old, new)
-                            print(f"[LOGO] Replaced {count} occurrence(s) of: {old[:50]}")
-                    
-                    # Verify replacement worked
-                    if 'src="/static/images/SKFS_logo.png"' in html_content or 'src="SKFS_logo.png"' in html_content:
-                        print("[LOGO] WARNING: Some logo references were NOT replaced!")
-                    else:
-                        print("[LOGO] SUCCESS: All logo references replaced with data URI")
-                        
-            except Exception as e:
-                print(f"[LOGO] ERROR converting logo: {e}")
-                import traceback
-                traceback.print_exc()
-                # Fallback: keep original path
-        else:
-            print(f"[LOGO] ERROR: Logo file not found at {logo_path}")
-        
-        return HTMLResponse(content=html_content)
-        
     except HTTPException:
+        # Preserve explicit HTTP errors (404, 401, etc.)
         raise
     except Exception as e:
+        # Normalize unexpected errors to a 500 for the client
         raise HTTPException(status_code=500, detail=f"Failed to generate daily sales report: {str(e)}")
