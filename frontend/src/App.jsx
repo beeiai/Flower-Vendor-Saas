@@ -1548,6 +1548,53 @@ export default function App() {
     }
   }, [activeDropdown, handleDropdownKeyDown]);
 
+  // Keyboard navigation for navbar (left/right arrows)
+  useEffect(() => {
+    const handleNavbarNavigation = (e) => {
+      // Only handle if we're not in a dropdown or if we are in the navbar
+      const activeElement = document.activeElement;
+      const isInNavbar = activeElement?.closest('nav') !== null;
+      
+      if (!isInNavbar) return;
+      
+      // Handle left/right arrow navigation in navbar
+      if (e.key === 'ArrowLeft' || e.key === 'ArrowRight') {
+        e.preventDefault();
+        
+        const navbarButtons = [
+          navRefs.logo.current,
+          navRefs.transactionMenu.current,
+          navRefs.reportsMenu.current,
+          navRefs.utilityMenu.current,
+          navRefs.moreMenu.current
+        ].filter(Boolean);
+        
+        const currentIndex = navbarButtons.findIndex(btn => btn === activeElement);
+        
+        if (currentIndex === -1) return;
+        
+        let nextIndex;
+        if (e.key === 'ArrowRight') {
+          nextIndex = (currentIndex + 1) % navbarButtons.length;
+        } else { // ArrowLeft
+          nextIndex = (currentIndex - 1 + navbarButtons.length) % navbarButtons.length;
+        }
+        
+        // Focus the next/previous button
+        setTimeout(() => {
+          if (navbarButtons[nextIndex]) {
+            navbarButtons[nextIndex].focus();
+          }
+        }, 0);
+      }
+    };
+    
+    document.addEventListener('keydown', handleNavbarNavigation);
+    return () => {
+      document.removeEventListener('keydown', handleNavbarNavigation);
+    };
+  }, []);
+
   // Standalone keyboard navigation for Group Patti Printing Page
   const useGroupPattiNavigation = (containerRef) => {
     useEffect(() => {
@@ -1679,7 +1726,11 @@ export default function App() {
                     ref={(el) => dropdownMenuRefs.current[`transaction-${index}`] = el}
                     onClick={() => { 
                       closeAllDropdowns(); 
-                      setActiveSection(item.id); 
+                      setActiveSection(item.id);
+                      // Return focus to navbar after navigation
+                      setTimeout(() => {
+                        navRefs.transactionMenu.current?.focus();
+                      }, 100);
                     }} 
                     tabIndex={-1}
                     id={`transaction-item-${index}`}
@@ -1711,7 +1762,7 @@ export default function App() {
                 setActiveSection('reports');
               }} 
               onKeyDown={(e) => {
-                if (e.key === 'ArrowDown' || e.key === 'Enter' || e.key === ' ') {
+                if (e.key === 'Enter' || e.key === ' ') {
                   e.preventDefault();
                   closeAllDropdowns();
                   setActiveSection('reports');
@@ -1723,6 +1774,7 @@ export default function App() {
                   : 'text-slate-300 hover:text-white hover:bg-slate-800/50'
               } navbar-element`} 
               data-navbar-element
+              tabIndex={0}
             >
               Reports
             </button>
@@ -1795,6 +1847,10 @@ export default function App() {
                         return;
                       }
                       setActiveSection(item.id);
+                      // Return focus to navbar after navigation
+                      setTimeout(() => {
+                        navRefs.utilityMenu.current?.focus();
+                      }, 100);
                     }} 
                     tabIndex={-1}
                     id={`utility-item-${index}`}
@@ -1855,7 +1911,11 @@ export default function App() {
                     ref={(el) => dropdownMenuRefs.current[`more-${index}`] = el}
                     onClick={() => { 
                       closeAllDropdowns(); 
-                      setActiveSection(item.id); 
+                      setActiveSection(item.id);
+                      // Return focus to navbar after navigation
+                      setTimeout(() => {
+                        navRefs.moreMenu.current?.focus();
+                      }, 100);
                     }} 
                     tabIndex={-1}
                     id={`more-item-${index}`}
