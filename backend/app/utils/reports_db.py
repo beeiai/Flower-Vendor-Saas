@@ -183,6 +183,7 @@ def get_ledger_data(
             "name": customer.name,
             "code": customer.farmer_code,
             "address": customer.address or "N/A",
+            "advance_total": str(customer.advance_total or 0),
             "group_name": group_name
         },
         "entries": entries_list,

@@ -161,6 +161,7 @@ def get_ledger_report(
     paid_total = 0
     balance_total = 0
     luggage_total = 0
+    qty_total = 0
     coolie_total = 0
     
     logger.info(f"Processing {len(ledger_data.get('entries', []))} entries for ledger report")
@@ -205,6 +206,10 @@ def get_ledger_report(
         paid_total += paid
         balance_total += balance
         luggage_total += luggage
+        try:
+            qty_total += float(entry.get("qty", 0))
+        except Exception:
+            pass
         coolie_total += coolie
     
     logger.info(f"Ledger report processing complete - {len(rows)} rows, gross_total: {gross_total:.2f}")
@@ -215,15 +220,27 @@ def get_ledger_report(
     if isinstance(customer_obj, dict):
         group_name = customer_obj.get("group_name", "N/A")
     
-    # Prepare template data
+    # Prepare template data (include fields expected by ledger_report.html)
+    customer_name = customer_obj.get("name") if isinstance(customer_obj, dict) else "N/A"
+    customer_address = customer_obj.get("address") if isinstance(customer_obj, dict) else "N/A"
+    rem_advance_val = customer_obj.get("advance_total") if isinstance(customer_obj, dict) else "0"
+
     template_data = {
         "rows": rows,
+        "name": customer_name,
+        "address": customer_address,
+        "rem_advance": rem_advance_val,
         "totals": {
+            "qty": f"{qty_total:.2f}",
             "gross_total": f"{gross_total:.2f}",
             "commission_total": f"{commission_total:.2f}",
             "net_total": f"{net_total:.2f}",
             "paid_total": f"{paid_total:.2f}",
             "balance_total": f"{balance_total:.2f}",
+            # Template expects `luggage` and `coolie` keys
+            "luggage": f"{luggage_total:.2f}",
+            "coolie": f"{coolie_total:.2f}",
+            # keep legacy keys for backward compatibility
             "luggage_total": f"{luggage_total:.2f}",
             "coolie_total": f"{coolie_total:.2f}"
         },
@@ -232,6 +249,7 @@ def get_ledger_report(
         "from_date": from_date.strftime("%d-%m-%Y"),
         "to_date": to_date.strftime("%d-%m-%Y"),
         "current_date": current_date,
+        "date": current_date,
         "generated_at": generated_at
     }
     
