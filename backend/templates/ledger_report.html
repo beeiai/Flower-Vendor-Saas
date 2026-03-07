@@ -183,7 +183,7 @@
     </div>
     <div>
       <span class="info-label">Group: </span>
-      <span class="info-value">{{ group }}</span>
+      <span class="info-value">{{ group_name }}</span>
     </div>
     <div>
       <div><span class="info-label">Rem Advance: </span><span class="info-value">{{ rem_advance }}</span></div>
@@ -220,11 +220,11 @@
       <tr>
         <td style="text-align:center;">{{ row.date }}</td>
         <td style="text-align:center;">{{ row.vehicle }}</td>
-        <td style="text-align:left;">{{ row.item_name }}</td>
+        <td style="text-align:left;">{{ row.product_name }}</td>
         <td style="text-align:right;">{{ row.qty }}</td>
         <td style="text-align:right;">{{ row.rate }}</td>
         <td style="text-align:right;">{{ row.luggage }}</td>
-        <td style="text-align:right;">{{ row.total }}</td>
+        <td style="text-align:right;">{{ row.gross }}</td>
         <td style="text-align:right;">{{ row.paid }}</td>
       </tr>
       {% endfor %}
@@ -235,8 +235,8 @@
         <td style="text-align:right;">{{ totals.qty }}</td>
         <td></td>
         <td style="text-align:right;">{{ totals.luggage }}</td>
-        <td style="text-align:right;">{{ totals.amount }}</td>
-        <td style="text-align:right;">{{ totals.paid }}</td>
+        <td style="text-align:right;">{{ totals.gross_total }}</td>
+        <td style="text-align:right;">{{ totals.paid_total }}</td>
       </tr>
     </tfoot>
   </table>
@@ -246,7 +246,7 @@
     <div class="summary-row">
       <div class="summary-cell">
         <span class="s-label">Commission</span>
-        <span class="s-value">{{ totals.commission }}</span>
+        <span class="s-value">{{ totals.commission_total }}</span>
       </div>
       <div class="summary-cell">
         <span class="s-label">Luggage</span>
@@ -260,15 +260,15 @@
     <div class="summary-row">
       <div class="summary-cell">
         <span class="s-label">Total</span>
-        <span class="s-value">{{ totals.grand_total }}</span>
+        <span class="s-value">{{ totals.gross_total }}</span>
       </div>
       <div class="summary-cell">
         <span class="s-label">Net Amount</span>
-        <span class="s-value">{{ totals.net_amount }}</span>
+        <span class="s-value">{{ totals.net_total }}</span>
       </div>
       <div class="summary-cell">
         <span class="s-label">Paid</span>
-        <span class="s-value">{{ totals.paid }}</span>
+        <span class="s-value">{{ totals.paid_total }}</span>
       </div>
     </div>
   </div>
