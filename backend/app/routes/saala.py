@@ -207,9 +207,10 @@ def create_saala_transaction(
     
     # New transaction's own balance
     new_transaction_balance = (total_amount or 0) - paid_amount
-    
-    # Total cumulative balance = previous outstanding + new transaction balance
-    balance = previous_balance + new_transaction_balance
+
+    # Set the transaction's own balance to its contribution; we'll
+    # rely on the canonical recalculation to compute cumulative balances
+    balance = new_transaction_balance
     
     print(f"Calculated values - Total: {total_amount}, Paid: {paid_amount}")
     print(f"Previous balance (from all transactions): {previous_balance}")
@@ -233,6 +234,10 @@ def create_saala_transaction(
     db.commit()
     db.refresh(transaction)
     
+    # Recalculate all balances for this customer to ensure consistency
+    recalculate_customer_balances(db, customer_id)
+    db.refresh(transaction)
+
     # Log the created transaction
     print(f"Created transaction: id={transaction.id}, item_code={transaction.item_code}, item_name={transaction.item_name}, qty={transaction.qty}, rate={transaction.rate}, total_amount={transaction.total_amount}, paid_amount={transaction.paid_amount}, balance={transaction.balance}")
     

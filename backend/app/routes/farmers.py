@@ -491,6 +491,7 @@ def update_farmer(
 
 # ---------- DELETE (SAFE) ----------
 @router.delete("/{farmer_id}")
+@router.delete("/{farmer_id}/")
 def delete_farmer(
     farmer_id: int,
     db: Session = Depends(get_db),

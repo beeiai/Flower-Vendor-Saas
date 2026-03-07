@@ -501,6 +501,7 @@ def sync_silk_ledger_from_transactions(
 
 
 @router.get("/credit", response_model=DailyCreditResponse)
+@router.get("/credit/", response_model=DailyCreditResponse)
 def get_silk_daily_credit(
     date: str = Query(..., description="Date in YYYY-MM-DD format"),
     db: Session = Depends(get_db),
@@ -790,3 +791,13 @@ def get_daily_collection_by_date(
     })
     
     return collection
+
+
+# Accept trailing-slash variant for single-date daily collection
+@router.get("/daily-collections/{date_str}/", response_model=SilkDailyCollectionResponse)
+def get_daily_collection_by_date_slash(
+    date_str: str,
+    db: Session = Depends(get_db),
+    user = Depends(get_current_user)
+):
+    return get_daily_collection_by_date(date_str=date_str, db=db, user=user)

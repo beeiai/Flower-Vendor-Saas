@@ -67,6 +67,7 @@ def list_farmer_groups(
 
 # ---------- READ (ONE) ----------
 @router.get("/{group_id}")
+@router.get("/{group_id}/")
 def get_farmer_group(
     group_id: int,
     db: Session = Depends(get_db),
@@ -84,6 +85,7 @@ def get_farmer_group(
 
 # ---------- UPDATE ----------
 @router.put("/{group_id}")
+@router.put("/{group_id}/")
 def update_farmer_group(
     group_id: int,
     data: FarmerGroupUpdate,
@@ -124,6 +126,7 @@ def update_farmer_group(
 
 # ---------- DELETE (SAFE) ----------
 @router.delete("/{group_id}")
+@router.delete("/{group_id}/")
 def delete_farmer_group(
     group_id: int,
     db: Session = Depends(get_db),
