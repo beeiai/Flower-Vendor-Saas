@@ -1,315 +1,222 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-    <meta charset="UTF-8">
-    <title>Group Total Report</title>
-    <link rel="stylesheet" href="/static/css/print.css">
-    <style>
-        /* A4 page settings */
-        @page {
-            size: A4;
-            margin: 0.5cm;
-        }
-        body {
-            text-align: center;
-            font-family: Arial, sans-serif;
-            font-size: 12px;
-            margin: 0;
-            padding: 0;
-        }
-        .page {
-            margin: 0 auto;
-            text-align: left;
-            max-width: 19.5cm;
-            width: 100%;
-            padding: 5px;
-        }
-        /* Header with photo */
-        .header-container {
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            margin-bottom: 15px;
-            gap: 15px;
-            border-bottom: 2px solid #000;
-            padding-bottom: 10px;
-        }
-        .header-photo {
-            width: 100px;
-            height: 100px;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            overflow: hidden;
-            flex-shrink: 0;
-        }
-        .header-photo img {
-            width: 100%;
-            height: 100%;
-            object-fit: contain;
-        }
-        .header-content {
-            text-align: center;
-            flex-grow: 1;
-        }
-        .header-content h2 {
-            margin: 0;
-            font-size: 20px;
-            line-height: 1.2;
-            color: #000;
-            font-weight: bold;
-        }
-        .header-content .sub {
-            margin: 5px 0 0 0;
-            font-size: 11px;
-            line-height: 1.2;
-        }
-        /* Report info in 2-column table */
-        .info-table {
-            width: 100%;
-            border-collapse: collapse;
-            margin-bottom: 15px;
-            font-size: 11px;
-        }
-        .info-table td {
-            padding: 5px 8px;
-            border: 1px solid #aaa;
-        }
-        /* Label cells in info table */
-        .info-table td:nth-child(1),
-        .info-table td:nth-child(3) {
-            font-weight: bold;
-            width: 20%;
-            background-color: #f5f5f5;
-        }
-        /* Compact table */
-        .report-table {
-            width: 100%;
-            border-collapse: collapse;
-            margin: 0 auto 20px auto;
-            font-size: 8px;
-        }
-        .report-table th,
-        .report-table td {
-            padding: 3px 4px;
-            border: 1px solid #aaa;
-            text-align: center;
-        }
-        .report-table th {
-            background-color: #f0f0f0;
-            font-weight: bold;
-            white-space: nowrap;
-            font-size: 8px;
-        }
-        .report-table td {
-            text-align: center;
-            font-size: 8px;
-        }
-        /* Left align for Group Name and Customer Name columns */
-        .report-table td:first-child {
-            text-align: left;
-        }
-        /* Adjust column widths for A4 with new columns */
-        .report-table th:nth-child(1) { width: 14%; } /* Group Name/Customer Name */
-        .report-table th:nth-child(2) { width: 10%; }  /* Address/Customers */
-        .report-table th:nth-child(3) { width: 10%; }  /* Total Qty */
-        .report-table th:nth-child(4) { width: 10%; }  /* Total Price */
-        .report-table th:nth-child(5) { width: 10%; }  /* Total Commission */
-        .report-table th:nth-child(6) { width: 10%; }  /* Total Luggage */
-        .report-table th:nth-child(7) { width: 10%; }  /* Total Coolie */
-        .report-table th:nth-child(8) { width: 10%; }  /* Total Net Amount */
-        /* Overall totals in table format */
-        .totals-table {
-            width: 100%;
-            border-collapse: collapse;
-            margin-top: 25px;
-            font-size: 11px;
-        }
-        .totals-table td {
-            padding: 5px 8px;
-            border: 1px solid #aaa;
-        }
-        /* Label cells in totals table */
-        .totals-table td:nth-child(1),
-        .totals-table td:nth-child(3) {
-            font-weight: bold;
-            width: 20%;
-            background-color: #f5f5f5;
-        }
-        .totals-table tr:last-child td {
-            font-weight: bold;
-            background-color: #e8e8e8;
-        }
-        .totals-table td:last-child {
-            text-align: right;
-            width: 20%;
-        }
-        /* Print optimization */
-        @media print {
-            body {
-                font-size: 11px;
-            }
-            .page {
-                max-width: 100%;
-                padding: 0;
-            }
-            .header-content h2 {
-                font-size: 18px;
-            }
-            .header-content .sub {
-                font-size: 10px;
-            }
-            .report-table {
-                font-size: 7.5px;
-            }
-            .report-table th,
-            .report-table td {
-                font-size: 7.5px;
-            }
-        }
-    </style>
+<meta charset="UTF-8">
+<title>SKFS Group Total Report</title>
+<style>
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+
+  body {
+    font-family: 'Courier New', monospace;
+    background: white;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    padding: 5mm;
+  }
+
+  /* ── INVOICE PAPER — same as Group Patti ── */
+  #invoice {
+    width: 200mm;
+    min-height: 297mm;
+    background: white;
+    padding: 4mm 5mm;
+    overflow: hidden;
+    box-sizing: border-box;
+  }
+
+  .outer-box {
+    border: 2px solid #000;
+    padding: 6px;
+    overflow: hidden;
+    box-sizing: border-box;
+  }
+
+  /* ── HEADER — identical to Group Patti ── */
+  .header {
+    display: flex;
+    align-items: flex-start;
+    gap: 8px;
+    border-bottom: 2px solid #000;
+    padding-bottom: 6px;
+    margin-bottom: 6px;
+  }
+  .logo-box {
+    width: 75px; height: 75px;
+    border: 1px solid #999;
+    display: flex; align-items: center; justify-content: center;
+    font-size: 11px; color: #666; flex-shrink: 0;
+    background: #f5f5f0;
+  }
+  .logo-box img { width: 100%; height: 100%; object-fit: contain; }
+  .shop-info { flex: 1; text-align: center; }
+  .shop-name { font-size: 30px; font-weight: 900; letter-spacing: 2px; line-height: 1.1; }
+  .shop-sub  { font-size: 14px; letter-spacing: 1px; }
+  .shop-address { font-size: 13px; margin-top: 3px; font-weight: bold; }
+  .contact-box { text-align: right; font-size: 13px; line-height: 1.8; }
+
+  /* ── META ROW — Trade Mark | Group Name ── */
+  .info-row {
+    display: grid;
+    grid-template-columns: 1fr 1fr 1fr;
+    font-size: 14px;
+    border: 1px solid #000;
+    padding: 6px 10px;
+    margin-bottom: 10px;
+  }
+  .info-label { font-weight: normal; color: #444; }
+  .info-value { font-weight: bold; font-size: 15px; }
+  .info-value-lg { font-weight: 900; font-size: 19px; }
+
+  /* ── TABLE — same sizing as Group Patti ── */
+  table {
+    width: 100%;
+    border-collapse: collapse;
+    font-size: 13px;
+    table-layout: fixed;
+  }
+  thead tr { background: #ddd; }
+  th, td {
+    border: 1px solid #555;
+    padding: 5px 7px;
+    overflow: hidden;
+    word-break: break-word;
+  }
+  th { font-weight: bold; text-align: center !important; font-size: 12px; }
+
+  /* Column widths for 4 columns */
+  col.c-party   { width: 30%; }
+  col.c-net     { width: 28%; }
+  col.c-paid    { width: 22%; }
+  col.c-ledger  { width: 20%; }
+
+  td:nth-child(1) { text-align: left;   }
+  td:nth-child(2) { text-align: right;  }
+  td:nth-child(3) { text-align: right;  }
+  td:nth-child(4) { text-align: center; }
+
+  tfoot tr { background: #eee; font-weight: bold; }
+  tfoot td  { border: 1px solid #555; padding: 5px 7px; }
+
+  /* ── FOOTER TOTALS ── */
+  .totals-section {
+    margin-top: 14px;
+    font-size: 14px;
+  }
+  .totals-line {
+    display: flex;
+    align-items: baseline;
+    gap: 10px;
+    padding: 4px 6px;
+  }
+  .totals-label {
+    font-size: 13px;
+    color: #444;
+    min-width: 160px;
+  }
+  .totals-value {
+    font-weight: 900;
+    font-size: 20px;
+  }
+
+  @media print {
+    .no-print { display: none !important; }
+    body { padding: 0; }
+    #invoice { width: 100%; padding: 4mm; }
+  }
+</style>
 </head>
 <body>
+<div id="invoice">
+<div class="outer-box">
 
-
-<div class="page">
-
-    <!-- HEADER WITH PHOTO -->
-    <div class="header-container">
-        <div class="header-photo">
-            <img src="{{ url_for('static', filename='images/SKFS_logo.png') }}" alt="S.K.F.S Logo">
-        </div>
-        <div class="header-content">
-            <h2>SREE KRISHNA FLOWER STALL</h2>
-            <p class="sub">
-                PH: 8147848760 | Mob: 9972878307<br>
-                Proprietor: K.C.N & SONS <br>
-                FLOWER MERCHANTS – 7795018307<br>
-                Shop No: B-32, S.K.R Market, Bangalore - 560002<br>
-                Trade Mark: <b>S.K.F.S</b>
-            </p>
-        </div>
+  <!-- HEADER — identical to Group Patti -->
+  <div class="header">
+    <div class="logo-box">
+      <img src="{{ url_for('static', filename='images/SKFS_logo.png') }}" alt="S.K.F.S Logo">
     </div>
+    <div class="shop-info">
+      <div class="shop-name">SREE KRISHNA FLOWER STALL</div>
+      <div class="shop-sub">Prop. K.C.N & SONS</div>
+      <div class="shop-sub"><strong>FLOWER MERCHANTS</strong></div>
+      <div class="shop-address">Shop No: B-32, S.K.R Market, Bangalore-560002</div>
+    </div>
+    <div class="contact-box">
+      <div>PH: 8147848760</div>
+      <div>Mob: 9972878307</div>
+      <div>7795018307</div>
+      <br>
+      <div style="font-size:20px;font-weight:900;letter-spacing:1px;">S.K.F.S</div>
+    </div>
+  </div>
 
-    <!-- REPORT INFO IN 2-COLUMN TABLE -->
-    <table class="info-table">
-        <tr>
-            <td>Report Type:</td>
-            <td>
-                {% if rows and rows[0].farmer_name is defined %}
-                    Group Total - Detailed View
-                {% else %}
-                    Group Total Summary
-                {% endif %}
-            </td>
-            <td>Period:</td>
-            <td>{{ from_date }} to {{ to_date }}</td>
-        </tr>
-        <tr>
-            <td>Group:</td>
-            <td>
-                {% if rows and rows[0].farmer_name is defined %}
-                    {{ rows[0].group_name if rows else 'All Groups' }}
-                {% else %}
-                    All Groups
-                {% endif %}
-            </td>
-            <td>Date:</td>
-            <td>{{ current_date }}</td>
-        </tr>
-    </table>
+  <!-- META ROW: Trade Mark | Group Name -->
+  <div class="info-row">
+    <div>
+      <span class="info-label">Trade Mark: </span>
+      <span class="info-value-lg">S.K.F.S</span>
+    </div>
+    <div style="text-align:center;">
+      <span class="info-label">Group Name : </span>
+      <span class="info-value">{{ group_name }}</span>
+    </div>
+    <div></div>
+  </div>
 
-    <!-- TABLE -->
-    <table class="report-table">
-        <thead>
-            <tr>
-                {% if rows and rows[0].farmer_name is defined %}
-                    <!-- Detailed view for specific group: show customer details -->
-                    <th>Customer Name</th>
-                    <th>Address</th>
-                    <th>Total Qty</th>
-                    <th>Total Price</th>
-                    <th>Total Commission</th>
-                    <th>Total Luggage</th>
-                    <th>Total Coolie</th>
-                    <th>Total Net Amount</th>
-                {% else %}
-                    <!-- Aggregated view: show group details -->
-                    <th>Group Name</th>
-                    <th>Customers</th>
-                    <th>Total Qty</th>
-                    <th>Total Amount</th>
-                    <th>Total Commission</th>
-                    <th>Total Luggage</th>
-                    <th>Total Coolie</th>
-                    <th>Total Net Amount</th>
-                {% endif %}
-            </tr>
-        </thead>
-        <tbody>
-            {% for row in rows %}
-            <tr>
-                {% if row.farmer_name is defined %}
-                    <!-- Detailed view for specific group: show customer details -->
-                    <td>{{ row.farmer_name }}</td>
-                    <td>{{ row.address }}</td>
-                    <td>{{ row.total_qty }}</td>
-                    <td>₹ {{ row.total_price }}</td>
-                    <td>₹ {{ row.total_commission }}</td>
-                    <td>{{ row.total_luggage }}</td>
-                    <td>{{ row.total_coolie }}</td>
-                    <td>₹ {{ row.total_net_amount }}</td>
-                {% else %}
-                    <!-- Aggregated view: show group details -->
-                    <td>{{ row.group_name }}</td>
-                    <td>{{ row.customer_count }}</td>
-                    <td>{{ row.total_qty }}</td>
-                    <td>₹ {{ row.total_amount }}</td>
-                    <td>₹ {{ row.total_commission }}</td>
-                    <td>{{ row.total_luggage }}</td>
-                    <td>{{ row.total_coolie }}</td>
-                    <td>₹ {{ row.total_net_amount }}</td>
-                {% endif %}
-            </tr>
-            {% endfor %}
-        </tbody>
-    </table>
+  <!-- MAIN TABLE -->
+  <table>
+    <colgroup>
+      <col class="c-party">
+      <col class="c-net">
+      <col class="c-paid">
+      <col class="c-ledger">
+    </colgroup>
+    <thead>
+      <tr>
+        <th>Party Name</th>
+        <th>Net Amount Payable</th>
+        <th>Paid Amount</th>
+        <th>Ledger No</th>
+      </tr>
+    </thead>
+    <tbody>
+      {% for row in rows %}
+      <tr>
+        <td style="text-align:left;">{{ row.farmer_name }}</td>
+        <td style="text-align:right;">{{ row.total_net_amount }}</td>
+        <td style="text-align:right;">{{ row.paid_amount }}</td>
+        <td style="text-align:center;">{{ row.ledger_no }}</td>
+      </tr>
+      {% endfor %}
+    </tbody>
+  </table>
 
-    <!-- OVERALL TOTALS IN 2-COLUMN TABLE -->
-    <table class="totals-table">
-        <tr>
-            <td>
-                {% if rows and rows[0].farmer_name is defined %}
-                    Overall Customers:
-                {% else %}
-                    Overall Groups:
-                {% endif %}
-            </td>
-            <td>{{ group_count }}</td>
-            <td>Total Qty:</td>
-            <td>{{ overall_qty }}</td>
-        </tr>
-        <tr>
-            <td>Total Price:</td>
-            <td>₹ {{ overall_amount }}</td>
-            <td><b>Total Commission:</b></td>
-            <td><b>₹ {{ overall_commission|default(0) }}</b></td>
-        </tr>
-        <tr>
-            <td>Total Luggage:</td>
-            <td>{{ overall_luggage|default(0) }}</td>
-            <td>Total Coolie:</td>
-            <td>{{ overall_coolie|default(0) }}</td>
-        </tr>
-        <tr>
-            <td><b>Net Amount:</b></td>
-            <td><b>₹ {{ overall_net_amount|default(overall_amount) }}</b></td>
-            <td></td>
-            <td></td>
-        </tr>
-    </table>
+  <!-- FOOTER TOTALS -->
+  <div class="totals-section">
+    <div class="totals-line">
+      <span class="totals-label">Net Amount Payable :</span>
+      <span class="totals-value">{{ overall_net_amount }}</span>
+    </div>
+    <div class="totals-line">
+      <span class="totals-label">Paid Amount :</span>
+      <span class="totals-value">{{ overall_paid|default(0) }}</span>
+    </div>
+  </div>
 
 </div>
+</div>
 
+<!-- Print Button (hidden when printing) -->
+<div class="no-print" style="text-align:center; margin:20px 0;">
+  <button onclick="window.print()" style="padding:10px 30px; font-size:14px; background-color:#4CAF50; color:white; border:none; border-radius:5px; cursor:pointer; font-weight:bold;">
+    🖨️ Print Report
+  </button>
+</div>
+
+<script>
+  window.addEventListener('load', function() {
+    setTimeout(function() { window.print(); }, 500);
+  });
+</script>
 </body>
 </html>
