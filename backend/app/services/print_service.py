@@ -34,30 +34,57 @@ class PrintService:
         net_amount: float,
         paid_amount: float,
         final_total: float,
+        rem_advance: str = "0.00",
     ) -> HTMLResponse:
-        """Generate HTML for ledger report"""
+        """Generate HTML for ledger report.
+
+        This method maps the older `print_templates` row structure to the
+        `ledger_report.html` template expected variable names so both routes
+        (`/reports/ledger/...` and `/print/ledger-report`) render correctly.
+        """
         template = env.get_template("ledger_report.html")
-        content = template.render(
-            farmer_name=farmer_name,
-            ledger_name=ledger_name,
-            address=address,
-            group_name=group_name,
-            balance=f"{balance:.2f}",
-            commission_pct=f"{commission_pct:.1f}",
-            from_date=from_date,
-            to_date=to_date,
-            report_date=datetime.now().strftime("%d-%m-%Y"),
-            report_datetime=datetime.now().strftime("%d-%m-%Y %H:%M:%S"),
-            rows=rows,
-            total_qty=f"{total_qty:.2f}",
-            total_amount=f"{total_amount:.2f}",
-            commission=f"{commission:.2f}",
-            luggage_total=f"{luggage_total:.2f}",
-            coolie=f"{coolie:.2f}",
-            net_amount=f"{net_amount:.2f}",
-            paid_amount=f"{paid_amount:.2f}",
-            final_total=f"{final_total:.2f}",
-        )
+
+        # Map incoming rows (which may use different keys) to template expected keys
+        mapped_rows = []
+        for r in rows:
+            mapped_rows.append({
+                "date": r.get("date") or r.get("date_str") or "N/A",
+                "vehicle": r.get("vehicle") or r.get("vehicle_name") or "N/A",
+                "product_name": r.get("product_name") or r.get("item_name") or r.get("ledger_name") or "",
+                "qty": r.get("qty") or r.get("qty") or "0",
+                "rate": r.get("price") or r.get("rate") or r.get("rate_per_kg") or "0",
+                "luggage": r.get("luggage") or r.get("transport_cost") or "0",
+                "gross": r.get("total") or r.get("amount") or "0",
+                "paid": r.get("paid") or r.get("paid_amount") or "0",
+            })
+
+        # Prepare totals dictionary matching ledger template expectations
+        totals = {
+            "qty": f"{float(total_qty):.2f}" if total_qty is not None else "0.00",
+            "luggage": f"{float(luggage_total):.2f}" if luggage_total is not None else "0.00",
+            "coolie": f"{float(coolie):.2f}" if coolie is not None else "0.00",
+            "gross_total": f"{float(total_amount):.2f}" if total_amount is not None else "0.00",
+            "commission_total": f"{float(commission):.2f}" if commission is not None else "0.00",
+            "net_total": f"{float(net_amount):.2f}" if net_amount is not None else "0.00",
+            "paid_total": f"{float(paid_amount):.2f}" if paid_amount is not None else "0.00",
+            "balance_total": f"{float(final_total):.2f}" if final_total is not None else "0.00",
+        }
+
+        template_data = {
+            "rows": mapped_rows,
+            "name": farmer_name,
+            "address": address,
+            "rem_advance": rem_advance,
+            "totals": totals,
+            "group_name": group_name,
+            "commission_pct": f"{commission_pct:.1f}",
+            "from_date": from_date,
+            "to_date": to_date,
+            "date": datetime.now().strftime("%d-%m-%Y"),
+            "generated_at": datetime.now().isoformat(),
+        }
+
+        content = template.render(**template_data)
         
         # Add print button with JavaScript
         print_button_html = '''
