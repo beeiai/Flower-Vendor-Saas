@@ -691,8 +691,11 @@ def save_daily_collection(
     if data.cash < 0 or data.upi < 0:
         raise HTTPException(status_code=400, detail="Payment amounts cannot be negative")
 
-    # Check if record exists for the date
-    existing = db.query(SilkDailyCollection).filter_by(date=target_date).first()
+    # Check if record exists for the date for this vendor
+    existing = db.query(SilkDailyCollection).filter(
+        SilkDailyCollection.vendor_id == user.vendor_id,
+        SilkDailyCollection.date == target_date
+    ).first()
 
     logger.debug("Silk collection save", extra={
         "date": target_date,
@@ -708,8 +711,9 @@ def save_daily_collection(
         db.refresh(existing)
         return existing
     else:
-        # Create new record
+        # Create new record (associate with vendor)
         new_collection = SilkDailyCollection(
+            vendor_id=user.vendor_id,
             date=target_date,
             cash=data.cash,
             upi=data.upi
@@ -740,10 +744,11 @@ def get_daily_collections(
     except ValueError:
         raise HTTPException(status_code=400, detail="Invalid date format. Use YYYY-MM-DD")
 
-    # Query collections in the date range
+    # Query collections in the date range for this vendor
     collections = (
         db.query(SilkDailyCollection)
         .filter(
+            SilkDailyCollection.vendor_id == user.vendor_id,
             SilkDailyCollection.date >= start_date,
             SilkDailyCollection.date <= end_date
         )
@@ -778,8 +783,11 @@ def get_daily_collection_by_date(
     except ValueError:
         raise HTTPException(status_code=400, detail="Invalid date format. Use YYYY-MM-DD")
 
-    # Query collection for the date
-    collection = db.query(SilkDailyCollection).filter_by(date=target_date).first()
+    # Query collection for the date and vendor
+    collection = db.query(SilkDailyCollection).filter(
+        SilkDailyCollection.vendor_id == user.vendor_id,
+        SilkDailyCollection.date == target_date
+    ).first()
     
     if not collection:
         raise HTTPException(status_code=404, detail="No collection found for the specified date")

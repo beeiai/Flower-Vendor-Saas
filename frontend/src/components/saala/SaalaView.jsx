@@ -441,6 +441,7 @@ function SaalaPaymentTab({ customers, showNotify, setDropdownOpen }) {
     date: new Date().toISOString().split('T')[0]
   });
   const [summary, setSummary] = useState({ totalCredit: 0, totalPaid: 0, balance: 0 });
+  const [isPaymentSubmitting, setIsPaymentSubmitting] = useState(false);
 
   const selectedCustomer = customers.find(c => c.id === selectedCustomerId);
 
@@ -481,6 +482,10 @@ function SaalaPaymentTab({ customers, showNotify, setDropdownOpen }) {
   };
 
   const handlePaymentSubmit = async () => {
+    if (isPaymentSubmitting) {
+      console.warn('[SaalaPayment] Submission already in progress, ignoring duplicate call');
+      return;
+    }
     // Validation
     if (!selectedCustomerId) return showNotify?.('Select a customer first', 'error');
     
@@ -494,6 +499,7 @@ function SaalaPaymentTab({ customers, showNotify, setDropdownOpen }) {
     };
 
     try {
+      setIsPaymentSubmitting(true);
       const result = await api.addSaalaPayment(selectedCustomerId, payload);
       showNotify?.('Payment recorded successfully', 'success');
 
@@ -514,6 +520,8 @@ function SaalaPaymentTab({ customers, showNotify, setDropdownOpen }) {
       });
     } catch (e) {
       showNotify?.(`Failed to record payment: ${e.message}`, 'error');
+    } finally {
+      setIsPaymentSubmitting(false);
     }
   };
 
@@ -633,7 +641,7 @@ function SaalaPaymentTab({ customers, showNotify, setDropdownOpen }) {
           <div className="flex justify-end mt-5">
             <button 
               onClick={handlePaymentSubmit} 
-              disabled={!selectedCustomerId || !paymentForm.amount}
+              disabled={isPaymentSubmitting || !selectedCustomerId || !paymentForm.amount}
               className="bg-gradient-to-r from-emerald-500 to-emerald-600 text-white px-6 py-2.5 font-black uppercase text-xs rounded-lg shadow-lg hover:from-emerald-600 hover:to-emerald-700 transition-all duration-200 tracking-wider flex items-center gap-2 disabled:opacity-40"
               data-payment-index="22"
               onKeyDown={(e) => handlePaymentKeyDown(e, 4)}
@@ -789,14 +797,14 @@ function SaalaTransactionTab({ customers, catalog, showNotify, setDropdownOpen }
   const handleTransactionKeyDown = (e, currentIndex) => {
     if (e.key === 'Enter') {
       e.preventDefault();
+      // New navigation order: Customer -> Item Code -> Qty -> Rate -> Paid -> Remarks -> Add
       const inputs = [
         document.querySelector('[data-enter-index="10"]'), // Customer
-        document.querySelector('[data-enter-index="10-date"]'), // Date
         document.querySelector('[data-enter-index="11"]'), // Item Code
-        document.querySelector('[data-enter-index="13"]'), // Item Name
         document.querySelector('[data-enter-index="12"]'), // Qty
         document.querySelector('[data-enter-index="13-rate"]'), // Rate
         document.querySelector('[data-enter-index="14"]'), // Paid Amount
+        document.querySelector('[data-enter-index="14-remarks"]'), // Remarks
         document.querySelector('[data-enter-index="15"]'), // Add Button
       ];
       
@@ -833,9 +841,6 @@ function SaalaTransactionTab({ customers, catalog, showNotify, setDropdownOpen }
     console.log('[SaalaTransaction] === Starting Add/Update Operation ===');
     console.log('[SaalaTransaction] Current time:', new Date().toISOString());
     
-    // Set submitting flag immediately
-    setIsSubmitting(true);
-    
     try {
       // Validation
       if (!selectedCustomerId) {
@@ -867,6 +872,9 @@ function SaalaTransactionTab({ customers, catalog, showNotify, setDropdownOpen }
         showNotify?.('Paid amount cannot exceed total amount', 'error');
         return;
       }
+
+      // All validations passed — set submitting flag
+      setIsSubmitting(true);
 
       // Build payload with snake_case field names to match backend expectations
       const payload = {
@@ -1090,6 +1098,7 @@ function SaalaTransactionTab({ customers, catalog, showNotify, setDropdownOpen }
                 onChange={handleItemCodeSelect} 
                 placeholder="Select Code" 
                 data-enter-index="11"
+                onKeyDown={(e) => handleTransactionKeyDown(e, 1)}
                 onDropdownStateChange={setDropdownOpen}
                 onSelectionComplete={() => {
                   // Focus on item name field after item code selection
@@ -1112,7 +1121,7 @@ function SaalaTransactionTab({ customers, catalog, showNotify, setDropdownOpen }
                 readOnly
                 placeholder="Auto-filled"
                 data-enter-index="13"
-                onKeyDown={(e) => handleTransactionKeyDown(e, 3)}
+                onKeyDown={(e) => handleTransactionKeyDown(e, 2)}
               />
             </div>
             <div className="w-[70px]">
@@ -1125,7 +1134,7 @@ function SaalaTransactionTab({ customers, catalog, showNotify, setDropdownOpen }
                 value={currentEntry.qty} 
                 onChange={e => setCurrentEntry({ ...currentEntry, qty: e.target.value })} 
                 data-enter-index="12"
-                onKeyDown={(e) => handleTransactionKeyDown(e, 4)}
+                onKeyDown={(e) => handleTransactionKeyDown(e, 2)}
               />
             </div>
             <div className="w-[70px]">
@@ -1138,7 +1147,7 @@ function SaalaTransactionTab({ customers, catalog, showNotify, setDropdownOpen }
                 value={currentEntry.rate} 
                 onChange={e => setCurrentEntry({ ...currentEntry, rate: e.target.value })} 
                 data-enter-index="13-rate"
-                onKeyDown={(e) => handleTransactionKeyDown(e, 5)}
+                onKeyDown={(e) => handleTransactionKeyDown(e, 3)}
               />
             </div>
             <div className="w-[100px]">
@@ -1161,7 +1170,7 @@ function SaalaTransactionTab({ customers, catalog, showNotify, setDropdownOpen }
                 value={currentEntry.paidAmount} 
                 onChange={e => setCurrentEntry({ ...currentEntry, paidAmount: e.target.value })} 
                 data-enter-index="14"
-                onKeyDown={(e) => handleTransactionKeyDown(e, 6)}
+                onKeyDown={(e) => handleTransactionKeyDown(e, 4)}
               />
             </div>
             <div className="w-[100px]">
@@ -1184,7 +1193,7 @@ function SaalaTransactionTab({ customers, catalog, showNotify, setDropdownOpen }
                 value={currentEntry.remarks} 
                 onChange={e => setCurrentEntry({ ...currentEntry, remarks: e.target.value })} 
                 data-enter-index="14-remarks"
-                onKeyDown={(e) => handleTransactionKeyDown(e, 7)}
+                onKeyDown={(e) => handleTransactionKeyDown(e, 5)}
               />
             </div>
             <div className="w-[100px]">
@@ -1193,7 +1202,7 @@ function SaalaTransactionTab({ customers, catalog, showNotify, setDropdownOpen }
                 disabled={isSubmitting || !selectedCustomerId}
                 className="w-full bg-gradient-to-r from-primary-600 to-primary-700 text-white py-2.5 font-black uppercase text-xs rounded-sm shadow-lg hover:from-primary-700 hover:to-primary-800 transition-all duration-200 disabled:opacity-40"
                 data-enter-index="15"
-                onKeyDown={(e) => handleTransactionKeyDown(e, 8)}
+                onKeyDown={(e) => handleTransactionKeyDown(e, 6)}
               >
                 {isSubmitting ? 'SAVING...' : (currentEntry.id ? 'UPDATE' : 'ADD')}
               </button>

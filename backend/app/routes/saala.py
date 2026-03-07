@@ -196,26 +196,30 @@ def create_saala_transaction(
     
     paid_amount = transaction_data.paid_amount or 0
     
-    # CRITICAL FIX: Calculate cumulative balance correctly
-    # Get the sum of all previous transaction balances for this customer
-    previous_transactions = db.query(SaalaTransaction).filter(
-        SaalaTransaction.customer_id == customer_id
-    ).all()
-    
-    # Sum up all previous balances (this represents the outstanding balance before this transaction)
-    previous_balance = sum(t.balance or 0 for t in previous_transactions)
-    
-    # New transaction's own balance
-    new_transaction_balance = (total_amount or 0) - paid_amount
+    # Deduplication: if an identical transaction already exists for this customer
+    # on the same date with the same key fields, return it instead of creating a duplicate.
+    try:
+        existing_dup = db.query(SaalaTransaction).filter(
+            SaalaTransaction.customer_id == customer_id,
+            SaalaTransaction.date == transaction_data.date,
+            SaalaTransaction.item_name == transaction_data.item_name,
+            SaalaTransaction.qty == transaction_data.qty,
+            SaalaTransaction.rate == transaction_data.rate,
+            SaalaTransaction.total_amount == total_amount,
+            SaalaTransaction.paid_amount == paid_amount
+        ).first()
+    except Exception:
+        existing_dup = None
 
-    # Set the transaction's own balance to its contribution; we'll
-    # rely on the canonical recalculation to compute cumulative balances
+    if existing_dup:
+        print(f"Duplicate transaction detected, returning existing id={existing_dup.id}")
+        return existing_dup
+
+    # New transaction's own balance (will be integrated by full recalculation)
+    new_transaction_balance = (total_amount or 0) - paid_amount
     balance = new_transaction_balance
-    
     print(f"Calculated values - Total: {total_amount}, Paid: {paid_amount}")
-    print(f"Previous balance (from all transactions): {previous_balance}")
     print(f"New transaction balance: {new_transaction_balance}")
-    print(f"FINAL CUMULATIVE BALANCE: {balance}")
     
     transaction = SaalaTransaction(
         customer_id=customer_id,
@@ -445,6 +449,18 @@ def add_saala_payment(
     
     print(f"Creating payment transaction: amount={amount}, description={description}, date={date_str}")
     
+    # Deduplicate payments: avoid creating duplicate payment transactions
+    existing_payment = db.query(SaalaTransaction).filter(
+        SaalaTransaction.customer_id == customer_id,
+        SaalaTransaction.item_code == "PAYMENT",
+        SaalaTransaction.paid_amount == amount,
+        SaalaTransaction.date == date
+    ).first()
+
+    if existing_payment:
+        print(f"Duplicate payment detected, returning existing id={existing_payment.id}")
+        return {"message": "Payment already recorded", "transaction_id": existing_payment.id}
+
     # Create a special payment transaction
     payment_transaction = SaalaTransaction(
         customer_id=customer_id,

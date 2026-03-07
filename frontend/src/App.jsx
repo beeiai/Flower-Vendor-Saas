@@ -601,6 +601,7 @@ function ItemRegistryForm({ form, setForm, onSave, onCancel, showNotify }) {
           <button 
             data-action="primary" 
             onClick={handleAddItem}
+            disabled={isAddingItem}
             className="w-full bg-gradient-to-r from-[#5B55E6] to-[#4A44D0] text-white py-3 font-bold uppercase text-sm shadow-lg hover:from-[#4A44D0] hover:to-[#3A34C0] rounded-xl transition-all hover:shadow-xl active:translate-y-0.5" 
             style={{height: '48px'}} 
             data-enter-index="3"
@@ -1298,6 +1299,8 @@ export default function App() {
     return { ...totals, totalCommission, netTotal };
   }, [items, commissionPct]);
 
+  const [isAddingItem, setIsAddingItem] = useState(false);
+
   // Calculate total paid amount separately
   const totalPaidAmount = useMemo(() => {
     return items.reduce((total, item) => total + Number(item.paidAmt || 0), 0);
@@ -1308,7 +1311,13 @@ export default function App() {
       return showNotify("Entry incomplete: Enter item, qty and rate", "error");
     }
     
+    if (isAddingItem) {
+      console.warn('Add item already in progress, ignoring duplicate call');
+      return;
+    }
+
     try {
+      setIsAddingItem(true);
       // Check if we're updating an existing item (has an id from the backend)
       let result;
       if (currentEntry.id && typeof currentEntry.id === 'number') {
@@ -1371,22 +1380,12 @@ export default function App() {
       }, 100);
       
       return true;
-    } catch (error) {
+    } catch (j) {
       showNotify(`Transaction save failed: ${error.message}`, "error");
+    } finally {
+      setIsAddingItem(false);
       return false;
-    }
-  };
-
-  // Single controlled state for all dropdowns (industry-standard approach)
-  // Only ONE dropdown can be open at a time - professional SaaS behavior
-  const [activeDropdown, setActiveDropdown] = useState(null); // 'transaction', 'utility', 'more', or null
-  
-  // Keyboard navigation state for dropdown menus
-  const [focusedMenuItem, setFocusedMenuItem] = useState(-1); // Index of focused menu item
-  const dropdownMenuRefs = useRef({}); // Store refs to menu items for keyboard navigation
-  
-  // Navigation refs for keyboard navigation
-  const navRefs = {
+      
     logo: useRef(null),
     transactionMenu: useRef(null),
     reportsButton: useRef(null),
