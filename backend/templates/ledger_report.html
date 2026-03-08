@@ -237,11 +237,11 @@
     <tfoot>
       <tr>
         <td colspan="3" style="text-align:right;">Total</td>
-        <td style="text-align:right;">{{ totals.qty }}</td>
+        <td style="text-align:right;">{{ totals.total_qty }}</td>
         <td></td>
-        <td style="text-align:right;">{{ totals.luggage }}</td>
-        <td style="text-align:right;">{{ totals.gross_total }}</td>
-        <td style="text-align:right;">{{ totals.paid_total }}</td>
+        <td style="text-align:right;">{{ totals.luggage_total }}</td>
+        <td style="text-align:right;">{{ totals.total_amount }}</td>
+        <td style="text-align:right;">{{ totals.paid_amount }}</td>
       </tr>
     </tfoot>
   </table>
@@ -251,29 +251,29 @@
     <div class="summary-row">
       <div class="summary-cell">
         <span class="s-label">Commission</span>
-        <span class="s-value">{{ totals.commission_total }}</span>
+        <span class="s-value">{{ totals.commission }}</span>
       </div>
       <div class="summary-cell">
         <span class="s-label">Luggage</span>
-        <span class="s-value">{{ totals.luggage }}</span>
+        <span class="s-value">{{ totals.luggage_total }}</span>
       </div>
       <div class="summary-cell">
         <span class="s-label">Coolie</span>
-        <span class="s-value">{{ totals.coolie }}</span>
+        <span class="s-value">{{ totals.coolie_total }}</span>
       </div>
     </div>
     <div class="summary-row">
       <div class="summary-cell">
         <span class="s-label">Total</span>
-        <span class="s-value">{{ totals.gross_total }}</span>
+        <span class="s-value">{{ totals.total_amount }}</span>
       </div>
       <div class="summary-cell">
         <span class="s-label">Net Amount</span>
-        <span class="s-value">{{ totals.net_total }}</span>
+        <span class="s-value">{{ totals.net_amount }}</span>
       </div>
       <div class="summary-cell">
         <span class="s-label">Paid</span>
-        <span class="s-value">{{ totals.paid_total }}</span>
+        <span class="s-value">{{ totals.paid_amount }}</span>
       </div>
     </div>
   </div>
