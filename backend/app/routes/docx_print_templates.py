@@ -140,7 +140,7 @@ def get_ledger_report_pdf(
                 "luggage": f"{luggage_total:.2f}",  # Now shows luggage total (luggage * qty)
                 "coolie": f"{coolie:.2f}",
                 "paid": f"{paid:.2f}",
-                "gross": f"{total:.2f}",
+                "total": f"{total:.2f}",  # Template expects "total" not "gross"
                 "commission": f"{row_commission:.2f}",
                 "net": f"{row_net:.2f}",
                 "balance": f"{row_balance:.2f}"

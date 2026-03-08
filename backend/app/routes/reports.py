@@ -212,6 +212,7 @@ def get_ledger_report(
         }
         
         logger.debug(f"Entry processed - date: {date_val}, vehicle: {vehicle_val}, total: {total_amount:.2f}, qty: {qty:.2f}")
+        logger.debug(f"Row data keys: {list(row_data.keys())}, total value: {row_data['total']}")
         rows.append(row_data)
         gross_total += total_amount
         commission_total += commission
