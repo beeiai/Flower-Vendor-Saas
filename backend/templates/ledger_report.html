@@ -14,15 +14,13 @@
   body {
     font-family: 'Courier New', monospace;
     background: white;
-    display: flex;
-    flex-direction: column;
-    align-items: center;
-    padding: 5mm;
+    padding: 0;
+    margin: 0;
   }
 
   /* ── INVOICE PAPER ── */
   #invoice {
-    width: 200mm;
+    width: 100%;
     background: white;
     padding: 4mm 5mm;
     box-sizing: border-box;
@@ -138,7 +136,7 @@
   .s-value { font-weight: 900; font-size: 15px; display: block; margin-top: 1px; word-break: break-word; }
 
   @media print {
-    body { padding: 0; }
+    body { padding: 0; margin: 0; }
     #invoice { width: 100%; padding: 4mm; }
   }
 </style>
