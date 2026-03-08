@@ -19,19 +19,22 @@
   }
 
   /* ── INVOICE PAPER ── */
-  .invoice {
+  #invoice {
     width: 100%;
     background: white;
     padding: 4mm 5mm;
     box-sizing: border-box;
-    page-break-after: always;
   }
-  .invoice:last-child { page-break-after: auto; }
+
+  /* Allow table rows to break across pages naturally */
+  table { page-break-inside: auto; }
+  tr    { page-break-inside: avoid; page-break-after: auto; }
+  thead { display: table-header-group; } /* repeat header on each page */
+  tfoot { display: table-footer-group; }
 
   .outer-box {
     border: 2px solid #000;
     padding: 6px;
-    overflow: hidden;
     box-sizing: border-box;
   }
 
@@ -75,7 +78,7 @@
   table {
     width: 100%;
     border-collapse: collapse;
-    font-size: 13px;
+    font-size: 14px; /* slightly increased */
     table-layout: fixed;
   }
   thead tr { background: #ddd; }
@@ -86,7 +89,7 @@
     overflow: hidden;
     word-break: break-word;
   }
-  th { font-weight: 900; text-align: center !important; font-size: 12px; color: #000; }
+  th { font-weight: 900; text-align: center !important; font-size: 13px; color: #000; }
 
   /* Slightly enhanced body cell values */
   tbody td {
@@ -110,7 +113,7 @@
   td:nth-child(3) { text-align: left;   }
 
   tfoot tr { background: #eee; font-weight: bold; }
-  tfoot td  { border: 1px solid #555; padding: 5px 7px; }
+  tfoot td  { border: 1px solid #555; padding: 5px 7px; font-size: 14px; }
 
   /* ── SUMMARY BOX ── */
   .summary-box {
@@ -140,16 +143,13 @@
   .s-value { font-weight: 900; font-size: 15px; display: block; margin-top: 1px; word-break: break-word; }
 
   @media print {
-    .no-print { display: none !important; }
     body { padding: 0; margin: 0; }
-    .invoice { width: 100%; padding: 4mm; }
+    #invoice { width: 100%; padding: 4mm; }
   }
 </style>
 </head>
 <body>
-
-{% for customer in customers %}
-<div class="invoice">
+<div id="invoice">
 <div class="outer-box">
 
   <!-- HEADER -->
@@ -179,11 +179,11 @@
     </div>
     <div>
       <span class="info-label">Name: </span>
-      <span class="info-value-lg">{{ customer.name }}</span>
+      <span class="info-value-lg">{{ name }}</span>
     </div>
     <div>
       <span class="info-label">Address: </span>
-      <span class="info-value-lg">{{ customer.address }}</span>
+      <span class="info-value-lg">{{ address }}</span>
     </div>
   </div>
 
@@ -198,7 +198,7 @@
       <span class="info-value">{{ group_name }}</span>
     </div>
     <div>
-      <div><span class="info-label">Rem Advance: </span><span class="info-value">{{ customer.balance }}</span></div>
+      <div><span class="info-label">Rem Advance: </span><span class="info-value">{{ rem_advance }}</span></div>
       <div><span class="info-label">Adv Deduction: </span><span class="info-value" style="display:inline-block; min-width:80px; border-bottom:1px solid #000;">&nbsp;</span></div>
     </div>
   </div>
@@ -228,7 +228,7 @@
       </tr>
     </thead>
     <tbody>
-      {% for row in customer.transactions %}
+      {% for row in rows %}
       <tr>
         <td style="text-align:center;">{{ row.date }}</td>
         <td style="text-align:center;">{{ row.vehicle }}</td>
@@ -244,11 +244,11 @@
     <tfoot>
       <tr>
         <td colspan="3" style="text-align:right;">Total</td>
-        <td style="text-align:right;">{{ customer.total_qty }}</td>
+        <td style="text-align:right;">{{ totals.qty }}</td>
         <td></td>
-        <td style="text-align:right;">{{ customer.luggage_total }}</td>
-        <td style="text-align:right;">{{ customer.total_amount }}</td>
-        <td style="text-align:right;">{{ customer.paid_amount }}</td>
+        <td style="text-align:right;">{{ totals.luggage }}</td>
+        <td style="text-align:right;">{{ totals.gross_total }}</td>
+        <td style="text-align:right;">{{ totals.paid_total }}</td>
       </tr>
     </tfoot>
   </table>
@@ -258,37 +258,35 @@
     <div class="summary-row">
       <div class="summary-cell">
         <span class="s-label">Commission</span>
-        <span class="s-value">{{ customer.commission }}</span>
+        <span class="s-value">{{ totals.commission_total }}</span>
       </div>
       <div class="summary-cell">
         <span class="s-label">Luggage</span>
-        <span class="s-value">{{ customer.luggage_total }}</span>
+        <span class="s-value">{{ totals.luggage }}</span>
       </div>
       <div class="summary-cell">
         <span class="s-label">Coolie</span>
-        <span class="s-value">{{ customer.coolie_total }}</span>
+        <span class="s-value">{{ totals.coolie }}</span>
       </div>
     </div>
     <div class="summary-row">
       <div class="summary-cell">
         <span class="s-label">Total</span>
-        <span class="s-value">{{ customer.total_amount }}</span>
+        <span class="s-value">{{ totals.gross_total }}</span>
       </div>
       <div class="summary-cell">
         <span class="s-label">Net Amount</span>
-        <span class="s-value">{{ customer.net_amount }}</span>
+        <span class="s-value">{{ totals.net_total }}</span>
       </div>
       <div class="summary-cell">
         <span class="s-label">Paid</span>
-        <span class="s-value">{{ customer.paid_amount }}</span>
+        <span class="s-value">{{ totals.paid_total }}</span>
       </div>
     </div>
   </div>
 
 </div>
 </div>
-{% endfor %}
-
 
 <script>
   (function(){
