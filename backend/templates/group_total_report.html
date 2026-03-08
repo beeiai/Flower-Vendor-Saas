@@ -63,7 +63,7 @@
   .shop-address { font-size: 13px; margin-top: 3px; font-weight: bold; }
   .contact-box { text-align: right; font-size: 13px; line-height: 1.8; }
 
-  /* ── META ROW — Trade Mark | Group Name ── */
+  /* ── META ROW ── */
   .info-row {
     display: grid;
     grid-template-columns: 1fr 1fr 1fr;
@@ -76,7 +76,7 @@
   .info-value { font-weight: bold; font-size: 15px; }
   .info-value-lg { font-weight: 900; font-size: 19px; }
 
-  /* ── TABLE — same sizing as Group Patti ── */
+  /* ── TABLE ── */
   table {
     width: 100%;
     border-collapse: collapse;
@@ -90,7 +90,14 @@
     overflow: hidden;
     word-break: break-word;
   }
-  th { font-weight: bold; text-align: center !important; font-size: 12px; }
+  th { font-weight: 900; text-align: center !important; font-size: 12px; color: #000; }
+
+  /* Slightly enhanced body cell values */
+  tbody td {
+    color: #222;
+    font-weight: 500;
+    font-size: 14px;
+  }
 
   /* Column widths for 4 columns */
   col.c-party   { width: 30%; }
@@ -137,7 +144,7 @@
 <div id="invoice">
 <div class="outer-box">
 
-  <!-- HEADER — identical to Group Patti -->
+  <!-- HEADER -->
   <div class="header">
     <div class="logo-box">
       <img src="{{ url_for('static', filename='images/SKFS_logo.png') }}" alt="S.K.F.S Logo">
@@ -157,7 +164,7 @@
     </div>
   </div>
 
-  <!-- META ROW: Trade Mark | Group Name -->
+  <!-- META ROW: Trade Mark | Group Name | Date (blank) -->
   <div class="info-row">
     <div>
       <span class="info-label">Trade Mark: </span>
@@ -167,7 +174,10 @@
       <span class="info-label">Group Name : </span>
       <span class="info-value">{{ group_name }}</span>
     </div>
-    <div></div>
+    <div style="text-align:right;">
+      <span class="info-label">Date: </span>
+      <span style="display:inline-block; min-width:110px; border-bottom:1px solid #000;">&nbsp;</span>
+    </div>
   </div>
 
   <!-- MAIN TABLE -->

@@ -86,7 +86,14 @@
     overflow: hidden;
     word-break: break-word;
   }
-  th { font-weight: bold; text-align: center !important; font-size: 12px; }
+  th { font-weight: 900; text-align: center !important; font-size: 12px; color: #000; }
+
+  /* Slightly enhanced body cell values */
+  tbody td {
+    color: #222;
+    font-weight: 500;
+    font-size: 14px;
+  }
 
   /* Column widths — must total 100% */
   col.c-date     { width: 13%; }
@@ -176,15 +183,15 @@
     </div>
     <div>
       <span class="info-label">Address: </span>
-      <span class="info-value">{{ customer.address }}</span>
+      <span class="info-value-lg">{{ customer.address }}</span>
     </div>
   </div>
 
-  <!-- ROW 2: Date | Group | Rem Advance + Adv Deduction -->
+  <!-- ROW 2: Date (blank) | Group | Rem Advance + Adv Deduction -->
   <div class="info-row">
     <div>
       <span class="info-label">Date: </span>
-      <span class="info-value">{{ current_date }}</span>
+      <span style="display:inline-block; min-width:110px; border-bottom:1px solid #000;">&nbsp;</span>
     </div>
     <div>
       <span class="info-label">Group: </span>
