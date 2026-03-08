@@ -70,6 +70,7 @@ def create_collection_items(
             labour_per_kg=item.labour_per_kg,
             coolie_cost=item.coolie_cost,
             transport_cost=item.transport_cost,
+            paid_amount=item.paid_amount or 0.0,
             total_labour=total_labour,
             line_total=line_total,
             is_locked=False
@@ -146,6 +147,7 @@ def update_collection_item(
     item.labour_per_kg = data.labour_per_kg
     item.coolie_cost = data.coolie_cost
     item.transport_cost = data.transport_cost
+    item.paid_amount = data.paid_amount or 0.0
 
     item.total_labour = data.qty_kg * data.labour_per_kg
     item.line_total = (

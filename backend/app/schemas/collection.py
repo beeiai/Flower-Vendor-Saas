@@ -18,6 +18,7 @@ class CollectionItemCreate(BaseModel):
     labour_per_kg: float = Field(..., ge=0, description="Labour cost per KG")
     coolie_cost: float = Field(..., ge=0, description="Fixed coolie cost")
     transport_cost: float = Field(..., ge=0, description="Transport cost")
+    paid_amount: Optional[float] = Field(0.0, ge=0, description="Amount paid to farmer")
 
     class Config:
         from_attributes = True
@@ -34,6 +35,7 @@ class CollectionItemUpdate(BaseModel):
     labour_per_kg: float = Field(..., ge=0)
     coolie_cost: float = Field(..., ge=0)
     transport_cost: float = Field(..., ge=0)
+    paid_amount: Optional[float] = Field(0.0, ge=0, description="Amount paid to farmer")
 
     class Config:
         from_attributes = True
@@ -54,6 +56,7 @@ class CollectionItemResponse(BaseModel):
     labour_per_kg: float
     coolie_cost: float
     transport_cost: float
+    paid_amount: float
 
     total_labour: float
     line_total: float

@@ -173,6 +173,15 @@ def get_ledger_report(
         paid = float(entry.get("paid", 0)) if entry.get("paid") is not None else 0.0
         luggage = float(entry.get("luggage", 0)) if entry.get("luggage") is not None else 0.0
         coolie = float(entry.get("coolie", 0)) if entry.get("coolie") is not None else 0.0
+        
+        # Parse quantity - handle string to float conversion properly
+        try:
+            qty_str = entry.get("qty", "0")
+            qty = float(qty_str) if qty_str else 0.0
+        except (ValueError, TypeError):
+            logger.warning(f"Invalid qty value: {entry.get('qty')}, using 0.0")
+            qty = 0.0
+        
         balance = net - paid - luggage - coolie
         
         # Date and vehicle are already properly formatted in the data
@@ -186,7 +195,7 @@ def get_ledger_report(
             "product_name": entry.get("item_name", "N/A"),
             "customer": ledger_data.get("customer", {}).get("name", "N/A"),
             "address": ledger_data.get("customer", {}).get("address", "N/A"),
-            "qty": entry.get("qty", "0"),
+            "qty": f"{qty:.2f}",
             "rate": entry.get("rate", "0"),
             "luggage": f"{luggage:.2f}",
             "coolie": f"{coolie:.2f}",
@@ -198,7 +207,7 @@ def get_ledger_report(
             "remarks": entry.get("remarks", "N/A")
         }
         
-        logger.debug(f"Entry processed - date: {date_val}, vehicle: {vehicle_val}, gross: {gross:.2f}")
+        logger.debug(f"Entry processed - date: {date_val}, vehicle: {vehicle_val}, gross: {gross:.2f}, qty: {qty:.2f}")
         rows.append(row_data)
         gross_total += gross
         commission_total += commission
@@ -206,10 +215,7 @@ def get_ledger_report(
         paid_total += paid
         balance_total += balance
         luggage_total += luggage
-        try:
-            qty_total += float(entry.get("qty", 0))
-        except Exception:
-            pass
+        qty_total += qty  # Add the parsed float qty
         coolie_total += coolie
     
     logger.info(f"Ledger report processing complete - {len(rows)} rows, gross_total: {gross_total:.2f}")
@@ -828,7 +834,14 @@ def get_group_patti_report(
         farmer_coolie = 0
         
         for entry in farmer.get("entries", []):
-            qty = float(entry.get("qty", 0))
+            # Parse quantity - handle string to float conversion properly
+            try:
+                qty_str = entry.get("qty", "0")
+                qty = float(qty_str) if qty_str else 0.0
+            except (ValueError, TypeError):
+                logger.warning(f"Invalid qty value in group patti: {entry.get('qty')}, using 0.0")
+                qty = 0.0
+            
             rate = float(entry.get("rate", 0))
             # Use the pre-calculated amount from the database instead of recalculating
             total = float(entry.get("amount", 0))
