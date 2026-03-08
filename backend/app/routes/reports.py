@@ -199,7 +199,7 @@ def get_ledger_report(
             "rate": entry.get("rate", "0"),
             "luggage": f"{luggage:.2f}",
             "coolie": f"{coolie:.2f}",
-            "gross": f"{gross:.2f}",
+            "total": f"{gross:.2f}",
             "commission": f"{commission:.2f}",
             "net": f"{net:.2f}",
             "paid": f"{paid:.2f}",
