@@ -167,9 +167,10 @@ def get_ledger_report(
     logger.info(f"Processing {len(ledger_data.get('entries', []))} entries for ledger report")
     
     for entry in ledger_data.get("entries", []):
-        gross = float(entry.get("amount", 0))
-        commission = gross * (commission_pct / 100)
-        net = gross - commission
+        # Calculate total amount (qty * rate)
+        total_amount = float(entry.get("amount", 0))
+        commission = total_amount * (commission_pct / 100)
+        net = total_amount - commission
         paid = float(entry.get("paid", 0)) if entry.get("paid") is not None else 0.0
         luggage = float(entry.get("luggage", 0)) if entry.get("luggage") is not None else 0.0
         coolie = float(entry.get("coolie", 0)) if entry.get("coolie") is not None else 0.0
@@ -199,7 +200,7 @@ def get_ledger_report(
             "rate": entry.get("rate", "0"),
             "luggage": f"{luggage:.2f}",
             "coolie": f"{coolie:.2f}",
-            "total": f"{gross:.2f}",
+            "total": f"{total_amount:.2f}",
             "commission": f"{commission:.2f}",
             "net": f"{net:.2f}",
             "paid": f"{paid:.2f}",
@@ -207,9 +208,9 @@ def get_ledger_report(
             "remarks": entry.get("remarks", "N/A")
         }
         
-        logger.debug(f"Entry processed - date: {date_val}, vehicle: {vehicle_val}, gross: {gross:.2f}, qty: {qty:.2f}")
+        logger.debug(f"Entry processed - date: {date_val}, vehicle: {vehicle_val}, total: {total_amount:.2f}, qty: {qty:.2f}")
         rows.append(row_data)
-        gross_total += gross
+        gross_total += total_amount
         commission_total += commission
         net_total += net
         paid_total += paid
@@ -303,25 +304,27 @@ def get_ledger_report(
 def get_group_total_report(
     from_date: Optional[date] = Query(None, description="Start date (defaults to month start)"),
     to_date: Optional[date] = Query(None, description="End date (defaults to today)"),
+    group_name: Optional[str] = Query(None, description="Specific group name (if provided, only shows farmers in that group)"),
     format: str = Query("html", description="Response format: html or json"),
     db: Session = Depends(get_db),
     user = Depends(get_current_user)
 ):
     """
-    Get Group Total Report with aggregated data for all groups.
+    Get Group Total Report with aggregated data for all groups or a specific group.
     
     Supports both HTML and JSON formats.
     
     Query Parameters:
     - from_date: Start date (optional, defaults to month start)
     - to_date: End date (optional, defaults to today)
+    - group_name: Specific group name (optional, if provided shows only that group's farmers)
     - format: Response format (html|json, default: html)
     
     Returns:
     - If format=html: Rendered HTML template
     - If format=json: {html, metadata} with page and group counts
     """
-    logger.info(f"Group Total report requested - format: {format}")
+    logger.info(f"Group Total report requested - format: {format}, group_name: {group_name}")
     logger.info(f"Date range: {from_date} to {to_date}")
     
     if from_date is None or to_date is None:
@@ -344,82 +347,103 @@ def get_group_total_report(
     generated_at = datetime.now().isoformat()
     current_date = datetime.now().strftime("%d-%m-%Y")
     
-    # Transform groups to match template expectations - implement proper grouping
-    from collections import defaultdict
-    
-    # Group data properly by group_id for summary view
-    grouped_data = defaultdict(list)
-    for entry in group_data.get("entries", []):
-        group_id = entry.get("group_id")
-        if group_id:
-            grouped_data[group_id].append(entry)
-    
+    # Transform groups to match template expectations - show individual farmers
     rows = []
     overall_qty = 0
     overall_amount = 0
     overall_paid = 0
     overall_balance = 0
+    overall_net_amount = 0
+    display_group_name = "All Groups"
     
-    logger.info(f"Processing {len(grouped_data)} groups for Group Total report")
+    logger.info(f"Processing {len(group_data.get('entries', []))} entries for Group Total report")
     
-    # Create summary rows for each group (what the template expects)
-    for group_id, group_entries in grouped_data.items():
-        if not group_entries:
+    # Process entries directly - each entry represents a farmer's transaction
+    # Group by farmer to get totals per farmer
+    from collections import defaultdict
+    farmer_totals = defaultdict(lambda: {
+        'qty': 0,
+        'amount': 0,
+        'paid': 0,
+        'commission': 0,
+        'net_amount': 0,
+        'group_name': '',
+        'farmer_id': None
+    })
+    
+    for entry in group_data.get("entries", []):
+        farmer_id = entry.get("farmer_id")
+        entry_group_name = entry.get("group_name", "N/A")
+        
+        # If group_name parameter is provided, filter to only that group
+        if group_name and entry_group_name != group_name:
+            continue
+        
+        if not farmer_id:
             continue
             
-        # Get group name from first entry
-        group_name = group_entries[0].get("group_name", "N/A") if group_entries else "N/A"
+        qty = float(entry.get("qty", 0))
+        amount = float(entry.get("amount", 0))
+        paid = float(entry.get("paid", 0)) if entry.get("paid") is not None else 0.0
         
-        logger.debug(f"Processing group: {group_name} (ID: {group_id}) with {len(group_entries)} entries")
+        # Calculate commission (12%)
+        commission = amount * 0.12
+        net = amount - commission
         
-        # Calculate group totals
-        group_qty = 0
-        group_amount = 0
-        group_paid = 0
+        farmer_totals[farmer_id]['qty'] += qty
+        farmer_totals[farmer_id]['amount'] += amount
+        farmer_totals[farmer_id]['paid'] += paid
+        farmer_totals[farmer_id]['commission'] += commission
+        farmer_totals[farmer_id]['net_amount'] += net
+        farmer_totals[farmer_id]['group_name'] = entry_group_name
+        farmer_totals[farmer_id]['farmer_id'] = farmer_id
+    
+    # Set display group name
+    if group_name:
+        display_group_name = group_name
+    
+    # Create rows for each farmer
+    for farmer_id, data in farmer_totals.items():
+        # Get farmer name from the entry
+        farmer_entry = next((e for e in group_data.get("entries", []) if e.get("farmer_id") == farmer_id), None)
+        farmer_name = farmer_entry.get("farmer_name", "Unknown") if farmer_entry else "Unknown"
         
-        # Process all entries for this group to get totals
-        for entry in group_entries:
-            qty = float(entry.get("qty", 0))
-            amount = float(entry.get("amount", 0))
-            paid = float(entry.get("paid", 0)) if entry.get("paid") is not None else 0.0
-            
-            group_qty += qty
-            group_amount += amount
-            group_paid += paid
+        logger.debug(f"Processing farmer: {farmer_name} (ID: {farmer_id})")
         
-        # Get customer count for this group
-        customer_count = len(set(entry.get("farmer_id") for entry in group_entries if entry.get("farmer_id")))
-        
-        # Add summary row for this group (this is what the template expects)
+        # Add row for this farmer
         row_data = {
-            "group_name": group_name,
-            "customer_count": customer_count,
-            "total_qty": f"{group_qty:.2f}",
-            "total_amount": f"{group_amount:.2f}"
+            "farmer_name": farmer_name,
+            "total_net_amount": f"{data['net_amount']:.2f}",
+            "paid_amount": f"{data['paid']:.2f}",
+            "ledger_no": str(farmer_id),  # Use farmer ID as ledger number
+            "group_name": data['group_name']  # Include group name for display
         }
         
-        logger.debug(f"Group {group_name} processed - customers: {customer_count}, qty: {group_qty:.2f}, amount: {group_amount:.2f}")
+        logger.debug(f"Farmer row created - {farmer_name}: net={data['net_amount']:.2f}, paid={data['paid']:.2f}")
         
         rows.append(row_data)
-        overall_qty += group_qty
-        overall_amount += group_amount
-        overall_paid += group_paid
-        overall_balance += (group_amount - group_paid)
+        overall_qty += data['qty']
+        overall_amount += data['amount']
+        overall_paid += data['paid']
+        overall_net_amount += data['net_amount']
+        overall_balance += (data['net_amount'] - data['paid'])
     
-    logger.info(f"Group Total processing complete - {len(rows)} groups, overall_qty: {overall_qty:.2f}")
+    logger.info(f"Group Total processing complete - {len(rows)} farmers, overall_net_amount: {overall_net_amount:.2f}")
     
-    # Prepare template data
+    # Prepare template data with ALL required fields
     template_data = {
         "rows": rows,
+        "group_name": display_group_name,  # Show specific group name or "All Groups"
         "overall_qty": f"{overall_qty:.2f}",
         "overall_amount": f"{overall_amount:.2f}",
         "overall_paid": f"{overall_paid:.2f}",
+        "overall_net_amount": f"{overall_net_amount:.2f}",
         "overall_balance": f"{overall_balance:.2f}",
         "from_date": from_date.strftime("%d-%m-%Y"),
         "to_date": to_date.strftime("%d-%m-%Y"),
         "current_date": current_date,
         "generated_at": generated_at,
-        "group_count": len(grouped_data)
+        "group_count": len(farmer_totals)
     }
     
     # Render HTML
@@ -879,14 +903,20 @@ def get_group_patti_report(
         # Calculate commission based on commission percentage
         farmer_commission = farmer_amount * (commission_pct / 100)
         farmer_net_amount = farmer_amount - farmer_commission
-        farmer_final_total = farmer_net_amount + 0.0 - farmer_paid - farmer_luggage - farmer_coolie
+        farmer_final_total = farmer_net_amount - farmer_paid - farmer_luggage - farmer_coolie
+        
+        # Get remaining advance for this farmer from advances table
+        adv_sum = db.query(func.coalesce(func.sum(Advance.amount), 0)).filter(
+            Advance.vendor_id == user.vendor_id,
+            Advance.farmer_id == farmer_id
+        ).scalar() or 0
         
         customer_data = {
             "id": farmer_id,
             "name": farmer_name,
             "address": farmer_address,
             "ledger_name": farmer.get("code", "N/A"),
-            "balance": f"{farmer_final_total:.2f}",
+            "balance": f"{adv_sum:.2f}",  # Remaining Advance (sum of advances given)
             "transactions": transactions,
             "total_qty": f"{farmer_qty:.2f}",
             "total_amount": f"{farmer_amount:.2f}",
