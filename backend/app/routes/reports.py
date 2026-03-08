@@ -666,7 +666,8 @@ def get_group_total_report_by_group(
             "total_luggage": f"{data['total_luggage']:.2f}",  # Now includes actual luggage total
             "total_coolie": f"{data['total_coolie']:.2f}",  # Now includes actual coolie total
             "total_net_amount": f"{data['total_net_amount']:.2f}",
-            "total_paid": f"{data['total_paid']:.2f}",
+            "paid_amount": f"{data['total_paid']:.2f}",  # Template expects paid_amount
+            "total_paid": f"{data['total_paid']:.2f}",  # Keep for backward compatibility
             "total_amount": f"{data['total_net_amount']:.2f}"  # Using net amount for display
         }
         
@@ -696,6 +697,7 @@ def get_group_total_report_by_group(
     try:
         template_data = {
             "rows": rows,
+            "group_name": group_name,  # Add group name for header display
             "overall_qty": f"{overall_qty:.2f}",
             "overall_amount": f"{overall_price:.2f}",  # Total price
             "overall_commission": f"{overall_commission:.2f}",  # Total commission

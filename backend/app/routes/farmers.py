@@ -542,7 +542,7 @@ def list_transactions(
             "itemName": r.item_name or "",
             "qty": float(r.qty_kg or 0),
             "rate": float(r.rate_per_kg or 0),
-            "laguage": float(r.labour_per_kg or 0),
+            "luggage": float(r.labour_per_kg or 0),  # Fixed typo: was "laguage"
             "coolie": float(r.coolie_cost or 0),
             "paidAmt": float(r.paid_amount or 0),
             "remarks": r.remarks or "",
