@@ -1,0 +1,298 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<title>SKFS Group Patti Report</title>
+<style>
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+
+  body {
+    font-family: 'Courier New', monospace;
+    background: white;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    padding: 5mm;
+  }
+
+  /* ── INVOICE PAPER ── */
+  #invoice {
+    width: 200mm;
+    min-height: 297mm;
+    background: white;
+    padding: 4mm 5mm;
+    overflow: hidden;
+    box-sizing: border-box;
+  }
+
+  .outer-box {
+    border: 2px solid #000;
+    padding: 6px;
+    overflow: hidden;
+    box-sizing: border-box;
+  }
+
+  /* ── HEADER ── */
+  .header {
+    display: flex;
+    align-items: flex-start;
+    gap: 8px;
+    border-bottom: 2px solid #000;
+    padding-bottom: 6px;
+    margin-bottom: 6px;
+  }
+  .logo-box {
+    width: 75px; height: 75px;
+    border: 1px solid #999;
+    display: flex; align-items: center; justify-content: center;
+    font-size: 11px; color: #666; flex-shrink: 0;
+    background: #f5f5f0;
+  }
+  .logo-box img { width: 100%; height: 100%; object-fit: contain; }
+  .shop-info { flex: 1; text-align: center; }
+  .shop-name { font-size: 30px; font-weight: 900; letter-spacing: 2px; line-height: 1.1; }
+  .shop-sub  { font-size: 14px; letter-spacing: 1px; }
+  .shop-address { font-size: 13px; margin-top: 3px; font-weight: bold; }
+  .contact-box { text-align: right; font-size: 13px; line-height: 1.8; }
+
+  /* ── META ROWS ── */
+  .info-row {
+    display: grid;
+    grid-template-columns: 1fr 1fr 1fr;
+    font-size: 14px;
+    border: 1px solid #000;
+    padding: 6px 10px;
+  }
+  .info-row + .info-row { border-top: none; margin-bottom: 10px; }
+  .info-label { font-weight: normal; color: #444; }
+  .info-value { font-weight: bold; font-size: 15px; }
+  .info-value-lg { font-weight: 900; font-size: 19px; }
+
+  /* ── TABLE ── */
+  table {
+    width: 100%;
+    border-collapse: collapse;
+    font-size: 13px;
+    table-layout: fixed;
+  }
+  thead tr { background: #ddd; }
+  th, td {
+    border: 1px solid #555;
+    padding: 5px 7px;
+    text-align: right;
+    overflow: hidden;
+    word-break: break-word;
+  }
+  th { font-weight: bold; text-align: center !important; font-size: 12px; }
+
+  /* Column widths — must total 100% */
+  col.c-date     { width: 13%; }
+  col.c-vehicle  { width: 13%; }
+  col.c-item     { width: 22%; }
+  col.c-qty      { width: 9%;  }
+  col.c-rate     { width: 9%;  }
+  col.c-luggage  { width: 10%; }
+  col.c-total    { width: 13%; }
+  col.c-paid     { width: 11%; }
+
+  td:nth-child(1) { text-align: center; }
+  td:nth-child(2) { text-align: center; }
+  td:nth-child(3) { text-align: left;   }
+
+  tfoot tr { background: #eee; font-weight: bold; }
+  tfoot td  { border: 1px solid #555; padding: 5px 7px; }
+
+  /* ── SUMMARY BOX ── */
+  .summary-box {
+    margin-top: 10px;
+    border: 1px solid #555;
+    font-size: 14px;
+    width: 100%;
+    box-sizing: border-box;
+    overflow: hidden;
+  }
+  .summary-row {
+    display: flex;
+    width: 100%;
+    border-bottom: 1px solid #555;
+    box-sizing: border-box;
+  }
+  .summary-row:last-child { border-bottom: none; }
+  .summary-cell {
+    flex: 1;
+    min-width: 0;
+    padding: 6px 12px;
+    border-right: 1px solid #555;
+    box-sizing: border-box;
+  }
+  .summary-cell:last-child { border-right: none; }
+  .s-label { font-size: 13px; color: #444; display: block; }
+  .s-value { font-weight: 900; font-size: 15px; display: block; margin-top: 1px; word-break: break-word; }
+
+  @media print {
+    .no-print { display: none !important; }
+    body { padding: 0; }
+    #invoice { width: 100%; padding: 4mm; }
+  }
+</style>
+</head>
+<body>
+<div id="invoice">
+<div class="outer-box">
+
+  <!-- HEADER -->
+  <div class="header">
+    <div class="logo-box">
+      <img src="{{ url_for('static', filename='images/SKFS_logo.png') }}" alt="S.K.F.S Logo">
+    </div>
+    <div class="shop-info">
+      <div class="shop-name">SREE KRISHNA FLOWER STALL</div>
+      <div class="shop-sub">Prop. K.C.N & SONS; <span style="font-size:17px;font-weight:900;"></span></div>
+      <div class="shop-sub"><strong>FLOWER MERCHANTS</strong></div>
+      <div class="shop-address">Shop No: B-32, S.K.R Market, Bangalore-560002</div>
+    </div>
+    <div class="contact-box">
+      <div>PH: 81478487760</div>
+      <div>Mob: 9972878307</div>
+      <br>
+      <div style="font-size:20px;font-weight:900;letter-spacing:1px;">S.K.F.S</div>
+    </div>
+  </div>
+
+  <!-- ROW 1: Trade Mark | Name | Address -->
+  <div class="info-row">
+    <div>
+      <span class="info-label">Trade Mark: </span>
+      <span style="font-size:17px;font-weight:900;">S.K.F.S</span>
+    </div>
+    <div>
+      <span class="info-label">Name: </span>
+      <span class="info-value-lg">{{ name }}</span>
+    </div>
+    <div>
+      <span class="info-label">Address: </span>
+      <span class="info-value">{{ address }}</span>
+    </div>
+  </div>
+
+  <!-- ROW 2: Date | Group | Rem Advance + Adv Deduction -->
+  <div class="info-row">
+    <div>
+      <span class="info-label">Date: </span>
+      <span class="info-value">{{ date }}</span>
+    </div>
+    <div>
+      <span class="info-label">Group: </span>
+      <span class="info-value">{{ group_name }}</span>
+    </div>
+    <div>
+      <div><span class="info-label">Rem Advance: </span><span class="info-value">{{ rem_advance }}</span></div>
+      <div><span class="info-label">Adv Deduction: </span><span class="info-value" style="display:inline-block; min-width:80px; border-bottom:1px solid #000;">&nbsp;</span></div>
+    </div>
+  </div>
+
+  <!-- MAIN TABLE -->
+  <table>
+    <colgroup>
+      <col class="c-date">
+      <col class="c-vehicle">
+      <col class="c-item">
+      <col class="c-qty">
+      <col class="c-rate">
+      <col class="c-luggage">
+      <col class="c-total">
+      <col class="c-paid">
+    </colgroup>
+    <thead>
+      <tr>
+        <th>Date</th>
+        <th>Vehicle</th>
+        <th>Item Name</th>
+        <th>Qty</th>
+        <th>Price</th>
+        <th>Luggage</th>
+        <th>Total</th>
+        <th>Paid</th>
+      </tr>
+    </thead>
+    <tbody>
+      {% for row in rows %}
+      <tr>
+        <td style="text-align:center;">{{ row.date }}</td>
+        <td style="text-align:center;">{{ row.vehicle }}</td>
+        <td style="text-align:left;">{{ row.product_name | default(row.item_name) | default(row.item) }}</td>
+        <td style="text-align:right;">{{ row.qty | default(row.quantity) | default('0') }}</td>
+        <td style="text-align:right;">{{ row.rate | default(row.price) | default('0') }}</td>
+        <td style="text-align:right;">{{ row.luggage | default(row.luggage_total) | default('0.00') }}</td>
+        <td style="text-align:right;">{{ row.gross | default(row.total) | default(row.amount) | default('0.00') }}</td>
+        <td style="text-align:right;">{{ row.paid | default(row.paid_amount) | default('0.00') }}</td>
+      </tr>
+      {% endfor %}
+    </tbody>
+    <tfoot>
+      <tr>
+        <td colspan="3" style="text-align:right;">Total</td>
+        <td style="text-align:right;">{{ totals.qty | default(totals.total_qty) | default('0.00') }}</td>
+        <td></td>
+        <td style="text-align:right;">{{ totals.luggage | default(totals.luggage_total) | default('0.00') }}</td>
+        <td style="text-align:right;">{{ totals.gross_total | default(totals.total_amount) | default('0.00') }}</td>
+        <td style="text-align:right;">{{ totals.paid_total | default(totals.paid_amount) | default('0.00') }}</td>
+      </tr>
+    </tfoot>
+  </table>
+
+  <!-- SUMMARY BOX -->
+  <div class="summary-box">
+    <div class="summary-row">
+      <div class="summary-cell">
+        <span class="s-label">Commission</span>
+        <span class="s-value">{{ totals.commission_total | default(totals.commission) | default('0.00') }}</span>
+      </div>
+      <div class="summary-cell">
+        <span class="s-label">Luggage</span>
+        <span class="s-value">{{ totals.luggage | default(totals.luggage_total) | default('0.00') }}</span>
+      </div>
+      <div class="summary-cell">
+        <span class="s-label">Coolie</span>
+        <span class="s-value">{{ totals.coolie | default(totals.coolie_total) | default('0.00') }}</span>
+      </div>
+    </div>
+    <div class="summary-row">
+      <div class="summary-cell">
+        <span class="s-label">Total</span>
+        <span class="s-value">{{ totals.gross_total }}</span>
+      </div>
+      <div class="summary-cell">
+        <span class="s-label">Net Amount</span>
+        <span class="s-value">{{ totals.net_total }}</span>
+      </div>
+      <div class="summary-cell">
+        <span class="s-label">Paid</span>
+        <span class="s-value">{{ totals.paid_total }}</span>
+      </div>
+    </div>
+  </div>
+
+</div>
+</div>
+
+<!-- Print Button (hidden when printing) -->
+<div class="no-print" style="text-align:center; margin:20px 0;">
+  <button onclick="window.__printed = true; window.print();" style="padding:10px 30px; font-size:14px; background-color:#4CAF50; color:white; border:none; border-radius:5px; cursor:pointer; font-weight:bold;">
+    🖨️ Print Report
+  </button>
+</div>
+
+<script>
+  (function(){
+    if (window.__ledger_auto_print_installed) return;
+    window.__ledger_auto_print_installed = true;
+    window.addEventListener('load', function() {
+      setTimeout(function() {
+        if (!window.__printed) { window.__printed = true; window.print(); }
+      }, 500);
+    });
+  })();
+</script>
+</body>
+</html>

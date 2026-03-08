@@ -1,0 +1,2393 @@
+import React, { useState, useMemo, useEffect, useRef, useCallback } from 'react';
+import useAuth from './hooks/useAuth';
+import AuthTabs from './components/shared/AuthTabs';
+import { useKeyboardNavigation } from './hooks/useKeyboardNavigation';
+import { useEnterController } from './hooks/useEnterController';
+import { useERPEnterNavigation } from './hooks/useERPEnterNavigation';
+import MasterAdminDashboard from './components/admin/MasterAdminDashboard';
+import { Flower2, Receipt, FolderPlus, PackagePlus, Users, Plus, Trash2, Save, UserPlus, Check, X, ChevronDown, Calculator, Sparkles, Monitor, Database, Activity, ArrowRight, Truck, Clock, List, ChevronLeft, ChevronRight, Info, AlertCircle, CheckCircle2, XCircle, Printer, Search, Edit2, MessageSquare, FileText, LayoutPanelTop, BarChart3, Settings2, Play, MoreHorizontal, WalletCards, UserCheck, History, Landmark, ArrowDownToLine, ArrowUpFromLine, Coins, ArrowDownRight, ArrowUpRight, FileBarChart, Layers, Send, Smartphone, Calendar, Percent, Loader2 } from 'lucide-react';
+import SearchableSelect from './components/shared/SearchableSelect';
+import DailyTransactionsView from './components/transactions/DailyTransactionsView';
+import Toast from './components/shared/Toast';
+import { api } from './utils/api';
+import ReportsWindow from './components/reports/ReportsView';
+import DailySaleView from './components/reports/DailySaleView';
+import PartyDetailsView from './components/utility/PartyDetailsView';
+import AdvanceTrackerView from './components/utility/AdvanceTrackerView';
+import { SilkSummaryView } from './components/utility/SilkSummaryView';
+import SaalaView from './components/saala/SaalaView';
+import { GroupPattiView } from './components/utility/GroupPattiView';
+import { GroupTotalView } from './components/utility/GroupTotalView';
+import SmsView from './components/utility/SmsView';
+import SmsSingle from './components/utility/smssingle';
+import { DEFAULT_STATES, resetComponentState } from './utils/stateManager';
+
+// --- SHARED UI COMPONENTS ---
+
+// ...existing code...
+
+// --- CORE FUNCTIONAL MODULES ---
+
+function GroupCustomerRegistryForm({ title = 'ADD GROUP', initialTab = 'group', groups, setGroups, customers, setCustomers, onCancel, showNotify }) {
+  const [tab, setTab] = useState(initialTab);
+  const [groupName, setGroupName] = useState('');
+  const [groupError, setGroupError] = useState('');
+  const [custForm, setCustForm] = useState({ groupName: '', name: '', contact: '', address: '' });
+  const [custError, setCustError] = useState('');
+  const [phoneError, setPhoneError] = useState('');
+
+  // Check if group name already exists (case-insensitive)
+  const checkGroupExists = (name) => {
+    if (!name) return false;
+    const lowerName = name.toLowerCase().trim();
+    return groups.some(g => g.name.toLowerCase().trim() === lowerName);
+  };
+
+  // Check if customer name already exists in the selected group (case-insensitive)
+  const checkCustomerExists = (name, groupName) => {
+    if (!name || !groupName) return false;
+    const lowerName = name.toLowerCase().trim();
+    const lowerGroup = groupName.toLowerCase().trim();
+    return customers.some(c => 
+      c.name.toLowerCase().trim() === lowerName && 
+      c.group.toLowerCase().trim() === lowerGroup
+    );
+  };
+
+  const addGroup = async () => {
+    setGroupError('');
+    const name = String(groupName || '').trim();
+    if (!name) {
+      setGroupError('Enter group name');
+      showNotify?.('Group add failed: Enter group name', 'error');
+      return;
+    }
+    
+    // Check for duplicate
+    if (checkGroupExists(name)) {
+      setGroupError('Group already exists.');
+      showNotify?.('Group already exists.', 'error');
+      return;
+    }
+    
+    try {
+      const created = await api.createGroup(name);
+      setGroups(prev => [...prev, created]);
+      setGroupName('');
+      showNotify?.('Group added successfully', 'success');
+      setTimeout(() => {
+        document.querySelector('input[placeholder="Enter group name"]')?.focus();
+      }, 100);
+    } catch (e) {
+      setGroupError(e.message);
+      showNotify?.(`Group add failed: ${e.message}`, 'error');
+    }
+  };
+
+  const validatePhoneNumber = (phone) => {
+    // Remove any non-digit characters
+    const digitsOnly = phone.replace(/\D/g, '');
+    // Check if exactly 10 digits
+    if (digitsOnly.length > 0 && digitsOnly.length !== 10) {
+      return false;
+    }
+    return true;
+  };
+
+  const addCustomer = async () => {
+    setCustError('');
+    setPhoneError('');
+    
+    const groupName = String(custForm.groupName || '').trim();
+    const name = String(custForm.name || '').trim();
+    const phone = String(custForm.contact || '').trim();
+    
+    if (!groupName) {
+      setCustError('Select group');
+      showNotify?.('Customer add failed: Select group', 'error');
+      return;
+    }
+    if (!name) {
+      setCustError('Enter customer name');
+      showNotify?.('Customer add failed: Enter customer name', 'error');
+      return;
+    }
+    
+    // Validate phone number (must be exactly 10 digits)
+    if (phone && !validatePhoneNumber(phone)) {
+      setPhoneError('Please enter a valid 10-digit phone number.');
+      showNotify?.('Customer add failed: Invalid phone number', 'error');
+      document.querySelector('[data-enter="3"]')?.focus();
+      return;
+    }
+    
+    const groupId = groups.find(g => g.name === groupName)?.id;
+    try {
+      const created = await api.createCustomer({
+        name,
+        groupId,
+        contact: custForm.contact,
+        address: custForm.address,
+      });
+      setCustomers(prev => [...prev, { id: created.id, group: groupName, name: created.name, contact: created.contact, address: created.address }]);
+      setCustForm({ groupName: custForm.groupName, name: '', contact: '', address: '' });
+      showNotify?.('Customer added successfully', 'success');
+      setTimeout(() => {
+        document.querySelector('[data-enter="2"]')?.focus();
+      }, 100);
+    } catch (e) {
+      setCustError(e.message);
+      showNotify?.(`Customer add failed: ${e.message}`, 'error');
+    }
+  };
+
+  return (
+    <div className="flex-1 flex flex-col h-full bg-gradient-to-br from-slate-50 to-slate-100 overflow-hidden">
+      <div className="bg-gradient-to-r from-[#5B55E6] to-[#4A44D0] px-5 py-3 flex justify-between items-center text-white shrink-0 shadow-xl rounded-b-xl">
+        <h1 className="text-base font-bold uppercase flex items-center gap-2.5 tracking-wider"><FolderPlus className="w-5 h-5 text-white" /> {String(title)}</h1>
+        <button data-action="secondary" onClick={onCancel} className="p-1.5 rounded-lg hover:bg-white/20 transition-all"><X className="w-5 h-5" /></button>
+      </div>
+
+      <div className="p-6 flex-1 overflow-auto">
+        <div className="max-w-[760px] mx-auto bg-white border border-slate-200 shadow-xl rounded-2xl overflow-hidden">
+          <div className="bg-gradient-to-r from-slate-50 to-slate-100 border-b border-slate-200 px-5 py-3 flex gap-3 rounded-t-2xl">
+            <button type="button" onClick={() => setTab('group')} className={`px-5 h-10 text-sm font-bold uppercase border rounded-lg transition-all shadow-sm ${tab === 'group' ? 'bg-gradient-to-r from-[#5B55E6] to-[#4A44D0] text-white border-[#4A44D0] shadow-md' : 'bg-white text-slate-600 border-slate-300 hover:bg-[#5B55E6]/10 hover:border-[#5B55E6] hover:text-[#5B55E6]'}`} data-enter-index="0">Group Addition</button>
+            <button type="button" onClick={() => setTab('customer')} className={`px-5 h-10 text-sm font-bold uppercase border rounded-lg transition-all shadow-sm ${tab === 'customer' ? 'bg-gradient-to-r from-[#5B55E6] to-[#4A44D0] text-white border-[#4A44D0] shadow-md' : 'bg-white text-slate-600 border-slate-300 hover:bg-[#5B55E6]/10 hover:border-[#5B55E6] hover:text-[#5B55E6]'}`} data-enter-index="0">Customer Addition</button>
+          </div>
+
+          <div className="p-6">
+        {tab === 'group' && (
+          <div className="space-y-6">
+            <div className="bg-slate-50/50 p-4 rounded-xl border border-slate-200">
+              <label className="text-xs font-bold uppercase text-slate-600 tracking-widest block mb-2">Group Name</label>
+              <input
+                type="text"
+                className={`w-full border border-rose-200 rounded-lg px-4 py-3 text-sm font-medium bg-white outline-none focus:border-rose-500 focus:ring-2 focus:ring-rose-500/20 shadow-sm hover:shadow-md transition-all ${groupError ? 'border-red-500' : ''}`}
+                style={{height: '46px'}}
+                value={groupName}
+                onChange={e => { 
+                  setGroupName(e.target.value); 
+                  setGroupError('');
+                }}
+                placeholder="Enter group name"
+                data-enter="1"
+                onKeyDown={e => {
+                  if (e.key === 'Enter') { e.preventDefault(); document.querySelector('[data-enter="2"]')?.focus(); }
+                }}
+              />
+              {groupError && <div className="text-xs text-red-600 mt-1 font-semibold">{groupError}</div>}
+            </div>
+            <button
+              data-action="primary"
+              onClick={addGroup}
+              className="w-full bg-gradient-to-r from-[#5B55E6] to-[#4A44D0] text-white py-3 font-bold uppercase text-sm shadow-lg hover:from-[#4A44D0] hover:to-[#3A34C0] rounded-xl transition-all hover:shadow-xl active:translate-y-0.5"
+              style={{height: '48px'}}
+              data-enter="2"
+              onKeyDown={e => { if (e.key === 'Enter') { e.preventDefault(); document.querySelector('[data-enter="1"]')?.focus(); } }}
+            >Add Group</button>
+          </div>
+        )}
+
+        {tab === 'customer' && (
+          <div className="space-y-6">
+            <div className="bg-slate-50/50 p-4 rounded-xl border border-slate-200">
+              <div className="relative">
+                <SearchableSelect
+                  label="Target Group"
+                  options={groups.map(g => g.name)}
+                  value={custForm.groupName}
+                  onChange={(val) => { setCustForm({ ...custForm, groupName: val }); setCustError(''); }}
+                  placeholder="Select group"
+                  data-enter="1"
+                  className="focus:border-rose-500 focus:ring-rose-500/20 rounded-lg shadow-sm hover:shadow-md transition-all border-rose-200"
+                  onKeyDown={e => {
+                    if (e.key === 'Enter') { e.preventDefault(); document.querySelector('[data-enter="2"]')?.focus(); }
+                  }}
+                />
+                <div className="absolute right-3 top-8 text-slate-700">
+                  <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
+                  </svg>
+                </div>
+              </div>
+            </div>
+            <div className="bg-slate-50/50 p-4 rounded-xl border border-slate-200">
+              <label className="text-xs font-bold uppercase text-slate-600 tracking-widest block mb-2">Customer Name</label>
+              <input
+                type="text"
+                className={`w-full border border-rose-200 rounded-lg px-4 py-3 text-sm font-medium bg-white outline-none focus:border-rose-500 focus:ring-2 focus:ring-rose-500/20 shadow-sm hover:shadow-md transition-all ${custError && !custForm.name ? 'border-red-500' : ''}`}
+                style={{height: '46px'}}
+                value={custForm.name}
+                onChange={e => { setCustForm({ ...custForm, name: e.target.value }); setCustError(''); }}
+                placeholder="Enter customer name"
+                data-enter="2"
+                onKeyDown={e => {
+                  if (e.key === 'Enter') { e.preventDefault(); document.querySelector('[data-enter="3"]')?.focus(); }
+                }}
+              />
+              {custError && !custForm.name && <div className="text-xs text-red-600 mt-1 font-semibold">{custError}</div>}
+            </div>
+            <div className="grid grid-cols-2 gap-4">
+              <div className="bg-slate-50/50 p-4 rounded-xl border border-slate-200">
+                <label className="text-xs font-bold uppercase text-slate-600 tracking-widest block mb-2">Phone</label>
+                <input
+                  type="text"
+                  className={`w-full border border-rose-200 rounded-lg px-4 py-3 text-sm font-medium bg-white outline-none focus:border-rose-500 focus:ring-2 focus:ring-rose-500/20 shadow-sm hover:shadow-md transition-all ${phoneError ? 'border-red-500' : ''}`}
+                  style={{height: '46px'}}
+                  value={custForm.contact}
+                  onChange={e => {
+                    const value = e.target.value;
+                    // Only allow digits
+                    if (/^\d*$/.test(value)) {
+                      setCustForm({ ...custForm, contact: value });
+                      setPhoneError('');
+                    }
+                  }}
+                  placeholder="Phone number (10 digits)"
+                  data-enter="3"
+                  onKeyDown={e => { if (e.key === 'Enter') { e.preventDefault(); document.querySelector('[data-enter="4"]')?.focus(); } }}
+                  maxLength={10}
+                />
+                {phoneError && <div className="text-xs text-red-600 mt-1 font-semibold">{phoneError}</div>}
+              </div>
+              <div className="bg-slate-50/50 p-4 rounded-xl border border-slate-200">
+                <label className="text-xs font-bold uppercase text-slate-600 tracking-widest block mb-2">Address</label>
+                <input
+                  type="text"
+                  className="w-full border border-rose-200 rounded-lg px-4 py-3 text-sm font-medium bg-white outline-none focus:border-rose-500 focus:ring-2 focus:ring-rose-500/20 shadow-sm hover:shadow-md transition-all"
+                  style={{height: '46px'}}
+                  value={custForm.address}
+                  onChange={e => setCustForm({ ...custForm, address: e.target.value })}
+                  placeholder="Address"
+                  data-enter="4"
+                  onKeyDown={e => { if (e.key === 'Enter') { e.preventDefault(); document.querySelector('[data-enter="5"]')?.focus(); } }}
+                />
+              </div>
+            </div>
+            <button
+              data-action="primary"
+              onClick={addCustomer}
+              className="w-full bg-gradient-to-r from-[#5B55E6] to-[#4A44D0] text-white py-3 font-bold uppercase text-sm shadow-lg hover:from-[#4A44D0] hover:to-[#3A34C0] rounded-xl transition-all hover:shadow-xl active:translate-y-0.5"
+              style={{height: '48px'}}
+              data-enter="5"
+              onKeyDown={e => { 
+                if (e.key === 'Enter') { 
+                  e.preventDefault(); 
+                  addCustomer(); 
+                } 
+              }}
+            >Add Customer</button>
+            {custError && custForm.name && <div className="text-xs text-red-600 mt-2 font-semibold">{custError}</div>}
+          </div>
+        )}
+          </div>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+function DeleteGroupCustomer({ groups, setGroups, customers, setCustomers, onCancel, showNotify }) {
+  const [selectedGroup, setSelectedGroup] = useState('');
+  const [selectedCustomer, setSelectedCustomer] = useState('');
+  const [error, setError] = useState('');
+
+  // Filter customers by selected group
+  const filteredCustomers = useMemo(() => {
+    if (!selectedGroup) return [];
+    return customers.filter(c => c.group === selectedGroup);
+  }, [customers, selectedGroup]);
+
+  const handleDeleteCustomer = async () => {
+    if (!selectedGroup) {
+      setError('Please select a group first.');
+      showNotify?.('Please select a group first.', 'error');
+      return;
+    }
+    if (!selectedCustomer) {
+      setError('Please select a customer to delete.');
+      showNotify?.('Please select a customer to delete.', 'error');
+      return;
+    }
+
+    const confirmed = window.confirm('Are you sure you want to delete this customer?');
+    if (!confirmed) return;
+
+    try {
+      // Find customer by name and group (case-insensitive)
+      const customerToDelete = customers.find(
+        c => c.name.toLowerCase().trim() === selectedCustomer.toLowerCase().trim() &&
+             c.group.toLowerCase().trim() === selectedGroup.toLowerCase().trim()
+      );
+
+      if (!customerToDelete) {
+        showNotify?.('Customer not found.', 'error');
+        return;
+      }
+
+      await api.deleteCustomer(customerToDelete.id);
+      setCustomers(prev => prev.filter(c => c.id !== customerToDelete.id));
+      setSelectedCustomer('');
+      showNotify?.('Customer deleted successfully.', 'success');
+    } catch (e) {
+      // Handle specific error messages from backend
+      let errorMsg = 'Unable to delete customer. Please try again.';
+      
+      if (e.message && e.message.includes('transaction history')) {
+        errorMsg = 'Cannot delete customer - has transaction history.';
+      } else if (e.message && e.message.includes('not found')) {
+        errorMsg = 'Customer not found in database.';
+      } else if (e.status === 404) {
+        errorMsg = 'Customer not found.';
+      }
+      
+      showNotify?.(errorMsg, 'error');
+      console.error('Delete customer error:', e);
+    }
+  };
+
+  const handleDeleteGroup = async () => {
+    if (!selectedGroup) {
+      setError('Please select a group to delete.');
+      showNotify?.('Please select a group to delete.', 'error');
+      return;
+    }
+
+    const confirmed = window.confirm('Are you sure you want to delete this group and all customers inside it?');
+    if (!confirmed) return;
+
+    try {
+      // Find group by name
+      const groupToDelete = groups.find(g => g.name === selectedGroup);
+      
+      if (!groupToDelete) {
+        showNotify?.('Group not found.', 'error');
+        return;
+      }
+
+      // Check if group has customers
+      const groupCustomers = customers.filter(c => c.group === selectedGroup);
+      if (groupCustomers.length > 0) {
+        const confirmWithCustomers = window.confirm(
+          `This group has ${groupCustomers.length} customer(s). Deleting the group will also delete all customers inside it. Continue?`
+        );
+        if (!confirmWithCustomers) return;
+
+        // Delete all customers in the group first
+        for (const customer of groupCustomers) {
+          try {
+            await api.deleteCustomer(customer.id);
+          } catch (err) {
+            console.error('Failed to delete customer:', err);
+            // If customer has transactions, skip and continue with others
+            if (err.message && err.message.includes('transaction')) {
+              console.warn(`Skipping customer ${customer.name} - has transactions`);
+            }
+          }
+        }
+        setCustomers(prev => prev.filter(c => c.group !== selectedGroup));
+      }
+
+      // Delete the group
+      await api.deleteGroup(groupToDelete.id);
+      setGroups(prev => prev.filter(g => g.id !== groupToDelete.id));
+      setSelectedGroup('');
+      setSelectedCustomer('');
+      showNotify?.('Group and all its customers deleted successfully.', 'success');
+    } catch (e) {
+      // Handle specific error messages from backend
+      let errorMsg = 'Unable to delete group. Please try again.';
+      
+      if (e.message && e.message.includes('transaction history')) {
+        errorMsg = 'Cannot delete group - contains customers with transaction history.';
+      } else if (e.message && e.message.includes('not found')) {
+        errorMsg = 'Group not found in database.';
+      } else if (e.status === 404) {
+        errorMsg = 'Group not found.';
+      }
+      
+      showNotify?.(errorMsg, 'error');
+      console.error('Delete group error:', e);
+    }
+  };
+
+  return (
+    <div className="flex-1 flex flex-col h-full bg-gradient-to-br from-slate-50 to-slate-100 overflow-hidden">
+      <div className="bg-gradient-to-r from-[#5B55E6] to-[#4A44D0] px-5 py-3 flex justify-between items-center text-white shrink-0 shadow-xl rounded-b-xl">
+        <h1 className="text-base font-bold uppercase flex items-center gap-2.5 tracking-wider"><Trash2 className="w-5 h-5 text-white" /> Delete Customer / Group</h1>
+        <button data-action="secondary" onClick={onCancel} className="p-1.5 rounded-lg hover:bg-white/20 transition-all"><X className="w-5 h-5" /></button>
+      </div>
+
+      <div className="p-6 flex-1 overflow-auto">
+        <div className="max-w-[760px] mx-auto bg-white border border-slate-200 shadow-xl rounded-2xl overflow-hidden">
+          <div className="p-6 space-y-6">
+            {/* Select Group */}
+            <div className="bg-slate-50/50 p-4 rounded-xl border border-slate-200">
+              <div className="relative">
+                <SearchableSelect
+                  label="Select Group"
+                  options={groups.map(g => g.name)}
+                  value={selectedGroup}
+                  onChange={(val) => { 
+                    setSelectedGroup(val); 
+                    setSelectedCustomer('');
+                    setError('');
+                  }}
+                  placeholder="Type to search groups..."
+                  data-enter="1"
+                  className="focus:border-rose-500 focus:ring-rose-500/20 rounded-lg shadow-sm hover:shadow-md transition-all border-rose-200"
+                  onKeyDown={e => {
+                    if (e.key === 'Enter') { e.preventDefault(); document.querySelector('[data-enter="2"]')?.focus(); }
+                  }}
+                />
+                <div className="absolute right-3 top-8 text-slate-700">
+                  <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
+                  </svg>
+                </div>
+              </div>
+              {error && !selectedGroup && <div className="text-xs text-red-600 mt-2 font-semibold">{error}</div>}
+            </div>
+
+            {/* Select Customer */}
+            <div className="bg-slate-50/50 p-4 rounded-xl border border-slate-200">
+              <div className="relative">
+                <SearchableSelect
+                  label="Select Customer"
+                  options={filteredCustomers.map(c => c.name)}
+                  value={selectedCustomer}
+                  onChange={(val) => { 
+                    setSelectedCustomer(val); 
+                    setError('');
+                  }}
+                  placeholder={selectedGroup ? "Type to search customers..." : "Select a group first"}
+                  disabled={!selectedGroup}
+                  data-enter="2"
+                  className="focus:border-rose-500 focus:ring-rose-500/20 rounded-lg shadow-sm hover:shadow-md transition-all border-rose-200"
+                  onKeyDown={e => {
+                    if (e.key === 'Enter') { e.preventDefault(); handleDeleteCustomer(); }
+                  }}
+                />
+                <div className="absolute right-3 top-8 text-slate-700">
+                  <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
+                  </svg>
+                </div>
+              </div>
+              {error && !selectedCustomer && selectedGroup && <div className="text-xs text-red-600 mt-2 font-semibold">{error}</div>}
+            </div>
+
+            {/* Action Buttons */}
+            <div className="grid grid-cols-2 gap-4">
+              <button
+                type="button"
+                onClick={handleDeleteCustomer}
+                disabled={!selectedCustomer || !selectedGroup}
+                className="bg-gradient-to-r from-rose-600 to-rose-700 text-white py-3 font-bold uppercase text-sm shadow-lg hover:from-rose-700 hover:to-rose-800 rounded-xl transition-all hover:shadow-xl active:translate-y-0.5 disabled:opacity-50 disabled:cursor-not-allowed"
+                style={{height: '48px'}}
+                title={!selectedCustomer || !selectedGroup ? 'Please select both group and customer' : 'Delete selected customer'}
+              >
+                <Trash2 className="w-4 h-4 inline mr-2" />
+                Delete Customer
+              </button>
+              <button
+                type="button"
+                onClick={handleDeleteGroup}
+                disabled={!selectedGroup}
+                className="bg-gradient-to-r from-orange-600 to-orange-700 text-white py-3 font-bold uppercase text-sm shadow-lg hover:from-orange-700 hover:to-orange-800 rounded-xl transition-all hover:shadow-xl active:translate-y-0.5 disabled:opacity-50 disabled:cursor-not-allowed"
+                style={{height: '48px'}}
+                title={!selectedGroup ? 'Please select a group' : 'Delete entire group with all customers'}
+              >
+                <Trash2 className="w-4 h-4 inline mr-2" />
+                Delete Entire Group
+              </button>
+            </div>
+
+            {/* Info Box */}
+            <div className="bg-blue-50 border border-blue-200 rounded-xl p-4">
+              <div className="flex items-start gap-3">
+                <Info className="w-5 h-5 text-blue-600 shrink-0 mt-0.5" />
+                <div className="text-sm text-blue-800">
+                  <p className="font-semibold mb-1">Deletion Information:</p>
+                  <ul className="list-disc list-inside space-y-1 text-blue-700">
+                    <li><strong>Delete Customer:</strong> Removes only the selected customer from the group</li>
+                    <li><strong>Delete Entire Group:</strong> Removes the group and ALL customers inside it</li>
+                    <li>This action cannot be undone</li>
+                  </ul>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+function ItemRegistryForm({ form, setForm, onSave, onCancel, showNotify }) {
+  const handleKeyDown = (e, nextIndex) => {
+    if (e.key === 'Enter') {
+      e.preventDefault();
+      document.querySelector(`[data-enter-index="${nextIndex}"]`)?.focus();
+    }
+  };
+
+  const handleAddItem = async () => {
+    if (!form.itemCode.trim()) {
+      showNotify?.('Item add failed: Enter item code', 'error');
+      document.querySelector('[data-enter-index="1"]')?.focus();
+      return;
+    }
+    
+    if (!form.itemName.trim()) {
+      showNotify?.('Item add failed: Enter product name', 'error');
+      document.querySelector('[data-enter-index="2"]')?.focus();
+      return;
+    }
+    
+    try {
+      await onSave();
+      showNotify?.('Item added to inventory successfully', 'success');
+      // Clear the form after successful save
+      setForm({ itemCode: '', itemName: '' });
+      // Focus back to the item code field
+      setTimeout(() => {
+        document.querySelector('[data-enter-index="1"]')?.focus();
+      }, 100);
+    } catch (error) {
+      showNotify?.(`Item add failed: ${error.message || 'Unknown error'}`, 'error');
+    }
+  };
+
+  return (
+    <div className="flex-1 flex flex-col h-full bg-gradient-to-br from-slate-50 to-slate-100 overflow-hidden">
+      <div className="bg-gradient-to-r from-[#5B55E6] to-[#4A44D0] px-5 py-3 flex justify-between items-center text-white shrink-0 shadow-xl rounded-b-xl">
+        <h1 className="text-base font-bold uppercase flex items-center gap-2.5 tracking-wider"><PackagePlus className="w-5 h-5 text-white" /> NEW ITEM</h1>
+        <button data-action="secondary" onClick={onCancel} className="p-1.5 rounded-lg hover:bg-white/20 transition-all"><X className="w-5 h-5" /></button>
+      </div>
+      <div className="p-6 flex-1 overflow-auto">
+        <div className="max-w-[560px] mx-auto bg-white border border-slate-200 shadow-xl rounded-2xl p-6 space-y-6">
+          <div className="bg-slate-50/50 p-4 rounded-xl border border-slate-200">
+            <label className="text-xs font-bold uppercase text-slate-600 tracking-widest block mb-2">Code</label>
+            <input 
+              type="text" 
+              className="w-full border border-rose-200 rounded-lg px-4 py-3 text-sm font-medium bg-white outline-none focus:border-rose-500 focus:ring-2 focus:ring-rose-500/20 shadow-sm hover:shadow-md transition-all" 
+              style={{height: '46px'}} 
+              value={form.itemCode} 
+              onChange={e => setForm({ ...form, itemCode: e.target.value })} 
+              placeholder="Enter item code" 
+              data-enter-index="1" 
+              onKeyDown={(e) => handleKeyDown(e, 2)}
+            />
+          </div>
+          <div className="bg-slate-50/50 p-4 rounded-xl border border-slate-200">
+            <label className="text-xs font-bold uppercase text-slate-600 tracking-widest block mb-2">Product Name</label>
+            <input 
+              type="text" 
+              className="w-full border border-rose-200 rounded-lg px-4 py-3 text-sm font-medium bg-white outline-none focus:border-rose-500 focus:ring-2 focus:ring-rose-500/20 shadow-sm hover:shadow-md transition-all" 
+              style={{height: '46px'}} 
+              value={form.itemName} 
+              onChange={e => setForm({...form, itemName: e.target.value})} 
+              placeholder="Enter product name" 
+              data-enter-index="2" 
+              onKeyDown={(e) => {
+                if (e.key === 'Enter') {
+                  e.preventDefault();
+                  handleAddItem();
+                }
+              }}
+            />
+          </div>
+          <button 
+            data-action="primary" 
+            onClick={handleAddItem}
+            className="w-full bg-gradient-to-r from-[#5B55E6] to-[#4A44D0] text-white py-3 font-bold uppercase text-sm shadow-lg hover:from-[#4A44D0] hover:to-[#3A34C0] rounded-xl transition-all hover:shadow-xl active:translate-y-0.5" 
+            style={{height: '48px'}} 
+            data-enter-index="3"
+            onKeyDown={(e) => {
+              if (e.key === 'Enter') {
+                e.preventDefault();
+                handleAddItem();
+              }
+            }}
+          >Add to Inventory</button>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+function GroupAdvanceView({ groups, customers, advanceStore, onCancel }) {
+  const data = useMemo(() => {
+    return groups.map(g => {
+      const groupCustomers = customers.filter(c => c.group === g.name);
+      const totalBalance = groupCustomers.reduce((acc, c) => acc + (advanceStore[c.name]?.balance || 0), 0);
+      return { name: g.name, count: groupCustomers.length, balance: totalBalance };
+    });
+  }, [groups, customers, advanceStore]);
+
+  return (
+    <div className="flex-1 flex flex-col h-full bg-slate-100 overflow-hidden">
+      <div className="bg-slate-800 px-5 py-3 flex justify-between items-center text-white shrink-0 shadow-lg">
+        <h1 className="text-base font-bold uppercase flex items-center gap-2.5 tracking-wide"><WalletCards className="w-5 h-5 text-primary-400" /> GROUP WISE ADVANCE</h1>
+        <button data-action="secondary" onClick={onCancel} className="p-1.5 rounded hover:bg-white/10 transition-colors"><X className="w-5 h-5" /></button>
+      </div>
+      <div className="p-5 flex-1 overflow-auto">
+        <table className="w-full bg-white border border-slate-200 shadow-card text-sm text-left rounded-sm overflow-hidden">
+          <thead className="bg-slate-50 sticky top-0 uppercase font-semibold text-xs z-10 border-b border-slate-200">
+            <tr><th className="px-4 py-3.5 text-slate-600">Group Name</th><th className="px-4 py-3.5 text-center text-slate-600">Customers</th><th className="px-4 py-3.5 text-right text-slate-600">Advance Aggregate</th></tr>
+          </thead>
+          <tbody>
+            {data.map((r, i) => (
+              <tr key={i} className="border-b border-slate-100 hover:bg-slate-50 transition-colors">
+                <td className="px-4 py-3.5 font-semibold text-slate-800">{String(r.name)}</td>
+                <td className="px-4 py-3.5 text-center text-slate-500">{String(r.count)}</td>
+                <td className="px-4 py-3.5 text-right font-bold text-emerald-600">₹{r.balance.toLocaleString()}</td>
+              </tr>
+            ))}
+          </tbody>
+        </table>
+      </div>
+    </div>
+  );
+}
+
+function GroupPaymentView({ groups, customers, ledgerStore, onCancel }) {
+  const data = useMemo(() => {
+    return groups.map(g => {
+      const groupCustomers = customers.filter(c => c.group === g.name);
+      const totalPaid = groupCustomers.reduce((acc, c) => {
+        const entries = ledgerStore[c.name] || [];
+        return acc + entries.reduce((sum, e) => sum + Number(e.paidAmt || 0), 0);
+      }, 0);
+      return { name: g.name, count: groupCustomers.length, paid: totalPaid };
+    });
+  }, [groups, customers, ledgerStore]);
+
+  return (
+    <div className="flex-1 flex flex-col h-full bg-slate-100 overflow-hidden">
+      <div className="bg-slate-800 px-5 py-3 flex justify-between items-center text-white shrink-0 shadow-lg">
+        <h1 className="text-base font-bold uppercase flex items-center gap-2.5 tracking-wide"><Coins className="w-5 h-5 text-primary-400" /> GROUP WISE PAYMENT</h1>
+        <button data-action="secondary" onClick={onCancel} className="p-1.5 rounded hover:bg-white/10 transition-colors"><X className="w-5 h-5" /></button>
+      </div>
+      <div className="p-5 flex-1 overflow-auto">
+        <table className="w-full bg-white border border-slate-200 shadow-card text-sm text-left rounded-sm overflow-hidden">
+          <thead className="bg-slate-50 sticky top-0 uppercase font-semibold text-xs z-10 border-b border-slate-200">
+            <tr><th className="px-4 py-3.5 text-slate-600">Group Name</th><th className="px-4 py-3.5 text-center text-slate-600">Customers</th><th className="px-4 py-3.5 text-right text-slate-600">Payment Aggregate</th></tr>
+          </thead>
+          <tbody>
+            {data.map((r, i) => (
+              <tr key={i} className="border-b border-slate-100 hover:bg-slate-50 transition-colors">
+                <td className="px-4 py-3.5 font-semibold text-slate-800">{String(r.name)}</td>
+                <td className="px-4 py-3.5 text-center text-slate-500">{String(r.count)}</td>
+                <td className="px-4 py-3.5 text-right font-bold text-primary-600">₹{r.paid.toLocaleString()}</td>
+              </tr>
+            ))}
+          </tbody>
+        </table>
+      </div>
+    </div>
+  );
+}
+
+
+
+function UtilityPlaceholderView({ title, onCancel }) {
+  return (
+    <div className="flex-1 flex flex-col h-full bg-slate-100 overflow-hidden">
+      <div className="bg-slate-800 px-5 py-3 flex justify-between items-center text-white shrink-0 shadow-lg">
+        <h1 className="text-base font-bold uppercase flex items-center gap-2.5 tracking-wide"><Settings2 className="w-5 h-5 text-primary-400" /> {String(title)}</h1>
+        <button data-action="secondary" onClick={onCancel} className="p-1.5 rounded hover:bg-white/10 transition-colors"><X className="w-5 h-5" /></button>
+      </div>
+      <div className="p-6 flex-1 overflow-auto">
+        <div className="max-w-[720px] mx-auto bg-white border border-slate-200 shadow-card rounded-sm p-8">
+          <div className="text-sm font-medium text-slate-600">This screen is not implemented yet.</div>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+
+
+function VehicleView({ vehicles, setVehicles, onCancel, showNotify }) {
+  const [newVehicle, setNewVehicle] = useState('');
+  
+  const handleAdd = async () => {
+    const name = String(newVehicle || '').trim();
+    if (!name) {
+      showNotify?.('Vehicle registration failed: Enter vehicle name', 'error');
+      document.querySelector('[data-enter-index="1"]')?.focus();
+      return;
+    }
+    try {
+      const created = await api.createVehicle(name);
+      setVehicles([...vehicles, created]);
+      setNewVehicle('');
+      showNotify?.('Vehicle registered successfully', 'success');
+      
+      // Focus back to the vehicle name field to add another vehicle
+      setTimeout(() => {
+        document.querySelector('[data-enter-index="1"]')?.focus();
+      }, 100);
+    } catch (e) {
+      showNotify?.(`Vehicle registration failed: ${e.message}`, 'error');
+    }
+  };
+  
+  const handleKeyDown = (e) => {
+    if (e.key === 'Enter') {
+      e.preventDefault();
+      handleAdd();
+    }
+  };
+  
+  return (
+    <div className="flex-1 flex flex-col h-full bg-gradient-to-br from-slate-50 to-slate-100 overflow-hidden">
+      <div className="bg-gradient-to-r from-[#5B55E6] to-[#4A44D0] px-5 py-3 flex justify-between items-center text-white shrink-0 shadow-xl rounded-b-xl"><h1 className="text-base font-bold uppercase flex items-center gap-2.5 tracking-wider"><Truck className="w-5 h-5 text-white" /> EXTRA VEHICLE MANAGEMENT</h1><button data-action="secondary" onClick={onCancel} className="p-1.5 rounded-lg hover:bg-white/20 transition-all"><X className="w-5 h-5" /></button></div>
+      <div className="flex-1 flex p-6 gap-6 overflow-hidden">
+        <div className="w-80 bg-white border border-slate-200 shadow-lg rounded-2xl p-5 h-fit">
+          <h3 className="text-sm font-bold uppercase text-slate-600 mb-5 tracking-widest flex items-center gap-2"><Truck className="w-4 h-4 text-slate-400" /> Add Vehicle</h3>
+          <div className="space-y-5">
+            <div>
+              <label className="text-xs font-bold uppercase text-slate-600 tracking-widest block mb-2">Vehicle Name / Plate</label>
+              <input 
+                type="text" 
+                className="w-full border border-rose-200 rounded-lg px-4 py-3 text-sm font-medium bg-white outline-none focus:border-rose-500 focus:ring-2 focus:ring-rose-500/20 shadow-sm hover:shadow-md transition-all" 
+                style={{height: '46px'}} 
+                value={newVehicle} 
+                onChange={e => setNewVehicle(e.target.value)} 
+                placeholder="Enter vehicle name or plate" 
+                data-enter-index="1" 
+                onKeyDown={handleKeyDown}
+              />
+            </div>
+            <button 
+              data-action="primary" 
+              onClick={handleAdd}
+              className="w-full bg-gradient-to-r from-[#5B55E6] to-[#4A44D0] text-white py-3 font-bold uppercase text-sm shadow-lg hover:from-[#4A44D0] hover:to-[#3A34C0] rounded-xl transition-all hover:shadow-xl active:translate-y-0.5" 
+              style={{height: '48px'}} 
+              data-enter-index="2"
+              onKeyDown={handleKeyDown}
+            >Register</button>
+          </div>
+        </div>
+        <div className="flex-1 bg-white border border-slate-200 shadow-lg rounded-2xl overflow-hidden flex flex-col">
+          <div className="bg-gradient-to-r from-slate-50 to-slate-100 px-5 py-3.5 border-b border-slate-200 font-bold text-sm uppercase text-slate-700 tracking-wider">Registry List</div>
+          <div className="flex-1 overflow-auto"><table className="w-full text-left text-sm border-collapse">
+              <thead className="bg-gradient-to-r from-[#5B55E6] to-[#4A44D0] sticky top-0 uppercase font-bold text-xs text-white border-b-2 border-black/20 shadow-lg"><tr><th className="px-5 py-4 border-r border-black/10">Vehicle Description</th><th className="px-5 py-4 text-right border-r border-black/10">Action</th></tr></thead>
+              <tbody>{vehicles.map(v => (
+                <tr key={v.id} className="border-b border-black/10 hover:bg-slate-50 transition-colors group">
+                  <td className="px-5 py-4 font-semibold text-slate-800 border-r border-black/5">{String(v.name)}</td>
+                  <td className="px-5 py-4 text-right">
+                    <button 
+                      onClick={async () => {
+                        const confirmed = window.confirm('Are you sure you want to delete this vehicle?');
+                        if (!confirmed) return;
+                        try {
+                          await api.deleteVehicle(v.id);
+                          setVehicles(vehicles.filter(x => x.id !== v.id));
+                          showNotify?.('Vehicle deleted successfully', 'success');
+                        } catch (error) {
+                          showNotify?.(`Failed to delete vehicle: ${error.message}`, 'error');
+                        }
+                      }} 
+                      className="text-slate-400 hover:text-red-500 opacity-0 group-hover:opacity-100 transition-all p-1.5 rounded-lg hover:bg-red-50" 
+                      data-enter-index={3 + v.id}
+                      title="Delete Vehicle"
+                    >
+                      <Trash2 className="w-4 h-4"/>
+                    </button>
+                  </td>
+                </tr>
+              ))}</tbody>
+          </table></div>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+
+
+// --- MAIN APPLICATION SHELL ---
+
+export default function App() {
+  const auth = useAuth();
+  const { registerElement, unregisterElement } = useKeyboardNavigation();
+  
+  // Check if user is master admin
+  const isMasterAdmin = localStorage.getItem('skfs_master_admin') === 'true';
+  
+  // NOTE: Global Enter key blocker has been removed to allow proper keyboard navigation
+  
+  if (!auth.authenticated) {
+    return <AuthTabs />;
+  }
+  
+  // Show master admin dashboard if master admin is logged in
+  if (isMasterAdmin) {
+    return <MasterAdminDashboard onLogout={() => {
+      auth.logout();
+      window.location.reload();
+    }} />;
+  }
+  const [activeSection, setActiveSection] = useState('daily');
+  const [notification, setNotification] = useState({ message: '', type: 'info' });
+  const [itemForm, setItemForm] = useState({ itemCode: '', itemName: '' });
+  
+  // Track previous section to detect navigation changes
+  const prevActiveSectionRef = useRef(activeSection);
+
+  const [groupPattiForm, setGroupPattiForm] = useState({
+    fromDate: new Date().toISOString().split('T')[0],
+    toDate: new Date().toISOString().split('T')[0],
+    groupName: '',
+    commissionPct: 12,
+  });
+  const [isGroupPattiPrinting, setIsGroupPattiPrinting] = useState(false);
+  
+  // Refs for keyboard navigation in Group Patti form
+  const groupPattiFromDateRef = useRef(null);
+  const groupPattiToDateRef = useRef(null);
+  const groupPattiGroupContainerRef = useRef(null);
+  const groupPattiGroupRef = useRef(null);
+  const groupPattiCommissionRef = useRef(null);
+  const groupPattiPrintBtnRef = useRef(null);
+  const groupPattiCancelBtnRef = useRef(null);
+
+  const [groupTotalForm, setGroupTotalForm] = useState({
+    fromDate: new Date().toISOString().split('T')[0],
+    toDate: new Date().toISOString().split('T')[0],
+    groupName: '',
+  });
+  const [isGroupTotalPrinting, setIsGroupTotalPrinting] = useState(false);
+  
+
+
+  const [isItemsDailySaleRateOpen, setIsItemsDailySaleRateOpen] = useState(false);
+  const [itemsDailySaleRateForm, setItemsDailySaleRateForm] = useState({
+    itemName: '',
+    fromDate: new Date().toISOString().split('T')[0],
+    toDate: new Date().toISOString().split('T')[0],
+  });
+  const [itemsDailySaleRateRows, setItemsDailySaleRateRows] = useState([]);
+  const [isItemsDailySaleRateLoading, setIsItemsDailySaleRateLoading] = useState(false);
+  const [isItemsDailySaleRatePrinting, setIsItemsDailySaleRatePrinting] = useState(false);
+  const [itemsDailySaleRatePrintData, setItemsDailySaleRatePrintData] = useState(null);
+  
+  const [groups, setGroups] = useState([]);
+  const [customers, setCustomers] = useState([]);
+  const [catalog, setCatalog] = useState([]);
+  const [vehicles, setVehicles] = useState([]);
+  
+  const [ledgerStore, setLedgerStore] = useState({});
+  const [advanceStore, setAdvanceStore] = useState({});
+  const [saalaPeople, setSaalaPeople] = useState([]);
+  const [saalaPayments, setSaalaPayments] = useState([]);
+
+  const [customerInfo, setCustomerInfo] = useState({ groupName: '', customerName: '', address: '', contactNo: '' });
+  const [currentEntry, setCurrentEntry] = useState({ date: new Date().toISOString().split('T')[0], vehicle: '', itemCode: '', itemName: '', qty: '', rate: '', laguage: '', coolie: '', paidAmt: '', remarks: '' });
+  const [items, setItems] = useState([]);
+  const [commissionPct, setCommissionPct] = useState(12);
+  const groupRef = useRef(null);
+  const prevAuthenticatedRef = useRef(auth.authenticated);
+  // Navbar dropdown state and refs
+  const [activeDropdown, setActiveDropdown] = useState(null);
+  const [focusedMenuItem, setFocusedMenuItem] = useState(-1);
+  const dropdownMenuRefs = useRef({});
+  const navRefs = {
+    logo: useRef(null),
+    transactionMenu: useRef(null),
+    reportsMenu: useRef(null),
+    utilityMenu: useRef(null),
+    moreMenu: useRef(null)
+  };
+
+  // Redirect to daily section after login
+  useEffect(() => {
+    // Only redirect if user just became authenticated (transition from false to true)
+    if (auth.authenticated && !prevAuthenticatedRef.current) {
+      setActiveSection('daily');
+    }
+    prevAuthenticatedRef.current = auth.authenticated;
+  }, [auth.authenticated]);
+
+  const showNotify = (m, t = 'info') => { setNotification({ message: m, type: t }); setTimeout(() => setNotification({ message: '', type: 'info' }), 3000); };
+
+  useEffect(() => {
+    const handleAfter = () => {
+      setIsItemsDailySaleRatePrinting(false);
+    };
+    window.addEventListener('afterprint', handleAfter);
+    return () => window.removeEventListener('afterprint', handleAfter);
+  }, []);
+
+
+  // Close all dropdown menus when clicking outside
+  useEffect(() => {
+    const handleClickOutside = (event) => {
+      const navElement = document.querySelector('nav');
+      if (navElement && !navElement.contains(event.target)) {
+        setActiveDropdown(null);
+      }
+    };
+
+    document.addEventListener('mousedown', handleClickOutside);
+    return () => document.removeEventListener('mousedown', handleClickOutside);
+  }, []);
+
+  // Update previous section ref
+  useEffect(() => {
+    prevActiveSectionRef.current = activeSection;
+  }, [activeSection]);
+  
+  // Register navigation elements for keyboard navigation
+  useEffect(() => {
+    // Register main navigation buttons
+    if (navRefs.logo.current) registerElement('nav-logo', navRefs.logo.current, { order: 0 });
+    if (navRefs.transactionMenu.current) registerElement('nav-transaction', navRefs.transactionMenu.current, { order: 1 });
+    if (navRefs.reportsMenu.current) registerElement('nav-reports', navRefs.reportsMenu.current, { order: 2 });
+    if (navRefs.utilityMenu.current) registerElement('nav-utility', navRefs.utilityMenu.current, { order: 3 });
+    if (navRefs.moreMenu.current) registerElement('nav-more', navRefs.moreMenu.current, { order: 4 });
+    
+    return () => {
+      unregisterElement('nav-logo');
+      unregisterElement('nav-transaction');
+      unregisterElement('nav-reports');
+      unregisterElement('nav-utility');
+      unregisterElement('nav-more');
+    };
+  }, [registerElement, unregisterElement]);
+  
+  // Register DailyTransactionsView elements when active
+  useEffect(() => {
+    if (activeSection === 'daily') {
+      // Give time for the component to render
+      setTimeout(() => {
+        // The DailyTransactionsView should register its own elements
+        // through the useKeyboardNavigation hook in the component
+      }, 100);
+    }
+  }, [activeSection]);
+  
+  // Reset component states when navigating to a new section
+  useEffect(() => {
+    const prevSection = prevActiveSectionRef.current;
+    
+    // Only reset if we're actually changing sections (not initial render)
+    if (prevSection !== activeSection && prevSection) {
+      // Reset various component states based on the section being left
+      switch (prevSection) {
+        case 'daily':
+          // Reset daily transaction state
+          setCustomerInfo(DEFAULT_STATES.dailyTransaction.customerInfo);
+          setCurrentEntry(DEFAULT_STATES.dailyTransaction.currentEntry);
+          setItems(DEFAULT_STATES.dailyTransaction.items);
+          setCommissionPct(DEFAULT_STATES.dailyTransaction.commissionPct);
+          break;
+        case 'reports':
+          // Reset reports state when leaving
+          break;
+        case 'daily-sale':
+          // DailySaleView manages its own state reset
+          break;
+        case 'group-print':
+          // Reset group patti form
+          setGroupPattiForm(DEFAULT_STATES.groupPattiForm);
+          break;
+        case 'group-total':
+          // Reset group total form
+          setGroupTotalForm(DEFAULT_STATES.groupTotalForm);
+          break;
+        case 'daily-rate-sales':
+          // Reset items daily sale rate form
+          setItemsDailySaleRateForm(DEFAULT_STATES.itemsDailySaleRateForm);
+          setItemsDailySaleRateRows([]);
+          setIsItemsDailySaleRateOpen(false);
+          break;
+        case 'sms':
+        case 'sms-single':
+          // Reset SMS view state - the component handles its own state
+          break;
+        default:
+          break;
+      }
+    }
+  }, [activeSection, setCustomerInfo, setCurrentEntry, setItems, setCommissionPct, 
+      setGroupPattiForm, setGroupTotalForm, setItemsDailySaleRateForm, 
+      setItemsDailySaleRateRows, setIsItemsDailySaleRateOpen]);
+
+  // Close dropdowns when navigating to a new section
+  useEffect(() => {
+    setActiveDropdown(null);
+  }, [activeSection]);
+
+  const loadItemsDailySaleRate = async () => {
+    const from = String(itemsDailySaleRateForm.fromDate || '');
+    const to = String(itemsDailySaleRateForm.toDate || '');
+    const selectedItem = String(itemsDailySaleRateForm.itemName || '').trim();
+
+    setIsItemsDailySaleRateLoading(true);
+    try {
+      const txnsByCustomer = await Promise.all(customers.map(async (cust) => {
+        if (!cust?.id) return [];
+        try {
+          const txns = await api.listTransactions(cust.id);
+          return (txns || []).map(t => ({ ...t, __party: cust.name || '' }));
+        } catch {
+          return [];
+        }
+      }));
+
+      const flat = txnsByCustomer.flat();
+      const rows = flat
+        .filter(t => {
+          const d = String(t.date || '');
+          if (!d) return false;
+          if (from && d < from) return false;
+          if (to && d > to) return false;
+          if (selectedItem && String(t.itemName || '') !== selectedItem) return false;
+          return true;
+        })
+        .map(t => {
+          const qty = Number(t.qty || 0);
+          const rate = Number(t.rate || 0);
+          return {
+            date: String(t.date || ''),
+            party: String(t.__party || ''),
+            itemName: String(t.itemName || ''),
+            qty,
+            rate,
+            total: qty * rate,
+          };
+        })
+        .sort((a, b) => (a.date > b.date ? 1 : a.date < b.date ? -1 : 0));
+
+      setItemsDailySaleRateRows(rows);
+    } finally {
+      setIsItemsDailySaleRateLoading(false);
+    }
+  };
+
+  const itemsDailySaleRateSummary = useMemo(() => {
+    return (itemsDailySaleRateRows || []).reduce((acc, r) => ({
+      qty: acc.qty + Number(r.qty || 0),
+      total: acc.total + Number(r.total || 0),
+    }), { qty: 0, total: 0 });
+  }, [itemsDailySaleRateRows]);
+
+  const handleItemsDailySaleRateSendSms = async () => {
+    const item = String(itemsDailySaleRateForm.itemName || '').trim();
+    const from = String(itemsDailySaleRateForm.fromDate || '');
+    const to = String(itemsDailySaleRateForm.toDate || '');
+    const msg = [
+      'ITEMS DAILY SALE RATE',
+      `FROM: ${from}  TO: ${to}`,
+      item ? `ITEM: ${item}` : 'ITEM: ALL',
+      `TOTAL QTY: ${Number(itemsDailySaleRateSummary.qty || 0).toFixed(2)}`,
+      `AMOUNT: ₹${Number(itemsDailySaleRateSummary.total || 0).toFixed(2)}`,
+    ].join('\n');
+
+    try {
+      await navigator.clipboard.writeText(msg);
+      showNotify('SMS summary copied to clipboard', 'success');
+    } catch {
+      showNotify('SMS summary prepared', 'success');
+    }
+  };
+
+  const handleItemsDailySaleRatePrint = async () => {
+    setIsItemsDailySaleRatePrinting(true);
+    try {
+      const item = String(itemsDailySaleRateForm.itemName || '').trim();
+      const from = String(itemsDailySaleRateForm.fromDate || '');
+      const to = String(itemsDailySaleRateForm.toDate || '');
+      setItemsDailySaleRatePrintData({
+        meta: { from, to, item: item || '' },
+        rows: itemsDailySaleRateRows,
+        totals: itemsDailySaleRateSummary,
+      });
+      setTimeout(() => window.print(), 50);
+    } catch {
+      // Handle error silently
+    }
+  };
+
+  const handleGroupPattiPrint = async () => {
+    const group = String(groupPattiForm.groupName || '').trim();
+    if (!group) return;
+
+    setIsGroupPattiPrinting(true);
+    try {
+      // Get the selected group ID
+      const selectedGroup = groups.find(g => g.name === group);
+      if (!selectedGroup) {
+        throw new Error('Group not found');
+      }
+      
+      // Generate the print report from backend using new HTML endpoint
+      const response = await api.getGroupPattiReportHtml(
+        selectedGroup.id,
+        groupPattiForm.fromDate,
+        groupPattiForm.toDate,
+        groupPattiForm.commissionPct
+      );
+      
+      // Get HTML content
+      const htmlContent = response || '';
+      if (!htmlContent) throw new Error('Empty print response');
+      
+      // Create a temporary window for printing
+      const printWindow = window.open('', '_blank', 'width=1200,height=800');
+      if (!printWindow) {
+        throw new Error('Unable to open print window. Please check your browser popup settings.');
+      }
+      
+      // Write complete HTML document with explicit DOCTYPE
+      printWindow.document.write('<!DOCTYPE html><html><head><title>Group Patti Report</title></head><body>');
+      printWindow.document.write(htmlContent);
+      printWindow.document.write('</body></html>');
+      printWindow.document.close();
+      
+      // Wait for the window to fully load
+      printWindow.onload = () => {
+        // Focus the window first
+        printWindow.focus();
+        // Small delay to ensure styles are applied
+        setTimeout(() => {
+          // Call print - guard with __printed to avoid duplicates
+          if (!printWindow.__printed) { printWindow.__printed = true; printWindow.print(); }
+          // Close the window after print dialog opens
+          setTimeout(() => {
+            if (!printWindow.closed) {
+              printWindow.close();
+            }
+          }, 1000);
+        }, 300);
+      };
+
+      // Fallback: trigger print if onload doesn't fire
+      setTimeout(() => {
+        if (printWindow && !printWindow.closed && !printWindow.__printed) {
+          printWindow.focus();
+          printWindow.__printed = true;
+          printWindow.print();
+          setTimeout(() => {
+            if (!printWindow.closed) {
+              printWindow.close();
+            }
+          }, 1000);
+        }
+      }, 2000);
+      
+    } catch (error) {
+      console.error('Group Patti Print error:', error);
+      let errorMessage = error.message;
+      if (error.response?.status === 401) {
+        errorMessage = 'Authentication failed. Please log in again.';
+      } else if (error.response?.status === 500) {
+        errorMessage = 'Server error. Please try again later.';
+      }
+      alert(`Print failed: ${errorMessage}`);
+    } finally {
+      setIsGroupPattiPrinting(false);
+    }
+  };
+
+  const handleGroupTotalPrint = async () => {
+    if (groupTotalForm.groupName && groups.length === 0) {
+      alert('No groups available. Please create a group first.');
+      return;
+    }
+    
+    setIsGroupTotalPrinting(true);
+    try {
+      let response;
+      if (groupTotalForm.groupName) {
+        // If a specific group is selected, use the new endpoint for group-specific report
+        response = await api.getGroupTotalReportByGroup(
+          groupTotalForm.groupName,
+          groupTotalForm.fromDate,
+          groupTotalForm.toDate
+        );
+      } else {
+        // If no group is selected, use the existing endpoint for all groups
+        response = await api.getGroupTotalReport(
+          groupTotalForm.fromDate,
+          groupTotalForm.toDate
+        );
+      }
+      
+      // Get HTML content
+      const htmlContent = response || '';
+      if (!htmlContent) throw new Error('Empty print response');
+      
+      // Create a temporary window for printing
+      const printWindow = window.open('', '_blank', 'width=1200,height=800');
+      if (!printWindow) {
+        throw new Error('Unable to open print window. Please check your browser popup settings.');
+      }
+      
+      // Write complete HTML document with explicit DOCTYPE
+      printWindow.document.write('<!DOCTYPE html><html><head><title>Group Total Report</title></head><body>');
+      printWindow.document.write(htmlContent);
+      printWindow.document.write('</body></html>');
+      printWindow.document.close();
+      
+      // Wait for the window to fully load
+      printWindow.onload = () => {
+        // Focus the window first
+        printWindow.focus();
+        // Small delay to ensure styles are applied
+        setTimeout(() => {
+          // Call print - guard with __printed to avoid duplicates
+          if (!printWindow.__printed) { printWindow.__printed = true; printWindow.print(); }
+          // Close the window after print dialog opens
+          setTimeout(() => {
+            if (!printWindow.closed) {
+              printWindow.close();
+            }
+          }, 1000);
+        }, 300);
+      };
+
+      // Fallback: trigger print if onload doesn't fire
+      setTimeout(() => {
+        if (printWindow && !printWindow.closed && !printWindow.__printed) {
+          printWindow.focus();
+          printWindow.__printed = true;
+          printWindow.print();
+          setTimeout(() => {
+            if (!printWindow.closed) {
+              printWindow.close();
+            }
+          }, 1000);
+        }
+      }, 2000);
+    } catch (error) {
+      console.error('Group Total Print error:', error);
+      let errorMessage = error.message;
+      if (error.response?.status === 401) {
+        errorMessage = 'Authentication failed. Please log in again.';
+      } else if (error.response?.status === 500) {
+        errorMessage = 'Server error. Please try again later.';
+      }
+      alert(`Print failed: ${errorMessage}`);
+    } finally {
+      setIsGroupTotalPrinting(false);
+    }
+  };
+
+
+
+  useEffect(() => {
+    let cancelled = false;
+    (async () => {
+      // Only fetch data if authenticated
+      if (!auth.authenticated) return;
+        
+      try {
+        const [gRows, cRows, catRows, vRows] = await Promise.all([
+          api.listGroups(),
+          api.listCustomers(),
+          api.listCatalog(),
+          api.listVehicles(),
+        ]);
+  
+        if (cancelled) return;
+        const groupData = Array.isArray(gRows) ? gRows : (gRows?.items || []);
+        const customerData = Array.isArray(cRows) ? cRows : (cRows?.items || []);
+        const catalogData = Array.isArray(catRows) ? catRows : (catRows?.items || []);
+        const vehicleData = Array.isArray(vRows) ? vRows : (vRows?.items || []);
+                
+        console.log('Fetched data:', { groups: groupData, customers: customerData, catalog: catalogData, vehicles: vehicleData });
+        
+        setGroups(groupData);
+        const mappedCustomers = customerData.map(c => ({ id: c.id, group: c.groupName || '', name: c.name, contact: c.contact, address: c.address }));
+        setCustomers(mappedCustomers);
+        setCatalog(catalogData);
+        setVehicles(vehicleData);
+  
+        // hydrate advanceStore from backend logs (used in Daily + Reports)
+        const advancePairs = await Promise.all(
+          mappedCustomers.map(async (cust) => {
+            if (!cust?.id) return [cust?.name || '', { given: 0, deducted: 0, balance: 0 }];
+            try {
+              const summary = await api.getCustomerAdvances(cust.id);
+              return [cust.name, { given: Number(summary?.given || 0), deducted: Number(summary?.deducted || 0), balance: Number(summary?.balance || 0) }];
+            } catch {
+              return [cust.name, { given: 0, deducted: 0, balance: 0 }];
+            }
+          })
+        );
+        if (cancelled) return;
+        const nextAdvanceStore = {};
+        for (const [name, val] of advancePairs) {
+          if (!name) continue;
+          nextAdvanceStore[name] = val;
+        }
+        setAdvanceStore(nextAdvanceStore);
+      } catch (e) {
+        console.error('Data fetch error:', e);
+        showNotify(`Backend not reachable: ${e.message}`, 'error');
+      }
+    })();
+    return () => { cancelled = true; };
+  }, [auth.authenticated]);
+
+  useEffect(() => {
+    let cancelled = false;
+    (async () => {
+      // Only fetch data if authenticated
+      if (!auth.authenticated || !customerInfo.customerName) {
+        setItems([]);
+        return;
+      }
+
+      const selected = customers.find(c => c.name === customerInfo.customerName);
+      if (!selected?.id) {
+        setItems([]);
+        return;
+      }
+
+      try {
+        // Only fetch today's transactions for the daily transaction view
+        const today = new Date().toISOString().split('T')[0];
+        const rows = await api.listTransactions(selected.id);
+        // Filter to only include today's transactions
+        const todayRows = rows.filter(r => r.date === today);
+        if (cancelled) return;
+        setItems(todayRows.map(r => ({
+          id: r.id,
+          date: r.date,
+          vehicle: r.vehicle,
+          itemCode: r.itemCode,
+          itemName: r.itemName,
+          qty: String(r.qty ?? ''),
+          rate: String(r.rate ?? ''),
+          laguage: String(r.laguage ?? ''),
+          coolie: String(r.coolie ?? ''),
+          paidAmt: String(r.paidAmt ?? ''),
+          remarks: r.remarks ?? '',
+        })));
+      } catch (e) {
+        showNotify(`Failed to load transactions: ${e.message}`, 'error');
+      }
+    })();
+    return () => { cancelled = true; };
+  }, [auth.authenticated, customerInfo.customerName, customers]);
+
+  const summary = useMemo(() => {
+    const totals = items.reduce((acc, item) => {
+      const gross = Number(item.qty || 0) * Number(item.rate || 0);
+      return { 
+        qty: acc.qty + Number(item.qty || 0), 
+        itemTotal: acc.itemTotal + gross, 
+        paid: acc.paid + Number(item.paidAmt || 0), 
+        coolieTotal: acc.coolieTotal + Number(item.coolie || 0), 
+        laguageTotal: acc.laguageTotal + (Number(item.laguage || 0) * Number(item.qty || 0)) 
+      };
+    }, { qty: 0, itemTotal: 0, paid: 0, coolieTotal: 0, laguageTotal: 0 });
+    const totalCommission = (totals.itemTotal * Number(commissionPct || 0)) / 100;
+    const netTotal = totals.itemTotal - totalCommission - totals.coolieTotal - totals.laguageTotal;
+    return { ...totals, totalCommission, netTotal };
+  }, [items, commissionPct]);
+
+  const [isAddingItem, setIsAddingItem] = useState(false);
+
+  // Calculate total paid amount separately
+  const totalPaidAmount = useMemo(() => {
+    return items.reduce((total, item) => total + Number(item.paidAmt || 0), 0);
+  }, [items]);
+
+  const handleAddItem = async () => {
+    if (!currentEntry.itemName || !currentEntry.qty || currentEntry.rate === '' || currentEntry.rate === null || currentEntry.rate === undefined) {
+      return showNotify("Entry incomplete: Enter item, qty and rate", "error");
+    }
+    
+    if (isAddingItem) {
+      console.warn('Add item already in progress, ignoring duplicate call');
+      return;
+    }
+
+    try {
+      setIsAddingItem(true);
+      // Check if we're updating an existing item (has an id from the backend)
+      let result;
+      if (currentEntry.id && typeof currentEntry.id === 'number') {
+        // Update existing transaction
+        result = await api.updateCollectionItem(currentEntry.id, {
+          date: currentEntry.date,
+          vehicle: currentEntry.vehicle || '',
+          itemCode: currentEntry.itemCode || '',
+          itemName: currentEntry.itemName,
+          qty: currentEntry.qty,
+          rate: currentEntry.rate,
+          labour_per_kg: currentEntry.laguage,
+          coolie_cost: currentEntry.coolie,
+          paid_amount: currentEntry.paidAmt,
+          remarks: currentEntry.remarks || '',
+        });
+        setItems(items.map(i => i.id === currentEntry.id ? { ...result } : i));
+        showNotify("Transaction Updated Successfully", "success");
+      } else {
+        // Create new transaction - need customer/farmer id
+        const customerId = customers.find(c => c.name === customerInfo.customerName)?.id;
+        if (!customerId) {
+          return showNotify("Please select a customer first", "error");
+        }
+        
+        // Create new transaction
+        result = await api.createFarmerTransaction(customerId, {
+          date: currentEntry.date,
+          vehicle: currentEntry.vehicle || '',
+          itemCode: currentEntry.itemCode || '',
+          itemName: currentEntry.itemName,
+          qty: currentEntry.qty,
+          rate: currentEntry.rate,
+          laguage: currentEntry.laguage,
+          coolie: currentEntry.coolie,
+          paidAmt: currentEntry.paidAmt,
+          remarks: currentEntry.remarks || '',
+        });
+        setItems([...items, { ...result }]);
+        showNotify("Transaction Added Successfully", "success");
+      }
+      
+      // Reset form
+      setCurrentEntry({ 
+        date: new Date().toISOString().split('T')[0], 
+        vehicle: '', 
+        itemCode: '', 
+        itemName: '', 
+        qty: '', 
+        rate: '', 
+        laguage: '', 
+        coolie: '', 
+        paidAmt: '', 
+        remarks: '' 
+      });
+      
+      // Return focus to group selection field
+      setTimeout(() => {
+        groupRef.current?.focus();
+      }, 100);
+      
+      return true;
+    } catch (j) {
+      showNotify(`Transaction save failed: ${j?.message || j}`, "error");
+      return false;
+    } finally {
+      setIsAddingItem(false);
+    }
+  };
+
+  // Click-outside-to-close handler for dropdowns
+  useEffect(() => {
+    const handleClickOutside = (event) => {
+      // Check if click is outside all navbar dropdown triggers
+      const isClickInsideNavbar = event.target.closest('nav');
+      if (!isClickInsideNavbar && activeDropdown !== null) {
+        setActiveDropdown(null);
+        setFocusedMenuItem(-1); // Reset focus
+      }
+    };
+
+    document.addEventListener('mousedown', handleClickOutside);
+    return () => document.removeEventListener('mousedown', handleClickOutside);
+  }, [activeDropdown]);
+
+  // Toggle dropdown with proper behavior
+  const toggleDropdown = useCallback((dropdownName) => {
+    setActiveDropdown(prev => {
+      // If same dropdown is clicked, close it (toggle behavior)
+      if (prev === dropdownName) {
+        setFocusedMenuItem(-1);
+        return null;
+      }
+      // Otherwise, open the new dropdown (automatically closes previous)
+      // Reset focus to first item when opening new dropdown
+      setFocusedMenuItem(0);
+      return dropdownName;
+    });
+  }, []);
+
+  // Close all dropdowns
+  const closeAllDropdowns = useCallback(() => {
+    setActiveDropdown(null);
+    setFocusedMenuItem(-1);
+  }, []);
+
+  // Get current dropdown menu items based on active dropdown
+  const getCurrentMenuItems = useCallback(() => {
+    switch (activeDropdown) {
+      case 'transaction':
+        return [
+          { id: 'daily', l: 'Daily Transaction', i: Receipt }, 
+          { id: 'group-reg', l: 'New Group', i: FolderPlus }, 
+          { id: 'delete-group-customer', l: 'Delete Customer / Group', i: Trash2 },
+          { id: 'item-reg', l: 'New Item', i: PackagePlus },
+          { id: 'party', l: 'Party Details', i: Users },
+          { id: 'vehicle', l: 'Extra Vehicle', i: Truck }
+        ];
+      case 'utility':
+        return [
+          { id: 'group-print', l: 'Group Printing', i: Printer },
+          { id: 'group-total', l: 'Group Total Report', i: Layers },
+          { id: 'daily-rate-sales', l: 'Daily Rate Wise Sales', i: FileBarChart },
+          { id: 'new-supplier', l: 'New Supplier', i: UserCheck },
+          { id: 'daily-sale', l: 'Daily Sale', i: Monitor },
+          { id: 'sms-single', l: 'SMS Single', i: Send },
+          { id: 'supply-details', l: 'Supply Details', i: List },
+          { id: 'payment-list', l: 'Payment List', i: WalletCards },
+          { id: 'payment-report', l: 'Payment Report', i: BarChart3 },
+          { id: 'move-data', l: 'Move Data', i: ArrowRight },
+          { id: 'view-data', l: 'View Data', i: Search }
+        ];
+      case 'more':
+        return [
+          { id: 'advance', l: 'Advance', i: WalletCards }, 
+          { id: 'saala', l: 'Saala (Credit)', i: Landmark }, 
+          { id: 'silk', l: 'Silk', i: Layers }
+        ];
+      default:
+        return [];
+    }
+  }, [activeDropdown]);
+
+  // Handle keyboard navigation within dropdowns
+  const handleDropdownKeyDown = useCallback((e) => {
+    if (activeDropdown === null) return;
+    
+    const menuItems = getCurrentMenuItems();
+    if (menuItems.length === 0) return;
+
+    switch (e.key) {
+      case 'ArrowDown':
+        e.preventDefault();
+        setFocusedMenuItem(prev => {
+          const nextIndex = prev >= menuItems.length - 1 ? 0 : prev + 1;
+          // Focus the next menu item
+          setTimeout(() => {
+            const nextElement = dropdownMenuRefs.current[`${activeDropdown}-${nextIndex}`];
+            if (nextElement) nextElement.focus();
+          }, 0);
+          return nextIndex;
+        });
+        break;
+        
+      case 'ArrowUp':
+        e.preventDefault();
+        setFocusedMenuItem(prev => {
+          const prevIndex = prev <= 0 ? menuItems.length - 1 : prev - 1;
+          // Focus the previous menu item
+          setTimeout(() => {
+            const prevElement = dropdownMenuRefs.current[`${activeDropdown}-${prevIndex}`];
+            if (prevElement) prevElement.focus();
+          }, 0);
+          return prevIndex;
+        });
+        break;
+        
+      case 'Enter':
+      case ' ':
+        e.preventDefault();
+        if (focusedMenuItem >= 0 && focusedMenuItem < menuItems.length) {
+          // Trigger click on focused menu item
+          const focusedElement = dropdownMenuRefs.current[`${activeDropdown}-${focusedMenuItem}`];
+          if (focusedElement) focusedElement.click();
+        }
+        break;
+        
+      case 'Escape':
+        e.preventDefault();
+        closeAllDropdowns();
+        // Return focus to the dropdown button that opened this menu
+        if (activeDropdown === 'transaction' && navRefs.transactionMenu.current) {
+          navRefs.transactionMenu.current.focus();
+        } else if (activeDropdown === 'utility' && navRefs.utilityMenu.current) {
+          navRefs.utilityMenu.current.focus();
+        } else if (activeDropdown === 'more' && navRefs.moreMenu.current) {
+          navRefs.moreMenu.current.focus();
+        }
+        break;
+        
+      case 'Tab':
+        // Close dropdown and let normal tab navigation continue
+        closeAllDropdowns();
+        break;
+        
+      default:
+        break;
+    }
+  }, [activeDropdown, focusedMenuItem, getCurrentMenuItems, closeAllDropdowns]);
+
+  // Add global keyboard listener when dropdown is open
+  useEffect(() => {
+    if (activeDropdown !== null) {
+      document.addEventListener('keydown', handleDropdownKeyDown);
+      return () => {
+        document.removeEventListener('keydown', handleDropdownKeyDown);
+      };
+    }
+  }, [activeDropdown, handleDropdownKeyDown]);
+
+  // Keyboard navigation for navbar (left/right arrows)
+  useEffect(() => {
+    const handleNavbarNavigation = (e) => {
+      // Only handle if we're not in a dropdown or if we are in the navbar
+      const activeElement = document.activeElement;
+      const isInNavbar = activeElement?.closest('nav') !== null;
+      
+      if (!isInNavbar) return;
+      
+      // Handle left/right arrow navigation in navbar
+      if (e.key === 'ArrowLeft' || e.key === 'ArrowRight') {
+        e.preventDefault();
+        
+        const navbarButtons = [
+          navRefs.logo.current,
+          navRefs.transactionMenu.current,
+          navRefs.reportsMenu.current,
+          navRefs.utilityMenu.current,
+          navRefs.moreMenu.current
+        ].filter(Boolean);
+        
+        const currentIndex = navbarButtons.findIndex(btn => btn === activeElement);
+        
+        if (currentIndex === -1) return;
+        
+        let nextIndex;
+        if (e.key === 'ArrowRight') {
+          nextIndex = (currentIndex + 1) % navbarButtons.length;
+        } else { // ArrowLeft
+          nextIndex = (currentIndex - 1 + navbarButtons.length) % navbarButtons.length;
+        }
+        
+        // Focus the next/previous button
+        setTimeout(() => {
+          if (navbarButtons[nextIndex]) {
+            navbarButtons[nextIndex].focus();
+          }
+        }, 0);
+      }
+    };
+    
+    document.addEventListener('keydown', handleNavbarNavigation);
+    return () => {
+      document.removeEventListener('keydown', handleNavbarNavigation);
+    };
+  }, []);
+
+  // Standalone keyboard navigation for Group Patti Printing Page
+  const useGroupPattiNavigation = (containerRef) => {
+    useEffect(() => {
+      const handleKeyDown = (e) => {
+        if (e.key !== 'Enter') return;
+        
+        const activeElement = document.activeElement;
+        const container = containerRef.current;
+        
+        // Only handle Enter key within this container
+        if (!container || !container.contains(activeElement)) return;
+        
+        // Prevent default Enter behavior
+        e.preventDefault();
+        
+        // Get all navigable elements in order - always include group name field
+        const navigableElements = [
+          { element: container.querySelector('[data-enter="1"]'), type: 'date' },
+          { element: container.querySelector('[data-enter="2"]'), type: 'date' },
+          { element: container.querySelector('[data-enter="3"]'), type: 'select' },
+          { element: container.querySelector('[data-enter="4"]'), type: 'input' },
+          { element: container.querySelector('[data-enter="5"]'), type: 'submit' },
+          { element: container.querySelector('[data-enter="6"]'), type: 'button' }
+        ].filter(item => item.element);
+        
+        // Find current element index
+        const currentIndex = navigableElements.findIndex(item => item.element === activeElement);
+        
+        if (currentIndex === -1) return;
+        
+        // Handle different element types
+        const currentElement = navigableElements[currentIndex];
+        
+        if (currentElement.type === 'select') {
+          // For dropdowns, always move to next element (even if already selected)
+          const nextElement = navigableElements[currentIndex + 1];
+          if (nextElement) {
+            setTimeout(() => {
+              nextElement.element.focus();
+            }, 100);
+          }
+        } else if (currentElement.type === 'submit' || currentElement.type === 'button') {
+          // Trigger button click
+          activeElement.click();
+        } else {
+          // For other elements, move to next
+          const nextElement = navigableElements[currentIndex + 1];
+          if (nextElement) {
+            nextElement.element.focus();
+          }
+        }
+      };
+      
+      document.addEventListener('keydown', handleKeyDown);
+      return () => document.removeEventListener('keydown', handleKeyDown);
+    }, [containerRef]);
+  };
+
+
+
+
+
+
+
+
+
+  return (
+    <div className="h-screen flex flex-col bg-white overflow-hidden text-slate-900 font-sans">
+      <Toast message={notification.message} type={notification.type} onClose={() => setNotification({ message: '', type: 'info' })} />
+      
+      {/* Top Navigation Bar */}
+      <nav className="h-[52px] bg-gradient-to-r from-slate-900 via-slate-800 to-slate-900 flex items-center justify-between px-6 shrink-0 z-[4000] border-b border-slate-700/50 shadow-lg navbar-element" data-navbar-element>
+        {/* Left Section - Logo & Main Menus */}
+        <div className="flex items-center gap-1 h-full">
+          {/* Logo */}
+          <div 
+            ref={navRefs.logo} 
+            className="flex items-center gap-2.5 pr-5 mr-1 border-r border-slate-600/50 cursor-pointer h-full navbar-element hover:bg-slate-800/50 rounded-lg px-3 -ml-3 transition-all duration-200" 
+            onClick={() => setActiveSection('daily')} 
+            data-navbar-element
+          >
+            <Flower2 className="w-5 h-5 text-primary-400" />
+            <span className="text-sm font-bold text-white tracking-wide">SKFS ERP</span>
+            <span className="text-xs text-slate-400 font-medium">v5.0.4</span>
+          </div>
+          
+          {/* Transaction Dropdown */}
+          <div className="relative h-full flex items-center">
+            <button 
+              ref={navRefs.transactionMenu} 
+              onClick={() => toggleDropdown('transaction')} 
+              onKeyDown={(e) => {
+                if (e.key === 'Enter' || e.key === ' ') {
+                  e.preventDefault();
+                  console.log('Transaction button Enter pressed, toggling dropdown');
+                  toggleDropdown('transaction');
+                } else if (e.key === 'ArrowDown') {
+                  e.preventDefault();
+                  // Open dropdown and focus first item
+                  if (activeDropdown !== 'transaction') {
+                    toggleDropdown('transaction');
+                  }
+                }
+              }}
+              className={`flex items-center gap-2 px-4 h-[40px] text-xs font-semibold rounded-lg transition-all duration-200 ${
+                activeDropdown === 'transaction' 
+                  ? 'bg-white text-slate-900 shadow-lg scale-105' 
+                  : 'text-slate-300 hover:text-white hover:bg-slate-800/50'
+              } navbar-element`} 
+              data-navbar-element
+              aria-expanded={activeDropdown === 'transaction'}
+              aria-haspopup="true"
+              aria-controls="transaction-menu"
+              tabIndex={0}
+            >
+              Transaction 
+              <ChevronDown className={`w-3.5 h-3.5 transition-transform duration-200 ${activeDropdown === 'transaction' ? 'rotate-180' : ''}`} />
+            </button>
+            
+            {activeDropdown === 'transaction' && (
+              <div 
+                id="transaction-menu"
+                className="absolute top-[48px] left-0 w-60 bg-white border border-slate-200 shadow-xl py-1.5 animate-in slide-in-from-top-2 duration-200 rounded-lg overflow-hidden z-[5000]" 
+                role="menu"
+                aria-activedescendant={focusedMenuItem >= 0 ? `transaction-item-${focusedMenuItem}` : undefined}
+              >
+                {[ 
+                  { id: 'daily', l: 'Daily Transaction', i: Receipt }, 
+                  { id: 'group-reg', l: 'New Group', i: FolderPlus }, 
+                  { id: 'delete-group-customer', l: 'Delete Customer / Group', i: Trash2 },
+                  { id: 'item-reg', l: 'New Item', i: PackagePlus },
+                  { id: 'party', l: 'Party Details', i: Users },
+                  { id: 'vehicle', l: 'Extra Vehicle', i: Truck }
+                ].map((item, index) => (
+                  <button 
+                    key={item.id} 
+                    ref={(el) => dropdownMenuRefs.current[`transaction-${index}`] = el}
+                    onClick={() => { 
+                      closeAllDropdowns(); 
+                      setActiveSection(item.id);
+                      // Return focus to navbar after navigation
+                      setTimeout(() => {
+                        navRefs.transactionMenu.current?.focus();
+                      }, 100);
+                    }} 
+                    tabIndex={-1}
+                    id={`transaction-item-${index}`}
+                    className={`w-full text-left px-4 py-2.5 text-sm font-medium flex items-center gap-3 transition-all duration-150 ${
+                      activeSection === item.id 
+                        ? 'bg-gradient-to-r from-primary-600 to-primary-500 text-white shadow-md' 
+                        : focusedMenuItem === index
+                          ? 'bg-primary-50 text-primary-700 outline outline-2 outline-primary-300'
+                          : 'text-slate-700 hover:bg-gradient-to-r hover:from-slate-50 hover:to-white hover:text-primary-700'
+                    } navbar-element`} 
+                    data-navbar-element
+                    role="menuitem"
+                    aria-selected={focusedMenuItem === index}
+                    onMouseEnter={() => setFocusedMenuItem(index)}
+                  >
+                    <item.i className="w-4 h-4" /> {item.l}
+                  </button>
+                ))}
+              </div>
+            )}
+          </div>
+
+          {/* Reports Dropdown */}
+          <div className="relative h-full flex items-center">
+            <button 
+              ref={navRefs.reportsMenu} 
+              onClick={() => {
+                closeAllDropdowns();
+                setActiveSection('reports');
+              }} 
+              onKeyDown={(e) => {
+                if (e.key === 'Enter' || e.key === ' ') {
+                  e.preventDefault();
+                  closeAllDropdowns();
+                  setActiveSection('reports');
+                }
+              }}
+              className={`flex items-center gap-2 px-4 h-[40px] text-xs font-semibold rounded-lg transition-all duration-200 ${
+                activeSection === 'reports' 
+                  ? 'bg-white text-slate-900 shadow-lg scale-105' 
+                  : 'text-slate-300 hover:text-white hover:bg-slate-800/50'
+              } navbar-element`} 
+              data-navbar-element
+              tabIndex={0}
+            >
+              Reports
+            </button>
+          </div>
+
+          {/* Utility Dropdown */}
+          <div className="relative h-full flex items-center">
+            <button 
+              ref={navRefs.utilityMenu} 
+              onClick={() => toggleDropdown('utility')} 
+              onKeyDown={(e) => {
+                if (e.key === 'Enter' || e.key === ' ') {
+                  e.preventDefault();
+                  console.log('Utility button Enter pressed, toggling dropdown');
+                  toggleDropdown('utility');
+                } else if (e.key === 'ArrowDown') {
+                  e.preventDefault();
+                  // Open dropdown and focus first item
+                  if (activeDropdown !== 'utility') {
+                    toggleDropdown('utility');
+                  }
+                }
+              }}
+              className={`flex items-center gap-2 px-4 h-[40px] text-xs font-semibold rounded-lg transition-all duration-200 ${
+                activeDropdown === 'utility' 
+                  ? 'bg-white text-slate-900 shadow-lg scale-105' 
+                  : 'text-slate-300 hover:text-white hover:bg-slate-800/50'
+              } navbar-element`} 
+              data-navbar-element
+              aria-expanded={activeDropdown === 'utility'}
+              aria-haspopup="true"
+              aria-controls="utility-menu"
+              tabIndex={0}
+            >
+              Utility 
+              <ChevronDown className={`w-3.5 h-3.5 transition-transform duration-200 ${activeDropdown === 'utility' ? 'rotate-180' : ''}`} />
+            </button>
+            
+            {activeDropdown === 'utility' && (
+              <div 
+                id="utility-menu"
+                className="absolute top-[48px] left-0 w-64 bg-white border border-slate-200 shadow-xl py-1.5 animate-in slide-in-from-top-2 duration-200 rounded-lg overflow-hidden z-[5000]" 
+                role="menu"
+                aria-activedescendant={focusedMenuItem >= 0 ? `utility-item-${focusedMenuItem}` : undefined}
+              >
+                {[ 
+                  { id: 'group-print', l: 'Group Printing', i: Printer },
+                  { id: 'group-total', l: 'Group Total Report', i: Layers },
+                  { id: 'daily-rate-sales', l: 'Daily Rate Wise Sales', i: FileBarChart },
+                  { id: 'new-supplier', l: 'New Supplier', i: UserCheck },
+                  { id: 'daily-sale', l: 'Daily Sale', i: Monitor },
+                  { id: 'sms-single', l: 'SMS Single', i: Send },
+                  { id: 'supply-details', l: 'Supply Details', i: List },
+                  { id: 'payment-list', l: 'Payment List', i: WalletCards },
+                  { id: 'payment-report', l: 'Payment Report', i: BarChart3 },
+                  { id: 'move-data', l: 'Move Data', i: ArrowRight },
+                  { id: 'view-data', l: 'View Data', i: Search }
+                ].map((item, index) => (
+                  <button 
+                    key={item.id} 
+                    ref={(el) => dropdownMenuRefs.current[`utility-${index}`] = el}
+                    onClick={() => {
+                      closeAllDropdowns();
+                      if (item.id === 'group-print') {
+                        setActiveSection('group-print');
+                        return;
+                      }
+                      if (item.id === 'group-total') {
+                        setActiveSection('group-total');
+                        return;
+                      }
+                      if (item.id === 'daily-rate-sales') {
+                        setActiveSection('daily-rate-sales');
+                        return;
+                      }
+                      if (item.id === 'daily-sale') {
+                        setActiveSection('daily-sale');
+                        return;
+                      }
+                      setActiveSection(item.id);
+                      // Return focus to navbar after navigation
+                      setTimeout(() => {
+                        navRefs.utilityMenu.current?.focus();
+                      }, 100);
+                    }} 
+                    tabIndex={-1}
+                    id={`utility-item-${index}`}
+                    className={`w-full text-left px-4 py-2.5 text-sm font-medium flex items-center gap-3 transition-all duration-150 ${
+                      activeSection === item.id 
+                        ? 'bg-gradient-to-r from-primary-600 to-primary-500 text-white shadow-md' 
+                        : focusedMenuItem === index
+                          ? 'bg-primary-50 text-primary-700 outline outline-2 outline-primary-300'
+                          : 'text-slate-700 hover:bg-gradient-to-r hover:from-slate-50 hover:to-white hover:text-primary-700'
+                    } navbar-element`} 
+                    data-navbar-element
+                    role="menuitem"
+                    aria-selected={focusedMenuItem === index}
+                    onMouseEnter={() => setFocusedMenuItem(index)}
+                  >
+                    <item.i className="w-4 h-4" /> {item.l}
+                  </button>
+                ))}
+              </div>
+            )}
+          </div>
+
+          {/* More Dropdown */}
+          <div className="relative h-full flex items-center">
+            <button 
+              ref={navRefs.moreMenu} 
+              onClick={() => toggleDropdown('more')} 
+              onKeyDown={(e) => {
+                if (e.key === 'Enter' || e.key === ' ') {
+                  e.preventDefault();
+                  console.log('More button Enter pressed, toggling dropdown');
+                  toggleDropdown('more');
+                } else if (e.key === 'ArrowDown') {
+                  e.preventDefault();
+                  // Open dropdown and focus first item
+                  if (activeDropdown !== 'more') {
+                    toggleDropdown('more');
+                  }
+                }
+              }}
+              className={`flex items-center gap-2 px-4 h-[40px] text-xs font-semibold rounded-lg transition-all duration-200 ${
+                activeDropdown === 'more' 
+                  ? 'bg-white text-slate-900 shadow-lg scale-105' 
+                  : 'text-slate-300 hover:text-white hover:bg-slate-800/50'
+              } navbar-element`} 
+              data-navbar-element
+              aria-expanded={activeDropdown === 'more'}
+              aria-haspopup="true"
+              aria-controls="more-menu"
+              tabIndex={0}
+            >
+              More 
+              <ChevronDown className={`w-3.5 h-3.5 transition-transform duration-200 ${activeDropdown === 'more' ? 'rotate-180' : ''}`} />
+            </button>
+            
+            {activeDropdown === 'more' && (
+              <div 
+                id="more-menu"
+                className="absolute top-[48px] left-0 w-56 bg-white border border-slate-200 shadow-xl py-1.5 animate-in slide-in-from-top-2 duration-200 rounded-lg overflow-hidden z-[5000]" 
+                role="menu"
+                aria-activedescendant={focusedMenuItem >= 0 ? `more-item-${focusedMenuItem}` : undefined}
+              >
+                {[ { id: 'advance', l: 'Advance', i: WalletCards }, { id: 'saala', l: 'Saala (Credit)', i: Landmark }, { id: 'silk', l: 'Silk', i: Layers } ].map((item, index) => (
+                  <button 
+                    key={item.id} 
+                    ref={(el) => dropdownMenuRefs.current[`more-${index}`] = el}
+                    onClick={() => { 
+                      closeAllDropdowns(); 
+                      setActiveSection(item.id);
+                      // Return focus to navbar after navigation
+                      setTimeout(() => {
+                        navRefs.moreMenu.current?.focus();
+                      }, 100);
+                    }} 
+                    tabIndex={-1}
+                    id={`more-item-${index}`}
+                    className={`w-full text-left px-4 py-2.5 text-sm font-medium flex items-center gap-3 transition-all duration-150 ${
+                      activeSection === item.id 
+                        ? 'bg-gradient-to-r from-primary-600 to-primary-500 text-white shadow-md' 
+                        : focusedMenuItem === index
+                          ? 'bg-primary-50 text-primary-700 outline outline-2 outline-primary-300'
+                          : 'text-slate-700 hover:bg-gradient-to-r hover:from-slate-50 hover:to-white hover:text-primary-700'
+                    } navbar-element`} 
+                    data-navbar-element
+                    role="menuitem"
+                    aria-selected={focusedMenuItem === index}
+                    onMouseEnter={() => setFocusedMenuItem(index)}
+                  >
+                    <item.i className="w-4 h-4" /> {item.l}
+                  </button>
+                ))}
+              </div>
+            )}
+          </div>
+        </div>
+
+        {/* Right Section - Logout */}
+        <div className="flex items-center gap-3">
+          <button 
+            onClick={auth.logout}
+            className="text-slate-300 hover:text-white hover:bg-red-600/80 text-xs font-semibold px-4 py-2 rounded-lg transition-all duration-200 flex items-center gap-2"
+            title="Logout"
+          >
+            <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17 16l4-4m0 0l-4-4m4 4H7m6 4v1a3 3 0 01-3 3H6a3 3 0 01-3-3V7a3 3 0 013-3h4a3 3 0 013 3v1" />
+            </svg>
+            Logout
+          </button>
+        </div>
+      </nav>
+
+      <div className="flex-1 overflow-hidden flex flex-col bg-slate-100 relative">
+        {activeSection === 'daily' && <DailyTransactionsView groupRef={groupRef} customerInfo={customerInfo} setCustomerInfo={setCustomerInfo} groups={groups} customers={customers} catalog={catalog} vehicles={vehicles} onOpenQuickAdd={(m) => { if (m === 'item') setActiveSection('item-reg'); else setActiveSection('party'); }} currentEntry={currentEntry} setCurrentEntry={setCurrentEntry} items={items} onAddItem={handleAddItem} onRemoveItem={async (id) => {
+            try {
+              await api.deleteCollectionItem(id);
+              setItems(items.filter(i => i.id !== id));
+              showNotify("Transaction deleted successfully", "success");
+            } catch (error) {
+              showNotify(`Delete failed: ${error.message}`, "error");
+            }
+          }} onEditItem={(item) => setCurrentEntry(item)} summary={summary} onSaveRecord={async () => {
+          if(!customerInfo.customerName) return showNotify("Transaction save failed: Select client", "error");
+          const selected = customers.find(c => c.name === customerInfo.customerName);
+          if (!selected?.id) return showNotify("Transaction save failed: Unknown customer", "error");
+          try {
+            await api.replaceTransactions(selected.id, items.map(i => ({
+              date: i.date,
+              vehicle: i.vehicle || '',
+              itemCode: i.itemCode || '',
+              itemName: i.itemName,
+              qty: i.qty,
+              rate: i.rate,
+              laguage: i.laguage,
+              coolie: i.coolie,
+              paidAmt: i.paidAmt,
+              remarks: i.remarks || '',
+            })));
+            
+            // Reload data from backend to ensure consistency
+            const updatedItems = await api.listTransactions(selected.id);
+            setItems(updatedItems.map(r => ({
+              id: r.id,
+              date: r.date,
+              vehicle: r.vehicle,
+              itemCode: r.itemCode,
+              itemName: r.itemName,
+              qty: String(r.qty ?? ''),
+              rate: String(r.rate ?? ''),
+              laguage: String(r.laguage ?? ''),
+              coolie: String(r.coolie ?? ''),
+              paidAmt: String(r.paidAmt ?? ''),
+              remarks: r.remarks ?? '',
+            })));
+            
+            showNotify("Session data synchronized successfully", "success");
+            
+            // Clear customer selection and return focus to group field
+            setCustomerInfo({ groupName: '', customerName: '', address: '', contactNo: '' });
+            setCurrentEntry({ date: new Date().toISOString().split('T')[0], vehicle: '', itemCode: '', itemName: '', qty: '', rate: '', laguage: '', coolie: '', paidAmt: '', remarks: '' });
+            setItems([]);
+            
+            // Return focus to group selection field
+            setTimeout(() => {
+              // Small delay to ensure state updates propagate to the UI
+              setTimeout(() => {
+                groupRef.current?.focus();
+              }, 50);
+            }, 100);
+          } catch (e) {
+            showNotify(`Save failed: ${e.message}`, 'error');
+          }
+        }} advanceStore={advanceStore} commissionPct={commissionPct} setCommissionPct={setCommissionPct} onViewReport={() => setActiveSection('reports')} totalPaidAmount={totalPaidAmount} activeSection={activeSection} />}
+        {activeSection === 'group-reg' && <GroupCustomerRegistryForm title="NEW GROUP" initialTab="group" groups={groups} setGroups={setGroups} customers={customers} setCustomers={setCustomers} showNotify={showNotify} onCancel={() => setActiveSection('daily')} />}
+        {activeSection === 'delete-group-customer' && <DeleteGroupCustomer groups={groups} setGroups={setGroups} customers={customers} setCustomers={setCustomers} showNotify={showNotify} onCancel={() => setActiveSection('daily')} />}
+        {activeSection === 'party' && customers !== undefined && <PartyDetailsView customers={customers} showNotify={showNotify} onCancel={() => setActiveSection('daily')} />}
+        {activeSection === 'item-reg' && <ItemRegistryForm form={itemForm} setForm={setItemForm} onSave={async () => {
+          try {
+            const created = await api.createCatalogItem({
+              itemCode: itemForm.itemCode,
+              itemName: itemForm.itemName,
+            });
+            setCatalog([...catalog, created]);
+            setItemForm({ itemCode: '', itemName: '' });
+            showNotify("New product registered successfully", "success");
+            
+            // Return focus to item code input field
+            setTimeout(() => {
+              document.querySelector('input[placeholder="Enter item code"]')?.focus();
+            }, 100);
+          } catch (e) {
+            showNotify(`Item add failed: ${e.message}`, 'error');
+          }
+        }} showNotify={showNotify} onCancel={() => setActiveSection('daily')} />}
+        {activeSection === 'advance' && groups !== undefined && customers !== undefined && <AdvanceTrackerView groups={groups} customers={customers} advanceStore={advanceStore} setAdvanceStore={setAdvanceStore} showNotify={showNotify} onCancel={() => setActiveSection('daily')} />}
+        {activeSection === 'daily-sale' && <DailySaleView onCancel={() => setActiveSection('daily')} />}
+        {activeSection === 'saala' && catalog !== undefined && <SaalaView catalog={catalog} onCancel={() => setActiveSection('daily')} showNotify={showNotify} />}
+        {activeSection === 'silk' && customers !== undefined && ledgerStore !== undefined && <SilkSummaryView ledgerStore={ledgerStore} customers={customers} onCancel={() => setActiveSection('daily')} />}
+        {activeSection === 'reports' && groups !== undefined && customers !== undefined && (
+          <ReportsWindow 
+            groups={groups} 
+            customers={customers} 
+            vehicles={vehicles} 
+            advanceStore={advanceStore} 
+            onCancel={() => setActiveSection('daily')}
+          />
+        )}
+        {activeSection === 'group-total' && (
+          <div>
+            {groups !== undefined ? (
+              <GroupTotalView 
+                groups={groups} 
+                customers={customers} 
+                ledgerStore={ledgerStore}
+                onCancel={() => setActiveSection('daily')}
+                setActiveSection={setActiveSection}
+              />
+            ) : (
+              <div className="flex-1 flex items-center justify-center bg-slate-100">
+                <div className="text-center p-8 bg-white rounded-xl shadow-lg border border-slate-200">
+                  <div className="text-slate-600 mb-4">Loading groups data...</div>
+                  <div className="text-sm text-slate-500">Please wait while we fetch the available groups</div>
+                </div>
+              </div>
+            )}
+          </div>
+        )}
+
+        {activeSection === 'group-print' && (
+          <div>
+            {groups !== undefined ? (
+              <GroupPattiView 
+                groups={groups} 
+                customers={customers} 
+                onCancel={() => setActiveSection('daily')}
+                setActiveSection={setActiveSection}
+              />
+            ) : (
+              <div className="flex-1 flex items-center justify-center bg-slate-100">
+                <div className="text-center p-8 bg-white rounded-xl shadow-lg border border-slate-200">
+                  <div className="text-slate-600 mb-4">Loading groups data...</div>
+                  <div className="text-sm text-slate-500">Please wait while we fetch the available groups</div>
+                </div>
+              </div>
+            )}
+          </div>
+        )}
+        {activeSection === 'group-adv' && groups !== undefined && customers !== undefined && <GroupAdvanceView groups={groups} customers={customers} advanceStore={advanceStore} onCancel={() => setActiveSection('daily')} />}
+        {activeSection === 'group-pay' && groups !== undefined && customers !== undefined && ledgerStore !== undefined && <GroupPaymentView groups={groups} customers={customers} ledgerStore={ledgerStore} onCancel={() => setActiveSection('daily')} />}
+        {activeSection === 'sms' && customers !== undefined && (
+          <SmsView 
+            customers={customers} 
+            ledgerStore={ledgerStore} 
+            onCancel={() => setActiveSection('daily')} 
+            showNotify={showNotify} 
+          />
+        )}
+        {activeSection === 'sms-single' && customers !== undefined && (
+          <SmsSingle 
+            customers={customers}
+            groups={groups}
+            onCancel={() => setActiveSection('daily')} 
+            showNotify={showNotify} 
+          />
+        )}
+        {activeSection === 'vehicle' && <VehicleView vehicles={vehicles} setVehicles={setVehicles} showNotify={showNotify} onCancel={() => setActiveSection('daily')} />}
+        {activeSection === 'daily-rate-sales' && <UtilityPlaceholderView title="Daily Rate Wise Sales" onCancel={() => setActiveSection('daily')} />}
+        {activeSection === 'new-supplier' && <UtilityPlaceholderView title="New Supplier" onCancel={() => setActiveSection('daily')} />}
+        {activeSection === 'supply-details' && <UtilityPlaceholderView title="Supply Details" onCancel={() => setActiveSection('daily')} />}
+        {activeSection === 'payment-list' && <UtilityPlaceholderView title="Payment List" onCancel={() => setActiveSection('daily')} />}
+        {activeSection === 'payment-report' && <UtilityPlaceholderView title="Payment Report" onCancel={() => setActiveSection('daily')} />}
+        {activeSection === 'move-data' && <UtilityPlaceholderView title="Move Data" onCancel={() => setActiveSection('daily')} />}
+        {activeSection === 'view-data' && <UtilityPlaceholderView title="View Data" onCancel={() => setActiveSection('daily')} />}
+      </div>
+
+      {isItemsDailySaleRateOpen && (
+        <div className="fixed inset-0 z-[6500] flex items-center justify-center bg-slate-900/60 p-6">
+          <div className="bg-white w-[1100px] h-[650px] border border-slate-400 shadow-2xl overflow-hidden flex flex-col">
+            <div className="bg-slate-800 px-3 py-2 text-white flex items-center justify-between shrink-0">
+              <h3 className="text-[11px] font-black uppercase tracking-widest">ITEMS DAILY SALE RATE</h3>
+              <button onClick={() => { setIsItemsDailySaleRateOpen(false); setIsItemsDailySaleRatePrinting(false); setIsItemsDailySaleRateLoading(false); }} className="p-1 hover:bg-rose-600"><X className="w-4 h-4" /></button>
+            </div>
+
+            <div className="p-4 border-b border-slate-200 shrink-0">
+              <div className="grid grid-cols-12 gap-3 items-end">
+                <div className="col-span-5">
+                  <label className="text-[9px] font-black uppercase text-slate-500">Item Name</label>
+                  <select className="w-full border p-2 text-[11px] font-bold outline-none bg-white" value={itemsDailySaleRateForm.itemName} onChange={e => setItemsDailySaleRateForm({ ...itemsDailySaleRateForm, itemName: e.target.value })}>
+                    <option value="">All Items</option>
+                    {[...new Set((catalog || []).map(i => i.itemName).filter(Boolean))].map((n) => (
+                      <option key={String(n)} value={String(n)}>{String(n)}</option>
+                    ))}
+                  </select>
+                </div>
+
+                <div className="col-span-2">
+                  <label className="text-[9px] font-black uppercase text-slate-500">From Date</label>
+                  <input type="date" className="w-full border p-2 text-[11px] font-bold outline-none" value={itemsDailySaleRateForm.fromDate} onChange={e => setItemsDailySaleRateForm({ ...itemsDailySaleRateForm, fromDate: e.target.value })} />
+                </div>
+                <div className="col-span-2">
+                  <label className="text-[9px] font-black uppercase text-slate-500">To Date</label>
+                  <input type="date" className="w-full border p-2 text-[11px] font-bold outline-none" value={itemsDailySaleRateForm.toDate} onChange={e => setItemsDailySaleRateForm({ ...itemsDailySaleRateForm, toDate: e.target.value })} />
+                </div>
+
+                <div className="col-span-3 flex gap-2">
+                  <button onClick={loadItemsDailySaleRate} disabled={isItemsDailySaleRateLoading} className="flex-1 bg-slate-800 text-white py-3 font-black uppercase text-[10px] shadow-md disabled:opacity-40">Go</button>
+                </div>
+              </div>
+            </div>
+
+            <div className="flex-1 overflow-hidden p-4 bg-slate-50">
+              <div className="h-full bg-white border border-slate-300 overflow-auto">
+                <table className="w-full border-collapse text-[11px]">
+                  <thead className="bg-slate-200 sticky top-0 z-10 uppercase text-[9px] font-black">
+                    <tr>
+                      <th className="border border-slate-300 p-2 w-14 text-center">Sl.No</th>
+                      <th className="border border-slate-300 p-2 w-28 text-center">Date</th>
+                      <th className="border border-slate-300 p-2">Party</th>
+                      <th className="border border-slate-300 p-2">Item Name</th>
+                      <th className="border border-slate-300 p-2 w-24 text-right">Qty</th>
+                      <th className="border border-slate-300 p-2 w-24 text-right">Rate</th>
+                      <th className="border border-slate-300 p-2 w-28 text-right">Total</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {(itemsDailySaleRateRows || []).map((r, idx) => (
+                      <tr key={idx} className="border-b border-slate-100">
+                        <td className="border border-slate-200 p-2 text-center text-slate-500 font-bold">{idx + 1}</td>
+                        <td className="border border-slate-200 p-2 text-center font-bold">{String(r.date)}</td>
+                        <td className="border border-slate-200 p-2 font-bold text-slate-800">{String(r.party)}</td>
+                        <td className="border border-slate-200 p-2 font-bold">{String(r.itemName)}</td>
+                        <td className="border border-slate-200 p-2 text-right font-black">{Number(r.qty || 0).toFixed(2)}</td>
+                        <td className="border border-slate-200 p-2 text-right font-black">{Number(r.rate || 0).toFixed(2)}</td>
+                        <td className="border border-slate-200 p-2 text-right font-black">{Number(r.total || 0).toFixed(2)}</td>
+                      </tr>
+                    ))}
+                    {Array.from({ length: Math.max(0, 18 - (itemsDailySaleRateRows || []).length) }).map((_, i) => (
+                      <tr key={`empty-${i}`} className="h-[32px]">
+                        <td className="border border-slate-200 p-2">&nbsp;</td>
+                        <td className="border border-slate-200 p-2">&nbsp;</td>
+                        <td className="border border-slate-200 p-2">&nbsp;</td>
+                        <td className="border border-slate-200 p-2">&nbsp;</td>
+                        <td className="border border-slate-200 p-2">&nbsp;</td>
+                        <td className="border border-slate-200 p-2">&nbsp;</td>
+                        <td className="border border-slate-200 p-2">&nbsp;</td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+            </div>
+
+            <div className="px-4 py-3 border-t border-slate-200 bg-white shrink-0">
+              <div className="flex items-center justify-between gap-4">
+                <button onClick={handleItemsDailySaleRateSendSms} className="bg-slate-800 text-white px-5 py-2 font-black uppercase text-[10px] shadow-md">Send SMS</button>
+
+                <div className="flex items-center gap-6">
+                  <div className="flex items-center gap-3">
+                    <span className="text-[10px] font-black text-slate-600 uppercase">TOTAL QUANTITY</span>
+                    <input readOnly className="w-28 bg-slate-100 p-1 text-[12px] font-black text-right outline-none" value={Number(itemsDailySaleRateSummary.qty || 0).toFixed(2)} />
+                  </div>
+                  <div className="flex items-center gap-3">
+                    <span className="text-[10px] font-black text-slate-600 uppercase">AMOUNT TOTAL</span>
+                    <input readOnly className="w-40 bg-rose-600 text-white p-1 text-[14px] font-black text-right outline-none" value={`₹ ${Number(itemsDailySaleRateSummary.total || 0).toFixed(2)}`} />
+                  </div>
+
+                  <div className="flex gap-2">
+                    <button onClick={handleItemsDailySaleRatePrint} disabled={isItemsDailySaleRatePrinting || isItemsDailySaleRateLoading} className="bg-slate-800 text-white px-6 py-2 font-black uppercase text-[10px] shadow-md disabled:opacity-40">Print</button>
+                    <button onClick={() => { setIsItemsDailySaleRateOpen(false); setIsItemsDailySaleRatePrinting(false); }} className="bg-slate-200 text-slate-800 px-6 py-2 font-black uppercase text-[10px] border border-slate-300 shadow-md">Cancel</button>
+                  </div>
+                </div>
+              </div>
+
+              <div className="mt-1 text-[10px] font-bold text-slate-500 min-h-[14px]">
+                {isItemsDailySaleRateLoading ? 'Loading...' : (isItemsDailySaleRatePrinting ? 'Printing...' : '')}
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
+
+
+
+
+
+      <div id="items-daily-sale-rate-print-area" className="hidden">
+        {itemsDailySaleRatePrintData && (
+          <div className="p-8 font-sans">
+            <div className="flex justify-between items-start mb-6">
+              <div>
+                <div className="text-[16px] font-black uppercase">ITEMS DAILY SALE RATE</div>
+                <div className="text-[12px] font-bold">From: {String(itemsDailySaleRatePrintData.meta.from)}  To: {String(itemsDailySaleRatePrintData.meta.to)}</div>
+                <div className="text-[12px] font-bold">Item: {itemsDailySaleRatePrintData.meta.item ? String(itemsDailySaleRatePrintData.meta.item) : 'ALL'}</div>
+              </div>
+              <div className="text-right">
+                <div className="text-[11px]">{new Date().toLocaleDateString()}</div>
+              </div>
+            </div>
+
+            <table className="w-full border-collapse text-[12px]">
+              <thead>
+                <tr>
+                  <th className="border border-black p-2 text-center">Sl.No</th>
+                  <th className="border border-black p-2 text-center">Date</th>
+                  <th className="border border-black p-2 text-left">Party</th>
+                  <th className="border border-black p-2 text-left">Item Name</th>
+                  <th className="border border-black p-2 text-right">Qty</th>
+                  <th className="border border-black p-2 text-right">Rate</th>
+                  <th className="border border-black p-2 text-right">Total</th>
+                </tr>
+              </thead>
+              <tbody>
+                {itemsDailySaleRatePrintData.rows.map((r, idx) => (
+                  <tr key={idx}>
+                    <td className="border border-black p-2 text-center">{idx + 1}</td>
+                    <td className="border border-black p-2 text-center">{String(r.date)}</td>
+                    <td className="border border-black p-2">{String(r.party)}</td>
+                    <td className="border border-black p-2">{String(r.itemName)}</td>
+                    <td className="border border-black p-2 text-right">{Number(r.qty || 0).toFixed(2)}</td>
+                    <td className="border border-black p-2 text-right">{Number(r.rate || 0).toFixed(2)}</td>
+                    <td className="border border-black p-2 text-right">{Number(r.total || 0).toFixed(2)}</td>
+                  </tr>
+                ))}
+                <tr>
+                  <td className="border border-black p-2 font-black text-right" colSpan={4}>TOTAL</td>
+                  <td className="border border-black p-2 text-right font-black">{Number(itemsDailySaleRatePrintData.totals.qty || 0).toFixed(2)}</td>
+                  <td className="border border-black p-2"></td>
+                  <td className="border border-black p-2 text-right font-black">{Number(itemsDailySaleRatePrintData.totals.total || 0).toFixed(2)}</td>
+                </tr>
+              </tbody>
+            </table>
+          </div>
+        )}
+      </div>
+
+      <footer className="h-7 bg-slate-900 border-t border-black/50 text-slate-500 font-mono text-[9px] px-4 flex items-center justify-between uppercase tracking-tighter shrink-0 shadow-2xl"><span>SECURE ERP CLOUD — <span className="text-emerald-500 font-black">CORE_SERVICE_OK</span> — v5.0.4</span><span>{new Date().toLocaleTimeString()}</span></footer>
+      <style dangerouslySetInnerHTML={{ __html: `input::-webkit-outer-spin-button, input::-webkit-inner-spin-button { -webkit-appearance: none; margin: 0; } ::-webkit-scrollbar { width: 4px; height: 4px; } ::-webkit-scrollbar-thumb { background: #334155; } ::-webkit-scrollbar-thumb:hover { background: #e11d48; } .custom-table-scroll:focus { outline: none; } @media print { body * { visibility: hidden !important; } #items-daily-sale-rate-print-area, #items-daily-sale-rate-print-area * { visibility: visible !important; } #items-daily-sale-rate-print-area { display: block !important; position: absolute; left: 0; top: 0; width: 100%; } }` }} />
+    </div>
+  );
+}

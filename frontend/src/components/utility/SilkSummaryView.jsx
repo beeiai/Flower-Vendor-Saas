@@ -1,0 +1,620 @@
+import React, { useState, useMemo, useEffect, useCallback } from 'react';
+import { 
+  X, Layers, Calendar, RefreshCcw, AlertTriangle, 
+  Coins, History, Landmark, Smartphone, List 
+} from 'lucide-react';
+import { api } from '../../utils/api';
+import { DEFAULT_STATES } from '../../utils/stateManager';
+
+/**
+ * SilkSummaryView Component
+ * * Purpose: Aggregates daily transaction data by Group Category.
+ * Logic:
+ * 1. Filters ledgerStore by selectedDate.
+ * 2. Maps items to their groups via customerMap.
+ * 3. Aggregates pieces (qty), weight (kg), and value (amount).
+ * 4. Compares manual collection inputs against aggregated totals.
+ */
+export function SilkSummaryView({ ledgerStore = {}, customers = [], onCancel }) {
+  const [state, setState] = useState(DEFAULT_STATES.silkSummary);
+  
+  const {
+    silkPayments,
+    selectedDate,
+    groupAggregation,
+    loading,
+    saving,
+    message
+  } = state;
+  
+  // Functions to update individual state properties
+  const setSilkPayments = useCallback((value) => {
+    setState(prev => ({ ...prev, silkPayments: value }));
+  }, []);
+  
+  const setSelectedDate = useCallback((value) => {
+    setState(prev => ({ ...prev, selectedDate: value }));
+  }, []);
+  
+  const setGroupAggregation = useCallback((value) => {
+    setState(prev => ({ ...prev, groupAggregation: value }));
+  }, []);
+  
+  const setLoading = useCallback((value) => {
+    setState(prev => ({ ...prev, loading: value }));
+  }, []);
+  
+  const setSaving = useCallback((value) => {
+    setState(prev => ({ ...prev, saving: value }));
+  }, []);
+  
+  const setMessage = useCallback((value) => {
+    setState(prev => ({ ...prev, message: value }));
+  }, []);
+  
+
+
+  // Fetch ledger data from API
+  const fetchLedgerData = async (date) => {
+    setLoading(true);
+    setMessage({ text: '', type: '' });
+    console.log('[FETCHING LEDGER DATA]', date);
+    try {
+      const response = await api.getSilkLedger(date);
+      console.log('[LEDGER RESPONSE]', response);
+      setGroupAggregation(response.groups || []);
+    } catch (error) {
+      setMessage({ text: `Failed to load ledger: ${error.message}`, type: 'error' });
+      setGroupAggregation([]);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  // Removed automatic fetching on date change - now requires manual fetch
+
+  // Manual fetch for selected date
+  const handleFetch = async () => {
+    if (!selectedDate) return;
+    
+    console.log('[HANDLE FETCH START] Starting fetch for date:', selectedDate);
+    console.log('[HANDLE FETCH] Current state before fetch:', {
+      cash: silkPayments.cash,
+      upi: silkPayments.phonePe,
+      credit: dailyCredit
+    });
+    
+    fetchLedgerData(selectedDate);
+    await fetchSavedCollection(selectedDate);
+    // Calculate credit AFTER fetching ledger and saved collection data
+    await calculateCreditAmount();
+    
+    console.log('[HANDLE FETCH END] Fetch completed for date:', selectedDate);
+    console.log('[HANDLE FETCH] State after fetch:', {
+      cash: silkPayments.cash,
+      upi: silkPayments.phonePe,
+      credit: dailyCredit
+    });
+  };
+  
+  // Fetch saved collection data for selected date
+  const fetchSavedCollection = async (date) => {
+    console.log('[FETCH SAVED COLLECTION START] Fetching data for date:', date);
+    try {
+      // Fetch daily cash and upi from the new silk_daily_collections table
+      console.log('[FETCH SAVED COLLECTION] Calling API to get daily collection');
+      const savedCollection = await api.getSilkDailyCollectionByDate(date);
+      
+      if (savedCollection) {
+        console.log('[FETCHED DAILY COLLECTION] SUCCESS - Data found:', {
+          date: savedCollection.date,
+          cash: savedCollection.cash,
+          upi: savedCollection.upi,
+          id: savedCollection.id
+        });
+        
+        // Sync fetched values into silkPayments state
+        setSilkPayments(prev => {
+          const newCash = Number(savedCollection.cash) || 0;
+          const newUpi = Number(savedCollection.upi) || 0;
+          console.log('[UPDATING SILK PAYMENTS] Updating state with fetched values:', { 
+            prevCash: prev.cash, 
+            prevUpi: prev.phonePe,
+            newCash,
+            newUpi,
+            prevState: prev
+          });
+          
+          return {
+            ...prev,
+            cash: newCash,
+            phonePe: newUpi
+            // credit comes from dailyCredit state, not saved collection
+          };
+        });
+        
+        // Update cashAmount and upiAmount states for UI and total calculation
+        const { cash, upi } = savedCollection;
+        
+        setCashAmount(Number(cash) || 0);
+        setUpiAmount(Number(upi) || 0);
+      } else {
+        console.log('[NO SAVED COLLECTION FOUND] No data for date:', date);
+        // Reset to 0 if no saved collection found
+        setSilkPayments(prev => {
+          console.log('[RESET SILK PAYMENTS] Resetting to 0 because no data found:', { 
+            prevCash: prev.cash, 
+            prevUpi: prev.phonePe,
+            prevState: prev
+          });
+          return {
+            ...prev,
+            cash: 0,
+            phonePe: 0
+          };
+        });
+      }
+      
+      // Log the updated state for verification
+      console.log('[SYNCED PAYMENTS STATE] After fetch operation:', silkPayments);
+      
+    } catch (error) {
+      console.error('[FETCH SAVED COLLECTION ERROR] Failed to fetch saved collection:', error);
+      // Reset on error
+      setSilkPayments(prev => {
+        console.log('[RESET SILK PAYMENTS ON ERROR] Resetting to 0 due to error:', { 
+          prevCash: prev.cash, 
+          prevUpi: prev.phonePe,
+          error: error.message,
+          prevState: prev
+        });
+        return {
+          ...prev,
+          cash: 0,
+          phonePe: 0
+        };
+      });
+    }
+    console.log('[FETCH SAVED COLLECTION END] Completed fetch for date:', date);
+  };
+  
+
+
+  // Save collection entry
+  const handleSaveCollection = async () => {
+    console.log('[SAVE COLLECTION START] Saving data for date:', selectedDate);
+    console.log('[SAVE COLLECTION] Current state values:', {
+      cash: silkPayments.cash,
+      upi: silkPayments.phonePe,
+      credit: dailyCredit
+    });
+    
+    setSaving(true);
+    setMessage({ text: '', type: '' });
+    try {
+      // Calculate the total manually for the message
+      const totalToSave = dailyCredit + 
+                          (Number(silkPayments.cash) || 0) + 
+                          (Number(silkPayments.phonePe) || 0);
+      
+      console.log('[SAVE COLLECTION] Preparing to save:', {
+        date: selectedDate,
+        cash: Number(silkPayments.cash) || 0,
+        upi: Number(silkPayments.phonePe) || 0,
+        totalToSave
+      });
+      
+      // Save only cash and upi to the new silk_daily_collections table
+      const result = await api.saveSilkDailyCollection({
+        date: selectedDate,
+        cash: Number(cashAmount) || 0,
+        upi: Number(upiAmount) || 0
+      });
+      
+      console.log('[SAVE COLLECTION] API response:', result);
+      
+      // After successful save, re-fetch to sync backend data
+      console.log('[SAVE COLLECTION] Re-fetching data to sync with backend');
+      await fetchSavedCollection(selectedDate);
+      
+      setMessage({ text: `Successfully saved! Total: ₹${totalToSave.toLocaleString(undefined, {minimumFractionDigits: 2})}`, type: 'success' });
+      console.log('[SAVE COLLECTION SUCCESS] Total saved:', totalToSave);
+    } catch (error) {
+      console.error('[SAVE COLLECTION ERROR] Failed to save:', error);
+      setMessage({ text: `Save failed: ${error.message}`, type: 'error' });
+    } finally {
+      setSaving(false);
+      console.log('[SAVE COLLECTION END] Save operation completed');
+    }
+  };
+  
+
+
+  // Dedicated state for Silk daily credit (separate from input state)
+  const [dailyCredit, setDailyCredit] = useState(0);
+  const [creditCalculationLoading, setCreditCalculationLoading] = useState(false);
+  
+  // Explicit state variables for credit, cash, and UPI
+  const [creditAmount, setCreditAmount] = useState(0);
+  // Use string-backed inputs so user can delete/clear before typing new numbers
+  const [cashAmount, setCashAmount] = useState('');
+  const [upiAmount, setUpiAmount] = useState('');
+  
+  // Debug effect to log dailyCredit changes
+  useEffect(() => {
+    console.log('[DAILY CREDIT STATE CHANGED]', dailyCredit);
+  }, [dailyCredit]);
+  
+  // Function to calculate credit amount
+  const calculateCreditAmount = async () => {
+    console.log('[CALCULATE CREDIT AMOUNT START] Calculating credit for date:', selectedDate);
+    setCreditCalculationLoading(true);
+    try {
+      // Get the daily credit from the new Silk endpoint
+      console.log('[CALCULATE CREDIT AMOUNT] Calling API to get daily credit');
+      console.log('[CALCULATE CREDIT AMOUNT] Selected date:', selectedDate);
+      
+      const response = await api.getSilkDailyCredit(selectedDate);
+      console.log('[CREDIT RESPONSE] Full API response:', response);
+      console.log('[CREDIT RESPONSE] Type of response:', typeof response);
+      console.log('[CREDIT RESPONSE] Response keys:', Object.keys(response || {}));
+      
+      // Handle different response formats
+      let totalCredit = 0;
+      if (response && typeof response === 'object') {
+        totalCredit = response.total_credit || response.totalCredit || 0;
+      }
+      
+      console.log('[CREDIT AMOUNT] Extracted total credit:', totalCredit);
+      
+      // Store backend credit in dedicated state - DO NOT touch silkPayments
+      console.log('[SETTING DAILY CREDIT] Setting credit value:', totalCredit);
+      setDailyCredit(prev => {
+        const newValue = Number(totalCredit) || 0;
+        console.log('[DAILY CREDIT SET] Updating credit state:', { prev, new: newValue });
+        return newValue;
+      });
+      
+      // Update creditAmount state for total calculation
+      setCreditAmount(totalCredit);
+      
+      // Show success message if credit was found
+      if (totalCredit > 0) {
+        console.log('[CREDIT SUCCESS] Successfully fetched credit:', totalCredit);
+      } else {
+        console.log('[CREDIT INFO] No credit found for this date (this is normal)');
+      }
+      
+      return totalCredit;
+    } catch (error) {
+      console.error('[CALCULATE CREDIT AMOUNT ERROR] Error calculating auto credit:', error);
+      console.error('[CALCULATE CREDIT AMOUNT ERROR] Error details:', {
+        message: error.message,
+        status: error.status,
+        response: error.response
+      });
+      
+      // Set to 0 on error but don't show error to user (credit is optional)
+      setDailyCredit(0);
+      setCreditAmount(0);
+      
+      // Optional: Show warning message
+      setMessage({ 
+        text: `Could not fetch credit: ${error.message || 'Unknown error'}`, 
+        type: 'warning' 
+      });
+      
+      return 0;
+    } finally {
+      setCreditCalculationLoading(false);
+      console.log('[CALCULATE CREDIT AMOUNT END] Credit calculation completed');
+    }
+  };
+
+  // Grand Totals across all groups
+  const grandTotals = useMemo(() => {
+    return groupAggregation.reduce((acc, curr) => ({
+      kg: acc.kg + curr.kg,
+      amount: acc.amount + curr.amount
+    }), { kg: 0, amount: 0 });
+  }, [groupAggregation]);
+
+  // Calculate total collected using useMemo
+  const totalCollected = useMemo(() => {
+    const credit = Number(creditAmount) || 0;
+    const cash = Number(cashAmount) || 0;
+    const upi = Number(upiAmount) || 0;
+
+    return credit + cash + upi;
+  }, [creditAmount, cashAmount, upiAmount]);
+  
+  // Temporary console log for debugging
+  console.log('[TOTAL]', {
+    creditAmount,
+    cashAmount,
+    upiAmount,
+    totalCollected
+  });
+      
+  // Verification log for daily collection UI
+  console.log('[DAILY COLLECTION UI]', {
+    cashAmount,
+    upiAmount
+  });
+  
+  const totalLedgerAmount = Number(grandTotals.amount || 0);
+  
+  // Calculate profit or loss
+  const profitLoss = useMemo(() => {
+    const result = totalCollected - totalLedgerAmount;
+    
+    // Debug logging
+    console.log('=== Profit/Loss Calculation Debug ===');
+    console.log('totalCollected:', totalCollected);
+    console.log('grandTotalLedgerValue:', totalLedgerAmount);
+    console.log('profitOrLoss:', result);
+    console.log('====================================');
+    
+    return result;
+  }, [totalCollected, totalLedgerAmount]);
+  
+  const isProfit = profitLoss > 0.01;
+  const isLoss = profitLoss < -0.01;
+  
+  // Calculate saved total amount (if available from fetched collection)
+  const savedTotalAmount = totalCollected > 0 ? totalCollected : null;
+
+// Credit calculation is now triggered only in handleFetch, not on date change
+
+  // Debug effect to log key values for verification
+  useEffect(() => {
+    console.log('=== Data Integrity Verification ===');
+    console.log('dailyCredit (backend):', dailyCredit);
+    console.log('cashCollection (from state):', silkPayments.cash);
+    console.log('upiCollection (from state):', silkPayments.phonePe);
+    console.log('totalCollected (computed):', totalCollected);
+    console.log('grandTotalLedgerValue:', grandTotals.amount);
+    console.log('profitOrLoss:', profitLoss);
+    console.log('isProfit:', isProfit);
+    console.log('isLoss:', isLoss);
+    console.log('=================================');
+  }, [dailyCredit, silkPayments, totalCollected, grandTotals, profitLoss, isProfit, isLoss]);
+
+  // Log state changes for debugging
+  useEffect(() => {
+    console.log('[STATE CHANGE] silkPayments updated:', silkPayments);
+  }, [silkPayments]);
+
+  useEffect(() => {
+    console.log('[STATE CHANGE] dailyCredit updated:', dailyCredit);
+  }, [dailyCredit]);
+
+  useEffect(() => {
+    console.log('[STATE CHANGE] totalCollected updated:', totalCollected);
+  }, [totalCollected]);
+
+
+
+  const handleCancel = () => {
+    // Reset state before cancelling
+    setState(DEFAULT_STATES.silkSummary);
+    onCancel && onCancel();
+  };
+
+  return (
+    <div className="flex-1 flex flex-col h-full bg-gradient-to-br from-slate-50 to-slate-100 animate-in fade-in duration-300 overflow-hidden">
+      {/* Header */}
+      <div className="bg-gradient-to-r from-[#5B55E6] to-[#4A44D0] px-5 py-3 flex justify-between items-center text-white shrink-0 shadow-xl rounded-b-xl">
+        <div className="flex flex-col">
+          <h1 className="text-base font-bold uppercase flex items-center gap-2.5 tracking-wider">
+            <Layers className="w-5 h-5 text-white" /> SILK DAILY GROUP SUMMARY
+          </h1>
+          <p className="text-[9px] text-white/80 uppercase font-black tracking-widest mt-1">Automated Financial Reconciliation</p>
+        </div>
+        <button onClick={handleCancel} className="p-1.5 rounded-lg hover:bg-white/20 transition-all" data-enter-index="7"><X className="w-5 h-5" /></button>
+      </div>
+
+      <div className="p-5 flex-1 flex flex-col gap-4 overflow-hidden">
+        {/* Controls: Date Picker and Fetch */}
+        <section className="bg-white rounded-xl border-2 border-slate-200 p-5 shadow-lg flex flex-col gap-4 shrink-0 backdrop-blur-sm">
+          <div className="bg-gradient-to-r from-slate-100 to-slate-200 px-4 py-2.5 border-b-2 font-bold text-sm text-slate-700 flex items-center gap-2 uppercase tracking-wider">
+            <Calendar className="w-5 h-5 text-rose-500" /> REPORT CONTROLS
+          </div>
+          
+          {/* Combined Filters Row */}
+          <div className="grid grid-cols-12 gap-4 items-end">
+            <div className="col-span-3">
+              <label className="text-[10px] font-black uppercase text-slate-600 mb-1.5 block tracking-wider">
+                <Calendar className="w-4 h-4 text-rose-500 inline mr-1.5" /> SELECT REPORT DATE
+              </label>
+              <input 
+                type="date" 
+                className="w-full bg-rose-50 border-2 border-rose-200 rounded-lg p-2.5 text-sm font-bold text-slate-800 outline-none transition-all duration-200 hover:border-rose-300 focus:border-rose-400 focus:ring-2 focus:ring-rose-100" 
+                value={selectedDate}
+                onChange={(e) => setSelectedDate(e.target.value)}
+                data-enter-index="1"
+              />
+            </div>
+            
+            <div className="col-span-2">
+              <label className="text-[10px] font-black uppercase text-slate-600 mb-1.5 block tracking-wider">
+                <History className="w-4 h-4 text-slate-400 inline mr-1.5" /> CREDIT AMOUNT
+              </label>
+              <input 
+                type="number" 
+                placeholder="0.00" 
+                className="w-full bg-slate-50 border-2 border-slate-200 rounded-lg p-2.5 text-sm font-black text-slate-800 outline-none cursor-not-allowed" 
+                value={dailyCredit} 
+                readOnly 
+                data-enter-index="3" 
+              />
+            </div>
+            
+            <div className="col-span-2">
+              <label className="text-[10px] font-black uppercase text-slate-600 mb-1.5 block tracking-wider">
+                <Landmark className="w-4 h-4 text-emerald-500 inline mr-1.5" /> CASH COLLECTION
+              </label>
+              <input
+                type="number"
+                placeholder="0.00"
+                className="w-full bg-rose-50 border-2 border-rose-200 rounded-lg p-2.5 text-sm font-bold text-slate-800 outline-none transition-all duration-200 hover:border-rose-300 focus:border-rose-400 focus:ring-2 focus:ring-rose-100"
+                value={cashAmount}
+                onChange={(e) => setCashAmount(e.target.value === '' ? '' : Number(e.target.value))}
+                data-enter-index="4"
+              />
+            </div>
+            
+            <div className="col-span-2">
+              <label className="text-[10px] font-black uppercase text-slate-600 mb-1.5 block tracking-wider">
+                <Smartphone className="w-4 h-4 text-blue-500 inline mr-1.5" /> PHONEPE / UPI
+              </label>
+              <input
+                type="number"
+                placeholder="0.00"
+                className="w-full bg-rose-50 border-2 border-rose-200 rounded-lg p-2.5 text-sm font-bold text-slate-800 outline-none transition-all duration-200 hover:border-rose-300 focus:border-rose-400 focus:ring-2 focus:ring-rose-100"
+                value={upiAmount}
+                onChange={(e) => setUpiAmount(e.target.value === '' ? '' : Number(e.target.value))}
+                data-enter-index="5"
+              />
+            </div>
+            
+            <div className="col-span-3 flex gap-2">
+              <button 
+                onClick={handleFetch}
+                className="flex-1 bg-gradient-to-r from-slate-700 to-slate-800 text-white px-4 py-2.5 text-xs font-black uppercase rounded-lg shadow-lg hover:from-slate-800 hover:to-slate-900 transition-all duration-200 flex items-center justify-center gap-2 tracking-wider"
+                data-enter-index="2"
+              >
+                <RefreshCcw className="w-4 h-4" /> FETCH
+              </button>
+              <button 
+                onClick={handleSaveCollection}
+                disabled={saving || loading}
+                className="flex-1 bg-gradient-to-r from-[#5B55E6] to-[#4A44D0] text-white px-4 py-2.5 text-xs font-black uppercase rounded-lg shadow-lg hover:from-[#4A44D0] hover:to-[#3A34C0] transition-all duration-200 flex items-center justify-center gap-2 tracking-wider disabled:opacity-50"
+                data-enter-index="6"
+              >
+                <Coins className="w-4 h-4" /> {saving ? 'SAVING...' : 'SAVE'}
+              </button>
+            </div>
+          </div>
+          
+          {/* Status Messages */}
+          <div className="flex gap-3">
+            {/* Profit/Loss Warning */}
+            {(isProfit || isLoss) && (
+              <div className={`flex items-center gap-2 px-4 py-2.5 border-2 rounded-lg ${isProfit ? 'bg-gradient-to-r from-emerald-50 to-emerald-100 text-emerald-700 border-emerald-200' : 'bg-gradient-to-r from-rose-50 to-rose-100 text-rose-700 border-rose-200'}`}>
+                <AlertTriangle className="w-4 h-4 animate-pulse" />
+                <div className="flex flex-col">
+                  <span className="text-[11px] font-black uppercase leading-tight">{isProfit ? 'PROFIT' : 'LOSS'}</span>
+                  <span className="text-[9px] font-bold">Amount: ₹{Math.abs(Number(profitLoss || 0)).toFixed(2)}</span>
+                </div>
+              </div>
+            )}
+            
+            {/* Status Message */}
+            {message.text && (
+              <div className={`flex items-center gap-2 px-4 py-2.5 border-2 rounded-lg ${message.type === 'success' ? 'bg-gradient-to-r from-emerald-50 to-emerald-100 text-emerald-700 border-emerald-200' : 'bg-gradient-to-r from-rose-50 to-rose-100 text-rose-700 border-rose-200'}`}>
+                {message.type === 'success' ? <Coins className="w-4 h-4" /> : <AlertTriangle className="w-4 h-4" />}
+                <span className="text-[10px] font-black uppercase">{message.text}</span>
+              </div>
+            )}
+          </div>
+        </section>
+
+        {/* Manual Collection Entry - REMOVED (now in combined filters above) */}
+
+
+
+        {/* Aggregated Group Table */}
+        <section className="flex-1 bg-white rounded-xl border-2 border-slate-200 shadow-lg overflow-hidden flex flex-col">
+          <div className="bg-gradient-to-r from-slate-100 to-slate-200 px-5 py-3 border-b-2 font-bold text-sm text-slate-700 flex items-center justify-between uppercase tracking-wider">
+            <div className="flex items-center gap-2.5">
+              <List className="w-5 h-5 text-rose-500" /> AGGREGATED SUMMARY FOR {selectedDate}
+            </div>
+            <span className="bg-gradient-to-r from-rose-100 to-rose-200 text-rose-800 px-3 py-1 rounded-full text-xs font-black uppercase tracking-wider">
+              Groups Found: {groupAggregation.length}
+            </span>
+          </div>
+          <div className="flex-1 overflow-auto custom-table-scroll">
+            <table className="w-full text-left text-sm border-collapse">
+              <thead className="bg-gradient-to-r from-[#5B55E6] to-[#4A44D0] sticky top-0 text-white uppercase font-bold text-xs z-10 border-b-2 border-black/20 shadow-lg">
+                <tr>
+                  <th className="px-4 py-3.5 border-r border-black/20">Group Name</th>
+                  <th className="px-4 py-3.5 border-r border-black/20 text-right">Total KG</th>
+                  <th className="px-4 py-3.5 text-right">Total Amount</th>
+                </tr>
+              </thead>
+              <tbody>
+                {loading ? (
+                  <tr>
+                    <td colSpan="3" className="p-16 text-center text-slate-500 text-sm font-bold">
+                      Loading group data...
+                    </td>
+                  </tr>
+                ) : groupAggregation.length === 0 ? (
+                  <tr>
+                    <td colSpan="3" className="p-16 text-center text-slate-500 text-sm font-bold">
+                      Select a date and click FETCH to load group summary
+                    </td>
+                  </tr>
+                ) : (
+                  groupAggregation.map((group, index) => (
+                    <tr key={index} className="border-b border-slate-100 hover:bg-slate-50 transition-all duration-150">
+                      <td className="px-4 py-3.5 font-bold text-slate-800 border-r border-slate-100">{group.groupName}</td>
+                      <td className="px-4 py-3.5 text-right font-bold text-slate-700 border-r border-slate-100">{Number(group.kg || 0).toFixed(2)} KG</td>
+                      <td className="px-4 py-3.5 text-right font-bold text-slate-800">₹{Number(group.amount || 0).toLocaleString()}</td>
+                    </tr>
+                  ))
+                )}
+              </tbody>
+            </table>
+          </div>
+          
+          {/* Footer Grand Totals */}
+          <div className="bg-gradient-to-r from-slate-800 to-slate-900 p-5 flex justify-between items-center text-white border-t-4 border-[#5B55E6] shadow-lg shrink-0">
+            <div className="text-center">
+              <p className="text-[10px] text-slate-300 font-black uppercase tracking-widest">Total Weight</p>
+              <p className="text-2xl font-black text-blue-400 tabular-nums">{Number(grandTotals.kg || 0).toFixed(2)} KG</p>
+            </div>
+            <div className="text-center flex-1">
+              <p className="text-[10px] text-slate-300 font-black uppercase tracking-widest">Total Collected</p>
+              <p className="text-4xl font-black text-emerald-400 tabular-nums drop-shadow-lg">₹{totalCollected.toLocaleString('en-IN', {
+                minimumFractionDigits: 2,
+                maximumFractionDigits: 2
+              })}</p>
+            </div>
+            <div className="text-right">
+              <p className="text-[10px] text-rose-300 font-black uppercase tracking-widest">Grand Total Ledger Value</p>
+              <p className="text-4xl font-black text-rose-400 tabular-nums drop-shadow-lg">₹{Number(grandTotals.amount || 0).toLocaleString(undefined, {minimumFractionDigits: 2})}</p>
+              <div className={`mt-2 text-sm font-bold ${isProfit ? 'text-emerald-400' : isLoss ? 'text-rose-400' : 'text-slate-300'}`}>
+                {isProfit ? 'PROFIT' : isLoss ? 'LOSS' : 'BREAK EVEN'}: ₹{Math.abs(profitLoss).toFixed(2)}
+              </div>
+            </div>
+          </div>
+        </section>
+      </div>
+    </div>
+  );
+}
+
+// Wrapper component to satisfy the "default export named App" requirement for previewing
+export default function App() {
+  // Mock data for preview purposes
+  const mockCustomers = [
+    { name: 'TV Mall', group: 'Retail' },
+    { name: 'Big Mart', group: 'Wholesale' }
+  ];
+  const mockLedger = {
+    'TV Mall': [{ date: new Date().toISOString().split('T')[0], qty: 10, kg: 85, rate: 100 }],
+    'Big Mart': [{ date: new Date().toISOString().split('T')[0], qty: 5, kg: 40, rate: 200 }]
+  };
+
+  return (
+    <div className="h-screen w-full flex bg-slate-200">
+      <SilkSummaryView 
+        customers={mockCustomers} 
+        ledgerStore={mockLedger} 
+        onCancel={() => console.log('Cancel clicked')} 
+      />
+    </div>
+  );
+}

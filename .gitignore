@@ -1,0 +1,29 @@
+# Python
+venv/
+__pycache__/
+*.pyc
+
+# Environment
+.env
+
+# Logs
+*.log
+
+# Static files
+static/settlements/*.pdf
+
+# Node.js
+node_modules/
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+.npm-cache/
+
+# Build outputs
+/dist
+/build
+/.vite
+
+# OS
+.DS_Store
+Thumbs.db

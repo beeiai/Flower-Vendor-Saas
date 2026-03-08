@@ -1,0 +1,882 @@
+from fastapi import APIRouter, Depends, HTTPException, Query
+from sqlalchemy.orm import Session
+from sqlalchemy import func, inspect
+from datetime import date, datetime
+from decimal import Decimal
+from typing import Optional
+import logging
+from sqlalchemy.exc import IntegrityError
+
+from app.core.db import get_db
+from app.dependencies import get_current_user
+from app.models.silk_ledger_entry import SilkLedgerEntry
+from app.models.silk_collection import SilkCollection, CollectionStatus
+from app.models.silk_physical_digital_entry import SilkPhysicalDigitalEntry
+from app.models.farmer import Farmer
+from app.models.collection_item import CollectionItem
+from app.models.saala_customer import SaalaCustomer, SaalaTransaction
+from pydantic import BaseModel, Field
+
+logger = logging.getLogger(__name__)
+
+router = APIRouter(
+    prefix="/silk",
+    tags=["Silk"]
+)
+
+
+# ========== SCHEMAS ==========
+
+class SilkCollectionCreate(BaseModel):
+    """Schema for creating a silk collection entry"""
+    date: str = Field(..., description="Date in YYYY-MM-DD format")
+    credit: float = Field(0, ge=0, description="Credit amount")
+    cash: float = Field(0, ge=0, description="Cash amount")
+    upi: float = Field(0, ge=0, description="UPI/PhonePe amount")
+
+
+class SilkPhysicalDigitalEntryCreate(BaseModel):
+    """Schema for creating a silk physical and digital collection entry"""
+    date: str = Field(..., description="Date in YYYY-MM-DD format")
+    physical_kg: float = Field(0, ge=0, description="Physical collection in KG")
+    physical_rate: float = Field(0, ge=0, description="Physical collection rate per KG")
+    digital_kg: float = Field(0, ge=0, description="Digital collection in KG")
+    digital_rate: float = Field(0, ge=0, description="Digital collection rate per KG")
+
+
+class GroupAggregation(BaseModel):
+    """Group-level aggregation"""
+    groupName: str
+    kg: float
+    amount: float
+
+
+class LedgerSummary(BaseModel):
+    """Response model for ledger aggregation"""
+    groups: list[GroupAggregation]
+    grandTotals: dict
+
+
+class CollectionResponse(BaseModel):
+    """Response model for collection save"""
+    id: int
+    date: str
+    credit_amount: float
+    cash_amount: float
+    upi_amount: float
+    total_entered: float
+    ledger_total: float
+    difference: float
+    status: str
+    message: str
+
+
+class SilkPhysicalDigitalResponse(BaseModel):
+    """Response model for physical and digital silk collection save"""
+    id: int
+    date: str
+    physical_kg: float
+    physical_rate: float
+    physical_amount: float
+    digital_kg: float
+    digital_rate: float
+    digital_amount: float
+    total_kg: float
+    total_amount: float
+    message: str
+
+
+class DailyCreditResponse(BaseModel):
+    """Response model for daily credit calculation"""
+    date: str
+    total_credit: float
+
+
+# ========== ENDPOINTS ==========
+
+@router.get("/ledger", response_model=LedgerSummary)
+def get_silk_ledger_aggregation(
+    date: str = Query(..., description="Date in YYYY-MM-DD format"),
+    db: Session = Depends(get_db),
+    user = Depends(get_current_user)
+):
+    """
+    Aggregates transactions from collection_items by customer group for a specific date.
+    
+    Returns:
+    - Group-wise aggregation (kg, amount)
+    - Grand totals across all groups
+    """
+    # Validate and parse the incoming date string into a date object
+    try:
+        target_date = datetime.strptime(date, "%Y-%m-%d").date()
+    except ValueError:
+        raise HTTPException(status_code=400, detail="Invalid date format. Use YYYY-MM-DD")
+
+    # Query regular transactions (collection_items) for the target date
+    # Join with Farmer and FarmerGroup to get names
+    from app.models.farmer_group import FarmerGroup
+    query = (
+        db.query(
+            CollectionItem,
+            FarmerGroup.name.label("group_name")
+        )
+        .outerjoin(FarmerGroup, CollectionItem.group_id == FarmerGroup.id)
+        .filter(
+            CollectionItem.vendor_id == user.vendor_id,
+            CollectionItem.date == target_date
+        )
+        .all()
+    )
+
+    # Aggregate by group
+    groups = {}
+    for item, group_name in query:
+        gname = group_name or "Unassigned"
+        
+        if gname not in groups:
+            groups[gname] = {
+                "groupName": gname,
+                "kg": 0,
+                "amount": 0
+            }
+        
+        kg = float(item.qty_kg or 0)
+        rate = float(item.rate_per_kg or 0)
+        groups[gname]["kg"] += kg
+        groups[gname]["amount"] += kg * rate
+
+    # Sort groups alphabetically
+    group_list = sorted(groups.values(), key=lambda x: x["groupName"])
+
+    # Compute grand totals
+    grand_totals = {
+        "kg": sum(g["kg"] for g in group_list),
+        "amount": sum(g["amount"] for g in group_list)
+    }
+
+    return {
+        "groups": group_list,
+        "grandTotals": grand_totals
+    }
+
+
+@router.post("/collections", response_model=CollectionResponse)
+def save_silk_collection(
+    data: SilkCollectionCreate,
+    db: Session = Depends(get_db),
+    user = Depends(get_current_user)
+):
+    """
+    Saves a silk collection entry with manual payment inputs
+    and performs reconciliation against ledger totals.
+    
+    Business Rules:
+    - Computes total_entered = credit + cash + upi
+    - Fetches ledger total for the date
+    - Computes difference = total_entered - ledger_total
+    - Sets status to MATCHED if |difference| <= 0.01, else MISMATCH
+    """
+    try:
+        target_date = datetime.strptime(data.date, "%Y-%m-%d").date()
+    except ValueError:
+        raise HTTPException(status_code=400, detail="Invalid date format. Use YYYY-MM-DD")
+
+    # Validate amounts
+    if data.credit < 0 or data.cash < 0 or data.upi < 0:
+        raise HTTPException(status_code=400, detail="Payment amounts cannot be negative")
+
+    # Compute total entered
+    total_entered = Decimal(str(data.credit)) + Decimal(str(data.cash)) + Decimal(str(data.upi))
+
+    # Fetch ledger total for the date from regular transactions
+    ledger_total = (
+        db.query(func.sum(CollectionItem.qty_kg * CollectionItem.rate_per_kg))
+        .filter(
+            CollectionItem.vendor_id == user.vendor_id,
+            CollectionItem.date == target_date
+        )
+        .scalar() or Decimal("0")
+    )
+
+    # Compute difference and status
+    difference = total_entered - ledger_total
+    status = CollectionStatus.MATCHED if abs(difference) <= Decimal("0.01") else CollectionStatus.MISMATCH
+
+    # Check if an entry already exists for this date
+    existing = (
+        db.query(SilkCollection)
+        .filter(
+            SilkCollection.vendor_id == user.vendor_id,
+            SilkCollection.date == target_date
+        )
+        .first()
+    )
+
+    if existing:
+        # Update existing entry
+        existing.credit_amount = Decimal(str(data.credit))
+        existing.cash_amount = Decimal(str(data.cash))
+        existing.upi_amount = Decimal(str(data.upi))
+        existing.total_entered = total_entered
+        existing.ledger_total = ledger_total
+        existing.difference = difference
+        existing.status = status
+        existing.updated_at = func.now()
+        
+        db.commit()
+        db.refresh(existing)
+        
+        collection = existing
+        message = "Collection entry updated successfully"
+    else:
+        # Create new entry
+        collection = SilkCollection(
+            vendor_id=user.vendor_id,
+            date=target_date,
+            credit_amount=Decimal(str(data.credit)),
+            cash_amount=Decimal(str(data.cash)),
+            upi_amount=Decimal(str(data.upi)),
+            total_entered=total_entered,
+            ledger_total=ledger_total,
+            difference=difference,
+            status=status,
+            created_by=user.id
+        )
+        
+        db.add(collection)
+        db.commit()
+        db.refresh(collection)
+        
+        message = "Collection entry saved successfully"
+
+    return {
+        "id": collection.id,
+        "date": collection.date.isoformat(),
+        "credit_amount": float(collection.credit_amount),
+        "cash_amount": float(collection.cash_amount),
+        "upi_amount": float(collection.upi_amount),
+        "total_entered": float(collection.total_entered),
+        "ledger_total": float(collection.ledger_total),
+        "difference": float(collection.difference),
+        "status": collection.status.value,
+        "message": message
+    }
+
+
+@router.post("/physical-digital-entries", response_model=SilkPhysicalDigitalResponse)
+def save_silk_physical_digital_entry(
+    data: SilkPhysicalDigitalEntryCreate,
+    db: Session = Depends(get_db),
+    user = Depends(get_current_user)
+):
+    """
+    Saves a silk physical and digital collection entry.
+    """
+    try:
+        target_date = datetime.strptime(data.date, "%Y-%m-%d").date()
+    except ValueError:
+        raise HTTPException(status_code=400, detail="Invalid date format. Use YYYY-MM-DD")
+
+    # Validate amounts
+    if data.physical_kg < 0 or data.physical_rate < 0 or data.digital_kg < 0 or data.digital_rate < 0:
+        raise HTTPException(status_code=400, detail="Collection amounts cannot be negative")
+
+    # Calculate derived values
+    physical_amount = Decimal(str(data.physical_kg)) * Decimal(str(data.physical_rate))
+    digital_amount = Decimal(str(data.digital_kg)) * Decimal(str(data.digital_rate))
+    total_kg = Decimal(str(data.physical_kg)) + Decimal(str(data.digital_kg))
+    total_amount = physical_amount + digital_amount
+
+    # Check if an entry already exists for this date
+    existing = (
+        db.query(SilkPhysicalDigitalEntry)
+        .filter(
+            SilkPhysicalDigitalEntry.vendor_id == user.vendor_id,
+            SilkPhysicalDigitalEntry.date == target_date
+        )
+        .first()
+    )
+
+    if existing:
+        # Update existing entry
+        existing.physical_kg = Decimal(str(data.physical_kg))
+        existing.physical_rate = Decimal(str(data.physical_rate))
+        existing.physical_amount = physical_amount
+        existing.digital_kg = Decimal(str(data.digital_kg))
+        existing.digital_rate = Decimal(str(data.digital_rate))
+        existing.digital_amount = digital_amount
+        existing.total_kg = total_kg
+        existing.total_amount = total_amount
+        existing.updated_at = func.now()
+        
+        db.commit()
+        db.refresh(existing)
+        
+        entry = existing
+        message = "Physical and digital collection entry updated successfully"
+    else:
+        # Create new entry
+        entry = SilkPhysicalDigitalEntry(
+            vendor_id=user.vendor_id,
+            date=target_date,
+            physical_kg=Decimal(str(data.physical_kg)),
+            physical_rate=Decimal(str(data.physical_rate)),
+            physical_amount=physical_amount,
+            digital_kg=Decimal(str(data.digital_kg)),
+            digital_rate=Decimal(str(data.digital_rate)),
+            digital_amount=digital_amount,
+            total_kg=total_kg,
+            total_amount=total_amount,
+            created_by=user.id
+        )
+        
+        db.add(entry)
+        db.commit()
+        db.refresh(entry)
+        
+        message = "Physical and digital collection entry saved successfully"
+
+    return {
+        "id": entry.id,
+        "date": entry.date.isoformat(),
+        "physical_kg": float(entry.physical_kg),
+        "physical_rate": float(entry.physical_rate),
+        "physical_amount": float(entry.physical_amount),
+        "digital_kg": float(entry.digital_kg),
+        "digital_rate": float(entry.digital_rate),
+        "digital_amount": float(entry.digital_amount),
+        "total_kg": float(entry.total_kg),
+        "total_amount": float(entry.total_amount),
+        "message": message
+    }
+
+
+@router.get("/physical-digital-entries")
+def list_silk_physical_digital_entries(
+    from_date: Optional[str] = Query(None, description="Start date YYYY-MM-DD"),
+    to_date: Optional[str] = Query(None, description="End date YYYY-MM-DD"),
+    db: Session = Depends(get_db),
+    user = Depends(get_current_user)
+):
+    """
+    Fetches silk physical and digital collection history with optional date range filtering.
+    """
+    query = db.query(SilkPhysicalDigitalEntry).filter(
+        SilkPhysicalDigitalEntry.vendor_id == user.vendor_id
+    )
+
+    if from_date:
+        try:
+            start = datetime.strptime(from_date, "%Y-%m-%d").date()
+            query = query.filter(SilkPhysicalDigitalEntry.date >= start)
+        except ValueError:
+            raise HTTPException(status_code=400, detail="Invalid from_date format")
+
+    if to_date:
+        try:
+            end = datetime.strptime(to_date, "%Y-%m-%d").date()
+            query = query.filter(SilkPhysicalDigitalEntry.date <= end)
+        except ValueError:
+            raise HTTPException(status_code=400, detail="Invalid to_date format")
+
+    entries = query.order_by(SilkPhysicalDigitalEntry.date.desc()).all()
+
+    return [
+        {
+            "id": e.id,
+            "date": e.date.isoformat(),
+            "physical_kg": float(e.physical_kg),
+            "physical_rate": float(e.physical_rate),
+            "physical_amount": float(e.physical_amount),
+            "digital_kg": float(e.digital_kg),
+            "digital_rate": float(e.digital_rate),
+            "digital_amount": float(e.digital_amount),
+            "total_kg": float(e.total_kg),
+            "total_amount": float(e.total_amount),
+            "created_at": e.created_at.isoformat() if e.created_at else None
+        }
+        for e in entries
+    ]
+
+
+
+@router.get("/collections")
+def list_silk_collections(
+    from_date: Optional[str] = Query(None, description="Start date YYYY-MM-DD"),
+    to_date: Optional[str] = Query(None, description="End date YYYY-MM-DD"),
+    db: Session = Depends(get_db),
+    user = Depends(get_current_user)
+):
+    """
+    Fetches silk collection history with optional date range filtering.
+    """
+    query = db.query(SilkCollection).filter(
+        SilkCollection.vendor_id == user.vendor_id
+    )
+
+    if from_date:
+        try:
+            start = datetime.strptime(from_date, "%Y-%m-%d").date()
+            query = query.filter(SilkCollection.date >= start)
+        except ValueError:
+            raise HTTPException(status_code=400, detail="Invalid from_date format")
+
+    if to_date:
+        try:
+            end = datetime.strptime(to_date, "%Y-%m-%d").date()
+            query = query.filter(SilkCollection.date <= end)
+        except ValueError:
+            raise HTTPException(status_code=400, detail="Invalid to_date format")
+
+    collections = query.order_by(SilkCollection.date.desc()).all()
+
+    return [
+        {
+            "id": c.id,
+            "date": c.date.isoformat(),
+            "credit_amount": float(c.credit_amount),
+            "cash_amount": float(c.cash_amount),
+            "upi_amount": float(c.upi_amount),
+            "total_entered": float(c.total_entered),
+            "ledger_total": float(c.ledger_total),
+            "difference": float(c.difference),
+            "status": c.status.value,
+            "created_at": c.created_at.isoformat() if c.created_at else None
+        }
+        for c in collections
+    ]
+
+    
+@router.post("/sync-from-transactions")
+def sync_silk_ledger_from_transactions(
+    db: Session = Depends(get_db),
+    user = Depends(get_current_user)
+):
+    """
+    Sync silk ledger entries from regular collection items.
+    Creates silk ledger entries from collection items grouped by customer group.
+    """
+    try:
+        # Get all collection items for the user's vendor for the last 30 days
+        from datetime import timedelta
+        thirty_days_ago = datetime.now().date() - timedelta(days=30)
+        
+        collection_items = db.query(CollectionItem).filter(
+            CollectionItem.vendor_id == user.vendor_id,
+            CollectionItem.date >= thirty_days_ago
+        ).all()
+        
+        created_count = 0
+        for item in collection_items:
+            # Skip items without farmer_id or date
+            if not item.farmer_id or not item.date:
+                continue
+                
+            # Check if silk ledger entry already exists for this combination
+            existing_silk = db.query(SilkLedgerEntry).filter(
+                SilkLedgerEntry.vendor_id == user.vendor_id,
+                SilkLedgerEntry.customer_id == item.farmer_id,
+                SilkLedgerEntry.date == item.date,
+                SilkLedgerEntry.kg == item.qty_kg,
+                SilkLedgerEntry.rate == item.rate_per_kg
+            ).first()
+            
+            if not existing_silk:
+                silk_entry = SilkLedgerEntry(
+                    vendor_id=user.vendor_id,
+                    customer_id=item.farmer_id,
+                    date=item.date,
+                    qty=item.qty_kg,  # Using qty_kg as pieces for silk
+                    kg=item.qty_kg,   # Using qty_kg as kg for silk
+                    rate=item.rate_per_kg
+                )
+                db.add(silk_entry)
+                created_count += 1
+        
+        db.commit()
+        return {"message": f"Successfully synced {created_count} silk ledger entries from collection items", "created_count": created_count}
+    
+    except Exception as e:
+        db.rollback()
+        raise HTTPException(status_code=500, detail=f"Sync failed: {str(e)}")
+
+
+@router.get("/credit", response_model=DailyCreditResponse)
+@router.get("/credit/", response_model=DailyCreditResponse)
+def get_silk_daily_credit(
+    date: str = Query(..., description="Date in YYYY-MM-DD format"),
+    db: Session = Depends(get_db),
+    user = Depends(get_current_user)
+):
+    """
+    Get the total daily credit for all customers on a specific date.
+    Daily credit = sum of (total_amount - paid_amount) for all transactions on that day.
+    """
+    try:
+        target_date = datetime.strptime(date, "%Y-%m-%d").date()
+        # Create datetime range for the entire day to handle timezone issues
+        from datetime import time
+        start_of_day = datetime.combine(target_date, time.min)
+        end_of_day = datetime.combine(target_date, time.max)
+    except ValueError:
+        raise HTTPException(status_code=400, detail="Invalid date format. Use YYYY-MM-DD")
+    
+    try:
+        # Get all customers for the vendor
+        customers = db.query(SaalaCustomer).filter(
+            SaalaCustomer.vendor_id == user.vendor_id
+        ).all()
+        
+        logger.info(f"Found {len(customers)} customers for vendor {user.vendor_id}")
+        
+        total_daily_credit = 0
+        
+        # For each customer, get the sum of (total_amount - paid_amount) for transactions on that date
+        for customer in customers:
+            try:
+                # Calculate daily credit correctly: sum(total_amount - paid_amount) for the day
+                daily_credit = (
+                    db.query(func.sum(SaalaTransaction.total_amount - SaalaTransaction.paid_amount))
+                    .filter(
+                        SaalaTransaction.customer_id == customer.id,
+                        SaalaTransaction.date >= start_of_day,
+                        SaalaTransaction.date <= end_of_day
+                    )
+                    .scalar()
+                ) or 0
+                
+                # Ensure we don't include negative values (overpayments)
+                daily_credit = max(float(daily_credit), 0)
+                total_daily_credit += daily_credit
+                
+                logger.debug(f"Customer {customer.id}: credit = {daily_credit}")
+                
+            except Exception as e:
+                logger.error(f"Error calculating credit for customer {customer.id}: {str(e)}")
+                continue  # Skip this customer and continue with others
+        
+        logger.info(f"Total daily credit for {date}: {total_daily_credit}")
+        
+        return {
+            "date": date,
+            "total_credit": total_daily_credit
+        }
+        
+    except Exception as e:
+        logger.error(f"Error in get_silk_daily_credit: {str(e)}")
+        raise HTTPException(status_code=500, detail=f"Internal server error: {str(e)}")
+
+
+@router.get("/saala-transactions-by-date-range")
+def get_saala_transactions_by_date_range(
+    from_date: str = Query(..., description="Start date in YYYY-MM-DD format"),
+    to_date: str = Query(..., description="End date in YYYY-MM-DD format"),
+    db: Session = Depends(get_db),
+    user = Depends(get_current_user)
+):
+    """
+    Get all SAALA transactions for a date range, grouped by customer.
+    Returns transactions for all customers within the specified date range.
+    """
+    try:
+        start_date = datetime.strptime(from_date, "%Y-%m-%d").date()
+        end_date = datetime.strptime(to_date, "%Y-%m-%d").date()
+        
+        # Create datetime range for the entire days to handle timezone issues
+        from datetime import time
+        start_datetime = datetime.combine(start_date, time.min)
+        end_datetime = datetime.combine(end_date, time.max)
+    except ValueError:
+        raise HTTPException(status_code=400, detail="Invalid date format. Use YYYY-MM-DD")
+    
+    try:
+        # Get all customers for the vendor
+        customers = db.query(SaalaCustomer).filter(
+            SaalaCustomer.vendor_id == user.vendor_id
+        ).all()
+        
+        logger.info(f"Found {len(customers)} customers for vendor {user.vendor_id}")
+        
+        result = []
+        
+        # For each customer, get transactions within the date range
+        for customer in customers:
+            try:
+                # Get transactions for this customer within the date range
+                transactions = (
+                    db.query(SaalaTransaction)
+                    .filter(
+                        SaalaTransaction.customer_id == customer.id,
+                        SaalaTransaction.date >= start_datetime,
+                        SaalaTransaction.date <= end_datetime
+                    )
+                    .order_by(SaalaTransaction.date.desc())
+                    .all()
+                )
+                
+                if transactions:
+                    # Convert transactions to dictionary format
+                    transaction_data = []
+                    for txn in transactions:
+                        transaction_data.append({
+                            "id": txn.id,
+                            "date": txn.date.isoformat() if txn.date else None,
+                            "description": txn.description or "",
+                            "item_code": txn.item_code or "",
+                            "item_name": txn.item_name or "",
+                            "qty": float(txn.qty) if txn.qty is not None else 0,
+                            "rate": float(txn.rate) if txn.rate is not None else 0,
+                            "total_amount": float(txn.total_amount) if txn.total_amount is not None else 0,
+                            "paid_amount": float(txn.paid_amount) if txn.paid_amount is not None else 0,
+                            "balance": float(txn.balance) if txn.balance is not None else 0,
+                            "created_at": txn.created_at.isoformat() if txn.created_at else None
+                        })
+                    
+                    # Add customer data with their transactions
+                    result.append({
+                        "customer_id": customer.id,
+                        "customer_name": customer.name,
+                        "customer_contact": customer.contact or "",
+                        "customer_address": customer.address or "",
+                        "transactions": transaction_data,
+                        "transaction_count": len(transaction_data)
+                    })
+                    
+                    logger.debug(f"Customer {customer.id}: {len(transaction_data)} transactions")
+                
+            except Exception as e:
+                logger.error(f"Error fetching transactions for customer {customer.id}: {str(e)}")
+                continue  # Skip this customer and continue with others
+        
+        logger.info(f"Total customers with transactions: {len(result)}")
+        
+        return {
+            "from_date": from_date,
+            "to_date": to_date,
+            "customers": result,
+            "total_customers": len(result)
+        }
+        
+    except Exception as e:
+        logger.error(f"Error in get_saala_transactions_by_date_range: {str(e)}")
+        raise HTTPException(status_code=500, detail=f"Internal server error: {str(e)}")
+
+# ========== DAILY CASH & UPI COLLECTIONS ========== #
+
+from app.models.silk_daily_collection import SilkDailyCollection
+from app.schemas.silk_collection import SilkDailyCollectionCreate, SilkDailyCollectionResponse, SilkDailyCollectionListResponse
+from datetime import datetime
+
+
+@router.post("/daily-collections", response_model=SilkDailyCollectionResponse)
+def save_daily_collection(
+    data: SilkDailyCollectionCreate,
+    db: Session = Depends(get_db),
+    user = Depends(get_current_user)
+):
+    """
+    Save or update daily Cash & UPI collection for a specific date.
+    
+    Business Rules:
+    - One record per date (UNIQUE constraint)
+    - If record exists for date → UPDATE
+    - Else → INSERT
+    - Cash and UPI are authoritative from this table
+    """
+    try:
+        target_date = datetime.strptime(str(data.date), "%Y-%m-%d").date()
+    except ValueError:
+        raise HTTPException(status_code=400, detail="Invalid date format. Use YYYY-MM-DD")
+
+    # Validate amounts
+    if data.cash < 0 or data.upi < 0:
+        raise HTTPException(status_code=400, detail="Payment amounts cannot be negative")
+
+    # Determine whether the DB schema contains `vendor_id` column and adapt accordingly
+    try:
+        inspector = inspect(db.bind)
+        cols = [c["name"] for c in inspector.get_columns(SilkDailyCollection.__tablename__)]
+    except Exception:
+        cols = []
+
+    vendor_col_present = "vendor_id" in cols
+
+    # Check if record exists for the date for this vendor (or legacy global date)
+    if vendor_col_present:
+        existing = db.query(SilkDailyCollection).filter(
+            SilkDailyCollection.vendor_id == user.vendor_id,
+            SilkDailyCollection.date == target_date
+        ).first()
+    else:
+        existing = db.query(SilkDailyCollection).filter(
+            SilkDailyCollection.date == target_date
+        ).first()
+
+    logger.debug("Silk collection save", extra={
+        "date": target_date,
+        "cash": data.cash,
+        "upi": data.upi,
+        "vendor_col_present": vendor_col_present
+    })
+
+    if existing:
+        # Update existing record
+        existing.cash = data.cash
+        existing.upi = data.upi
+        db.commit()
+        db.refresh(existing)
+        return existing
+    else:
+        # Create new record. If vendor_id exists in schema, set it; otherwise omit for legacy schema.
+        if vendor_col_present:
+            new_collection = SilkDailyCollection(
+                vendor_id=user.vendor_id,
+                date=target_date,
+                cash=data.cash,
+                upi=data.upi
+            )
+        else:
+            new_collection = SilkDailyCollection(
+                date=target_date,
+                cash=data.cash,
+                upi=data.upi
+            )
+
+        db.add(new_collection)
+        try:
+            db.commit()
+            db.refresh(new_collection)
+            return new_collection
+        except IntegrityError as ie:
+            db.rollback()
+            logger.exception("IntegrityError saving SilkDailyCollection: %s", str(ie))
+
+            # If vendor column exists, try to resolve race/update as before
+            if vendor_col_present:
+                conflict = db.query(SilkDailyCollection).filter(
+                    SilkDailyCollection.vendor_id == user.vendor_id,
+                    SilkDailyCollection.date == target_date
+                ).first()
+                if conflict:
+                    conflict.cash = data.cash
+                    conflict.upi = data.upi
+                    conflict.updated_at = func.now()
+                    db.commit()
+                    db.refresh(conflict)
+                    return conflict
+
+                # If another vendor holds this date due to global unique constraint, return 409
+                other = db.query(SilkDailyCollection).filter(SilkDailyCollection.date == target_date).first()
+                if other:
+                    raise HTTPException(status_code=409, detail=f"A collection for date {target_date} already exists (vendor_id={getattr(other, 'vendor_id', 'unknown')}). Database enforces unique date.")
+
+            # Legacy schema: another integrity error (e.g., unique date violated). Try to fetch existing row by date and return it.
+            fallback = db.query(SilkDailyCollection).filter(SilkDailyCollection.date == target_date).first()
+            if fallback:
+                fallback.cash = data.cash
+                fallback.upi = data.upi
+                fallback.updated_at = func.now()
+                db.commit()
+                db.refresh(fallback)
+                return fallback
+
+            # Unknown integrity error, propagate as server error
+            raise HTTPException(status_code=500, detail=f"Failed to save collection due to integrity error: {str(ie)}")
+
+
+@router.get("/daily-collections", response_model=SilkDailyCollectionListResponse)
+def get_daily_collections(
+    from_date: str = Query(..., description="Start date in YYYY-MM-DD format"),
+    to_date: str = Query(..., description="End date in YYYY-MM-DD format"),
+    db: Session = Depends(get_db),
+    user = Depends(get_current_user)
+):
+    """
+    Fetch daily Cash & UPI collections for a date range.
+    
+    Returns:
+    - List of collections for the given date range
+    - Empty array if no records found
+    """
+    try:
+        start_date = datetime.strptime(from_date, "%Y-%m-%d").date()
+        end_date = datetime.strptime(to_date, "%Y-%m-%d").date()
+    except ValueError:
+        raise HTTPException(status_code=400, detail="Invalid date format. Use YYYY-MM-DD")
+
+    # Query collections in the date range for this vendor
+    collections = (
+        db.query(SilkDailyCollection)
+        .filter(
+            SilkDailyCollection.vendor_id == user.vendor_id,
+            SilkDailyCollection.date >= start_date,
+            SilkDailyCollection.date <= end_date
+        )
+        .order_by(SilkDailyCollection.date)
+        .all()
+    )
+
+    # Log debug info
+    logger.debug("Silk collection fetch", extra={
+        "collections_count": len(collections),
+        "sample_dates": [c.date for c in collections[:3]]
+    })
+
+    return {"collections": collections}
+
+
+@router.get("/daily-collections/{date_str}", response_model=SilkDailyCollectionResponse)
+def get_daily_collection_by_date(
+    date_str: str,
+    db: Session = Depends(get_db),
+    user = Depends(get_current_user)
+):
+    """
+    Fetch daily Cash & UPI collection for a specific date.
+    
+    Returns:
+    - Collection record for the date
+    - 404 if no record found
+    """
+    try:
+        target_date = datetime.strptime(date_str, "%Y-%m-%d").date()
+    except ValueError:
+        raise HTTPException(status_code=400, detail="Invalid date format. Use YYYY-MM-DD")
+
+    # Query collection for the date and vendor
+    collection = db.query(SilkDailyCollection).filter(
+        SilkDailyCollection.vendor_id == user.vendor_id,
+        SilkDailyCollection.date == target_date
+    ).first()
+    
+    if not collection:
+        raise HTTPException(status_code=404, detail="No collection found for the specified date")
+
+    logger.debug("Silk collection fetch by date", extra={
+        "date": collection.date,
+        "cash": collection.cash,
+        "upi": collection.upi
+    })
+    
+    return collection
+
+
+# Accept trailing-slash variant for POST daily collection
+@router.post("/daily-collections/", response_model=SilkDailyCollectionResponse)
+def save_daily_collection_slash(
+    data: SilkDailyCollectionCreate,
+    db: Session = Depends(get_db),
+    user = Depends(get_current_user)
+):
+    return save_daily_collection(data=data, db=db, user=user)
+
+
+# Accept trailing-slash variant for single-date daily collection
+@router.get("/daily-collections/{date_str}/", response_model=SilkDailyCollectionResponse)
+def get_daily_collection_by_date_slash(
+    date_str: str,
+    db: Session = Depends(get_db),
+    user = Depends(get_current_user)
+):
+    return get_daily_collection_by_date(date_str=date_str, db=db, user=user)
