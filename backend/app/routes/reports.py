@@ -18,6 +18,7 @@ from app.dependencies import get_current_user
 from app.models.collection_item import CollectionItem
 from app.models.farmer import Farmer
 from app.models.farmer_group import FarmerGroup
+from app.models.advance import Advance
 from app.utils.page_counter import estimate_pdf_page_count
 from app.utils.reports_db import (
     get_ledger_data,
@@ -174,6 +175,8 @@ def get_ledger_report(
         paid = float(entry.get("paid", 0)) if entry.get("paid") is not None else 0.0
         luggage = float(entry.get("luggage", 0)) if entry.get("luggage") is not None else 0.0
         coolie = float(entry.get("coolie", 0)) if entry.get("coolie") is not None else 0.0
+        
+        logger.debug(f"DEBUG Ledger Entry - amount from DB: {entry.get('amount')}, total_amount: {total_amount:.2f}")
         
         # Parse quantity - handle string to float conversion properly
         try:
@@ -430,6 +433,12 @@ def get_group_total_report(
     
     logger.info(f"Group Total processing complete - {len(rows)} farmers, overall_net_amount: {overall_net_amount:.2f}")
     
+    # Log first few rows for debugging
+    if rows:
+        logger.info(f"First row sample: {rows[0]}")
+        logger.info(f"Group name being sent: {display_group_name}")
+        logger.info(f"Total paid across all rows: {overall_paid:.2f}")
+    
     # Prepare template data with ALL required fields
     template_data = {
         "rows": rows,
@@ -445,6 +454,8 @@ def get_group_total_report(
         "generated_at": generated_at,
         "group_count": len(farmer_totals)
     }
+    
+    logger.info(f"Template data prepared - rows count: {len(rows)}, keys: {list(template_data.keys())}")
     
     # Render HTML
     try:
